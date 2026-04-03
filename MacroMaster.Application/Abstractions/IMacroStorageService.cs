@@ -1,10 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using MacroMaster.Domain.Models;
 
-namespace MacroMaster.Application.Abstractions
+namespace MacroMaster.Application.Abstractions;
+
+public interface IMacroStorageService
 {
-    internal interface IMacroStorageService
-    {
-    }
+    Task SaveAsJsonAsync(
+        MacroSession session,
+        string filePath,
+        CancellationToken cancellationToken = default);
+
+    Task<MacroSession> LoadFromJsonAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
+
+    Task SaveAsXmlAsync(
+        MacroSession session,
+        string filePath,
+        CancellationToken cancellationToken = default);
+
+    Task<MacroSession> LoadFromXmlAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
 }

@@ -1,10 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using MacroMaster.Domain.Models;
 
-namespace MacroMaster.Application.Abstractions
+namespace MacroMaster.Application.Abstractions;
+
+public interface IHotkeyService
 {
-    internal interface IHotkeyService
-    {
-    }
+    bool IsRegistered { get; }
+
+    Task RegisterAsync(CancellationToken cancellationToken = default);
+
+    Task UnregisterAsync(CancellationToken cancellationToken = default);
+
+    event Action? RecordToggleRequested;
+    event Action? PlaybackToggleRequested;
+    event Action? StopRequested;
 }
