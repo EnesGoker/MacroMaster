@@ -18,6 +18,18 @@ internal static class NativeMethods
     internal const uint MouseEventFWheel = 0x0800;
 
     internal const int WhKeyboardLl = 13;
+    internal const int WhMouseLl = 14;
+
+    internal const int WmMouseMove = 0x0200;
+    internal const int WmLButtonDown = 0x0201;
+    internal const int WmLButtonUp = 0x0202;
+    internal const int WmRButtonDown = 0x0204;
+    internal const int WmRButtonUp = 0x0205;
+    internal const int WmMButtonDown = 0x0207;
+    internal const int WmMButtonUp = 0x0208;
+    internal const int WmMouseWheel = 0x020A;
+    internal const int WmLButtonDblClk = 0x0203;
+
 
     internal const int WmKeyDown = 0x0100;
     internal const int WmKeyUp = 0x0101;
@@ -103,5 +115,22 @@ internal static class NativeMethods
         public uint flags;
         public uint time;
         public IntPtr dwExtraInfo;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    
+    internal struct POINT
+    {
+    public int x;
+    public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MSLLHOOKSTRUCT
+    {
+    public POINT pt;
+    public uint mouseData;
+    public uint flags;
+    public uint time;
+    public IntPtr dwExtraInfo;
     }
 }

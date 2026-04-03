@@ -34,7 +34,7 @@ internal sealed class AppCompositionRoot
         IApplicationStateService applicationStateService = new ApplicationStateService();
 
         IKeyboardHookSource keyboardHookSource = new WindowsKeyboardHookSource();
-        IMouseHookSource mouseHookSource = new NullMouseHookSource();
+        IMouseHookSource mouseHookSource = new WindowsMouseHookSource();
         IHotkeyService hotkeyService = new NullHotkeyService();
 
         var jsonMacroStorageService = new JsonMacroStorageService();
