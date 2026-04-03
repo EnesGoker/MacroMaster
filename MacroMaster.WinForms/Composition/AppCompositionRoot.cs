@@ -4,6 +4,7 @@ using MacroMaster.Infrastructure.Hooks;
 using MacroMaster.Infrastructure.Interop;
 using MacroMaster.Infrastructure.Persistence;
 using MacroMaster.WinForms.Forms;
+using MacroMaster.WinForms.Platform;
 
 namespace MacroMaster.WinForms.Composition;
 
@@ -35,7 +36,7 @@ internal sealed class AppCompositionRoot
 
         IKeyboardHookSource keyboardHookSource = new WindowsKeyboardHookSource();
         IMouseHookSource mouseHookSource = new WindowsMouseHookSource();
-        IHotkeyService hotkeyService = new NullHotkeyService();
+        IHotkeyService hotkeyService = new WindowsHotkeyService();
 
         var jsonMacroStorageService = new JsonMacroStorageService();
         var xmlMacroStorageService = new XmlMacroStorageService();
