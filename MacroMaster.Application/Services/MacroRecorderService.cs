@@ -9,6 +9,7 @@ public sealed class MacroRecorderService : IMacroRecorderService
     private readonly IKeyboardHookSource _keyboardHookSource;
     private readonly IMouseHookSource _mouseHookSource;
     private readonly IApplicationStateService _applicationStateService;
+    private readonly IHotkeyConfiguration _hotkeyConfiguration;
 
     private readonly List<MacroEvent> _recordedEvents = new();
     private DateTime _lastEventTimestampUtc;
@@ -16,11 +17,13 @@ public sealed class MacroRecorderService : IMacroRecorderService
     public MacroRecorderService(
         IKeyboardHookSource keyboardHookSource,
         IMouseHookSource mouseHookSource,
-        IApplicationStateService applicationStateService)
+        IApplicationStateService applicationStateService,
+        IHotkeyConfiguration hotkeyConfiguration)
     {
         _keyboardHookSource = keyboardHookSource;
         _mouseHookSource = mouseHookSource;
         _applicationStateService = applicationStateService;
+        _hotkeyConfiguration = hotkeyConfiguration;
     }
 
     public bool IsRecording => _applicationStateService.Is(AppState.Recording);
@@ -35,7 +38,7 @@ public sealed class MacroRecorderService : IMacroRecorderService
         string? sessionName = null,
         CancellationToken cancellationToken = default)
     {
-        if (IsRecording)
+        if (IsRecording || _applicationStateService.Is(AppState.Playing))
         {
             return;
         }
@@ -98,6 +101,11 @@ public sealed class MacroRecorderService : IMacroRecorderService
             return;
         }
 
+        if (IsReservedHotkey(keyCode))
+        {
+            return;
+        }
+
         var nowUtc = DateTime.UtcNow;
 
         var macroEvent = new MacroEvent
@@ -144,6 +152,13 @@ public sealed class MacroRecorderService : IMacroRecorderService
 
         _recordedEvents.Add(macroEvent);
         EventRecorded?.Invoke(macroEvent);
+    }
+
+    private bool IsReservedHotkey(int keyCode)
+    {
+        return keyCode == _hotkeyConfiguration.RecordToggleVirtualKey
+            || keyCode == _hotkeyConfiguration.PlaybackToggleVirtualKey
+            || keyCode == _hotkeyConfiguration.StopVirtualKey;
     }
 
     private int CalculateDelayMs(DateTime currentTimestampUtc)

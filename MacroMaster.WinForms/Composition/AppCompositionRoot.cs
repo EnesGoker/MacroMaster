@@ -34,9 +34,11 @@ internal sealed class AppCompositionRoot
     {
         IApplicationStateService applicationStateService = new ApplicationStateService();
 
+        IHotkeyConfiguration hotkeyConfiguration = new DefaultHotkeyConfiguration();
+
         IKeyboardHookSource keyboardHookSource = new WindowsKeyboardHookSource();
         IMouseHookSource mouseHookSource = new WindowsMouseHookSource();
-        IHotkeyService hotkeyService = new WindowsHotkeyService();
+        IHotkeyService hotkeyService = new WindowsHotkeyService(hotkeyConfiguration);
 
         var jsonMacroStorageService = new JsonMacroStorageService();
         var xmlMacroStorageService = new XmlMacroStorageService();
@@ -48,7 +50,8 @@ internal sealed class AppCompositionRoot
         IMacroRecorderService macroRecorderService = new MacroRecorderService(
             keyboardHookSource,
             mouseHookSource,
-            applicationStateService);
+            applicationStateService,
+            hotkeyConfiguration);
 
         IMacroPlaybackService macroPlaybackService = new MacroPlaybackService(
             inputPlaybackAdapter,

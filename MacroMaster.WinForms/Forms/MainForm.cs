@@ -50,6 +50,11 @@ public partial class MainForm : Form
 
     private async void OnRecordToggleRequested()
     {
+        if (_macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused)
+        {
+            return;
+        }
+
         if (_macroRecorderService.IsRecording)
         {
             await _macroRecorderService.StopAsync();
@@ -61,6 +66,11 @@ public partial class MainForm : Form
 
     private async void OnPlaybackToggleRequested()
     {
+        if (_macroRecorderService.IsRecording)
+        {
+            return;
+        }
+
         if (_macroPlaybackService.IsPlaying)
         {
             if (_macroPlaybackService.IsPaused)

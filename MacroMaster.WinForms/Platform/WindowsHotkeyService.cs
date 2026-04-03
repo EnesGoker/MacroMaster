@@ -11,15 +11,13 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
     private const uint ModNone = 0x0000;
 
-    private const uint VkF8 = 0x77;
-    private const uint VkF9 = 0x78;
-    private const uint VkF10 = 0x79;
-
     private readonly HotkeyMessageWindow _messageWindow;
+    private readonly IHotkeyConfiguration _hotkeyConfiguration;
     private bool _disposed;
 
-    public WindowsHotkeyService()
+    public WindowsHotkeyService(IHotkeyConfiguration hotkeyConfiguration)
     {
+        _hotkeyConfiguration = hotkeyConfiguration;
         _messageWindow = new HotkeyMessageWindow(this);
     }
 
@@ -47,9 +45,20 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
         _messageWindow.EnsureHandleCreated();
 
-        RegisterSingleHotkey(RecordToggleHotkeyId, ModNone, VkF8);
-        RegisterSingleHotkey(PlaybackToggleHotkeyId, ModNone, VkF9);
-        RegisterSingleHotkey(StopHotkeyId, ModNone, VkF10);
+        RegisterSingleHotkey(
+            RecordToggleHotkeyId,
+            ModNone,
+            unchecked((uint)_hotkeyConfiguration.RecordToggleVirtualKey));
+
+        RegisterSingleHotkey(
+            PlaybackToggleHotkeyId,
+            ModNone,
+            unchecked((uint)_hotkeyConfiguration.PlaybackToggleVirtualKey));
+
+        RegisterSingleHotkey(
+            StopHotkeyId,
+            ModNone,
+            unchecked((uint)_hotkeyConfiguration.StopVirtualKey));
 
         IsRegistered = true;
         return Task.CompletedTask;
