@@ -33,7 +33,7 @@ internal sealed class AppCompositionRoot
     {
         IApplicationStateService applicationStateService = new ApplicationStateService();
 
-        IKeyboardHookSource keyboardHookSource = new NullKeyboardHookSource();
+        IKeyboardHookSource keyboardHookSource = new WindowsKeyboardHookSource();
         IMouseHookSource mouseHookSource = new NullMouseHookSource();
         IHotkeyService hotkeyService = new NullHotkeyService();
 
