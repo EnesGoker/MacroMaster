@@ -105,7 +105,7 @@ public partial class MainForm
         _statusStripEventCountLabel.Text = $"Olay: {totalEvents}";
         _statusStripSessionLabel.Text = $"Oturum: {(_activeSession?.Name ?? "Hazir oturum yok")}";
         _statusStripHotkeysLabel.Text = $"Kisayol: {GetHotkeySummaryText()}";
-        _controlHintLabel.Text = $"Kisayollar: {GetHotkeyDetailsText()}";
+        _controlHintLabel.Text = GetHotkeyDetailsText();
 
         var canEditPlaybackSettings = !_macroRecorderService.IsRecording
             && !_macroPlaybackService.IsPlaying

@@ -102,8 +102,8 @@ public partial class MainForm
     private string GetHotkeyDetailsText()
     {
         return
-            $"{GetHotkeyDisplayText(_hotkeyConfiguration.RecordToggleVirtualKey)} kayit, " +
-            $"{GetHotkeyDisplayText(_hotkeyConfiguration.PlaybackToggleVirtualKey)} oynat, " +
+            $"{GetHotkeyDisplayText(_hotkeyConfiguration.RecordToggleVirtualKey)} kayit  •  " +
+            $"{GetHotkeyDisplayText(_hotkeyConfiguration.PlaybackToggleVirtualKey)} oynat  •  " +
             $"{GetHotkeyDisplayText(_hotkeyConfiguration.StopVirtualKey)} durdur";
     }
 
