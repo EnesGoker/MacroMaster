@@ -30,7 +30,7 @@ public partial class MainForm
             AppState.Error => "Hata",
             _ => "Hazir"
         };
-        _playbackModeValueLabel.Text = _preserveTimingCheckBox.Checked ? "Gercek zaman" : "Sabit hiz";
+        _playbackTotalEventsValueLabel.Text = totalEvents.ToString();
         _playbackSpeedValueLabel.Text = $"{_speedNumeric.Value:0.##}x";
         _playbackRepeatValueLabel.Text = _loopPlaybackCheckBox.Checked ? "Sonsuz" : $"{_repeatCountNumeric.Value:0}x";
         _playbackDelayValueLabel.Text = $"{_initialDelayNumeric.Value:0} ms";
@@ -74,6 +74,12 @@ public partial class MainForm
             : ModernButtonVariant.Secondary;
 
         _stopButton.Enabled = canStop;
+
+        _playbackActionButton.Text = _playButton.Text;
+        _playbackActionButton.Enabled = canPlay;
+        _playbackActionButton.Variant = _playButton.Variant;
+        _playbackStopButton.Enabled = canStop;
+
         _recordMenuItem.Text = _macroRecorderService.IsRecording ? "Kaydi Durdur" : "Kaydi Baslat";
         _recordMenuItem.Enabled = canRecord;
 

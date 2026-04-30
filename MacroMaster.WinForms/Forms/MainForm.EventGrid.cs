@@ -113,7 +113,7 @@ public partial class MainForm
             _detailDelayValueLabel.Text = "-";
             _detailPositionValueLabel.Text = "-";
             _detailInputValueLabel.Text = "-";
-            _eventDetailBox.Text = "Bir olay secildiginde aciklama ve ham bilgi burada gorunecek.";
+            _detailDescriptionValueLabel.Text = "Bir olay secildiginde aciklama burada gorunecek.";
             return;
         }
 
@@ -128,14 +128,7 @@ public partial class MainForm
         _detailDelayValueLabel.Text = $"{macroEvent.DelayMs} ms";
         _detailPositionValueLabel.Text = GetLocationText(macroEvent);
         _detailInputValueLabel.Text = GetInputText(macroEvent);
-
-        _eventDetailBox.Text = string.Join(
-            Environment.NewLine,
-            [
-                $"Aciklama: {GetDetailText(macroEvent)}",
-                $"Kimlik: {macroEvent.Id}",
-                $"Zaman damgasi: {macroEvent.TimestampUtc:O}"
-            ]);
+        _detailDescriptionValueLabel.Text = GetDetailDescriptionText(macroEvent);
     }
 
     private void SelectEvent(MacroEvent macroEvent)
@@ -249,5 +242,13 @@ public partial class MainForm
         }
 
         return "-";
+    }
+
+    private static string GetDetailDescriptionText(MacroEvent macroEvent)
+    {
+        var description = GetDetailText(macroEvent);
+        return string.IsNullOrWhiteSpace(description)
+            ? "Ek aciklama yok."
+            : description;
     }
 }
