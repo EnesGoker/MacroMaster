@@ -9,7 +9,6 @@ public partial class MainForm
     private Panel _contentHost = null!;
     private TableLayoutPanel _rootLayout = null!;
     private MenuStrip _menuStrip = null!;
-    private ToolStrip _toolStrip = null!;
     private StatusStrip _statusStrip = null!;
     private ToolStripMenuItem _recordMenuItem = null!;
     private ToolStripMenuItem _playMenuItem = null!;
@@ -17,9 +16,7 @@ public partial class MainForm
     private ToolStripMenuItem _saveMenuItem = null!;
     private ToolStripMenuItem _loadMenuItem = null!;
     private ToolStripMenuItem _clearMenuItem = null!;
-    private ToolStripButton _saveToolButton = null!;
-    private ToolStripButton _loadToolButton = null!;
-    private ToolStripButton _clearToolButton = null!;
+    private ToolStripMenuItem _hotkeysMenuItem = null!;
     private ToolStripStatusLabel _statusStripStateLabel = null!;
     private ToolStripStatusLabel _statusStripEventCountLabel = null!;
     private ToolStripStatusLabel _statusStripSessionLabel = null!;
@@ -54,6 +51,9 @@ public partial class MainForm
     private ModernButton _recordButton = null!;
     private ModernButton _playButton = null!;
     private ModernButton _stopButton = null!;
+    private ModernButton _saveButton = null!;
+    private ModernButton _loadButton = null!;
+    private ModernButton _clearButton = null!;
     private ModernButton _playbackActionButton = null!;
     private ModernButton _playbackStopButton = null!;
     private DataGridView _eventGrid = null!;
@@ -71,7 +71,6 @@ public partial class MainForm
         Text = "MacroMaster Kontrol Merkezi";
 
         _menuStrip = CreateMenuStrip();
-        _toolStrip = CreateToolStrip();
         _statusStrip = CreateStatusStrip();
 
         _rootLayout = new TableLayoutPanel
@@ -84,7 +83,7 @@ public partial class MainForm
             Padding = Padding.Empty
         };
         _rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112f));
-        _rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 172f));
+        _rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 188f));
         _rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _rootLayout.Controls.Add(CreateHeaderCard(), 0, 0);
@@ -103,20 +102,18 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 3,
             BackColor = Color.Transparent,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         _chromeLayout.RowStyles.Add(new RowStyle());
-        _chromeLayout.RowStyles.Add(new RowStyle());
         _chromeLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         _chromeLayout.RowStyles.Add(new RowStyle());
 
         _chromeLayout.Controls.Add(_menuStrip, 0, 0);
-        _chromeLayout.Controls.Add(_toolStrip, 0, 1);
-        _chromeLayout.Controls.Add(_contentHost, 0, 2);
-        _chromeLayout.Controls.Add(_statusStrip, 0, 3);
+        _chromeLayout.Controls.Add(_contentHost, 0, 1);
+        _chromeLayout.Controls.Add(_statusStrip, 0, 2);
 
         MainMenuStrip = _menuStrip;
         Controls.Add(_chromeLayout);
@@ -167,57 +164,17 @@ public partial class MainForm
                 _stopMenuItem
             ]);
 
-        var settingsMenu = new ToolStripMenuItem("&Ayarlar");
-        var hotkeysMenuItem = new ToolStripMenuItem("Kisayol Bilgileri");
-        hotkeysMenuItem.Click += (_, _) => ShowHotkeyReference();
-        settingsMenu.DropDownItems.Add(hotkeysMenuItem);
-
-        var helpMenu = new ToolStripMenuItem("&Yardim");
-        var aboutMenuItem = new ToolStripMenuItem("Hakkinda");
-        aboutMenuItem.Click += (_, _) => ShowAboutDialog();
-        helpMenu.DropDownItems.Add(aboutMenuItem);
+        _hotkeysMenuItem = CreateMenuActionItem("&Kisayollar", async () => await ShowHotkeySettingsAsync());
 
         menuStrip.Items.AddRange(
             [
                 fileMenu,
                 macroMenu,
                 playbackMenu,
-                settingsMenu,
-                helpMenu
+                _hotkeysMenuItem
             ]);
 
         return menuStrip;
-    }
-
-    private ToolStrip CreateToolStrip()
-    {
-        var toolStrip = new ToolStrip
-        {
-            Dock = DockStyle.Fill,
-            GripStyle = ToolStripGripStyle.Hidden,
-            Stretch = true,
-            AutoSize = false,
-            Height = 42,
-            Padding = new Padding(AppSpacing.Sm, AppSpacing.Xs, AppSpacing.Sm, AppSpacing.Xs)
-        };
-
-        _saveToolButton = CreateToolButton("Kaydet", async () => await SaveSessionAsync());
-        _loadToolButton = CreateToolButton("Yukle", async () => await LoadSessionAsync());
-        _clearToolButton = CreateToolButton("Temizle", ClearCurrentSession);
-        var hotkeysToolButton = CreateToolButton("Kisayollar", ShowHotkeyReference);
-        var aboutToolButton = CreateToolButton("Hakkinda", ShowAboutDialog);
-
-        toolStrip.Items.AddRange(
-            [
-                _saveToolButton,
-                _loadToolButton,
-                _clearToolButton,
-                new ToolStripSeparator(),
-                hotkeysToolButton,
-                aboutToolButton
-            ]);
-
-        return toolStrip;
     }
 
     private StatusStrip CreateStatusStrip()
@@ -334,10 +291,10 @@ public partial class MainForm
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 32f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 24f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 26f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 18f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 32f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 14f));
 
         var detailCard = CreateDetailCard();
         detailCard.Margin = new Padding(0, 0, 0, AppSpacing.Lg / 2);
@@ -348,13 +305,13 @@ public partial class MainForm
         var playbackSettingsCard = CreatePlaybackSettingsCard();
         playbackSettingsCard.Margin = new Padding(0, AppSpacing.Lg / 2, 0, AppSpacing.Lg / 2);
 
-        var hotkeysCard = CreateHotkeysCard();
-        hotkeysCard.Margin = new Padding(0, AppSpacing.Lg / 2, 0, 0);
+        var aboutCard = CreateAboutCard();
+        aboutCard.Margin = new Padding(0, AppSpacing.Lg / 2, 0, 0);
 
         layout.Controls.Add(detailCard, 0, 0);
         layout.Controls.Add(playbackCard, 0, 1);
         layout.Controls.Add(playbackSettingsCard, 0, 2);
-        layout.Controls.Add(hotkeysCard, 0, 3);
+        layout.Controls.Add(aboutCard, 0, 3);
         return layout;
     }
 
@@ -420,11 +377,12 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 4,
             BackColor = Color.Transparent
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layout.Controls.Add(CreateSectionLabel("Canli Kontroller"), 0, 0);
 
@@ -432,7 +390,7 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
-            RowCount = 1,
+            RowCount = 2,
             BackColor = Color.Transparent,
             Margin = new Padding(0, AppSpacing.Sm, 0, 0)
         };
@@ -440,24 +398,32 @@ public partial class MainForm
         {
             buttonsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
         }
-        buttonsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        buttonsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+        buttonsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
 
         _recordButton = CreateActionButton("Kaydi Baslat", ModernButtonVariant.Primary, async () => await ToggleRecordingAsync());
         _playButton = CreateActionButton("Oynat", ModernButtonVariant.Secondary, async () => await TogglePlaybackAsync());
         _stopButton = CreateActionButton("Durdur", ModernButtonVariant.Danger, async () => await StopAsync());
+        _saveButton = CreateActionButton("Kaydet", ModernButtonVariant.Secondary, async () => await SaveSessionAsync());
+        _loadButton = CreateActionButton("Yukle", ModernButtonVariant.Secondary, async () => await LoadSessionAsync());
+        _clearButton = CreateActionButton("Temizle", ModernButtonVariant.Ghost, ClearCurrentSession);
 
         buttonsLayout.Controls.Add(_recordButton, 0, 0);
         buttonsLayout.Controls.Add(_playButton, 1, 0);
         buttonsLayout.Controls.Add(_stopButton, 2, 0);
+        buttonsLayout.Controls.Add(_saveButton, 0, 1);
+        buttonsLayout.Controls.Add(_loadButton, 1, 1);
+        buttonsLayout.Controls.Add(_clearButton, 2, 1);
 
         layout.Controls.Add(buttonsLayout, 0, 1);
+        layout.SetRowSpan(buttonsLayout, 2);
 
         _controlHintLabel = CreateLabel(
             "Kisayollar: F8 kayit, F9 oynat, F10 durdur",
             AppFonts.Caption,
             AppColors.TextSecondary);
-        _controlHintLabel.Margin = new Padding(0, AppSpacing.Sm, 0, 0);
-        layout.Controls.Add(_controlHintLabel, 0, 2);
+        _controlHintLabel.Margin = new Padding(0, AppSpacing.Xs, 0, 0);
+        layout.Controls.Add(_controlHintLabel, 0, 3);
 
         card.Controls.Add(layout);
         return card;
@@ -639,7 +605,7 @@ public partial class MainForm
         return card;
     }
 
-    private ModernCard CreateHotkeysCard()
+    private ModernCard CreateAboutCard()
     {
         var card = CreateCard();
 
@@ -654,18 +620,17 @@ public partial class MainForm
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20f));
 
-        layout.Controls.Add(CreateSectionLabel("Global Kisayollar"), 0, 0);
+        layout.Controls.Add(CreateSectionLabel("Hakkinda"), 0, 0);
 
-        var hotkeysLabel = CreateLabel(
-            "Kayit: F8" + Environment.NewLine +
-            "Oynat / Duraklat: F9" + Environment.NewLine +
-            "Acil Durdur: F10",
+        var aboutLabel = CreateLabel(
+            "Macro Master" + Environment.NewLine +
+            "WinForms tabanli makro kayit, oynatim ve dosya yonetimi araci.",
             AppFonts.Body,
             AppColors.TextSecondary);
-        hotkeysLabel.TextAlign = ContentAlignment.TopLeft;
-        layout.Controls.Add(hotkeysLabel, 0, 1);
+        aboutLabel.TextAlign = ContentAlignment.TopLeft;
+        layout.Controls.Add(aboutLabel, 0, 1);
 
-        var hintLabel = CreateLabel("Global tuslar aktif oldugunda her yerden calisir.", AppFonts.Caption, AppColors.TextMuted);
+        var hintLabel = CreateLabel("JSON ve XML kaydetme/yukleme desteklenir.", AppFonts.Caption, AppColors.TextMuted);
         layout.Controls.Add(hintLabel, 0, 2);
 
         card.Controls.Add(layout);
@@ -819,8 +784,9 @@ public partial class MainForm
         panel.Controls.Add(titleLabel);
 
         valueLabel = CreateLabel("-", AppFonts.BodyStrong, AppColors.TextPrimary);
-        valueLabel.Dock = DockStyle.Fill;
-        valueLabel.TextAlign = ContentAlignment.BottomLeft;
+        valueLabel.Dock = DockStyle.Bottom;
+        valueLabel.Height = 18;
+        valueLabel.TextAlign = ContentAlignment.MiddleLeft;
         panel.Controls.Add(valueLabel);
 
         return panel;
@@ -841,8 +807,9 @@ public partial class MainForm
         panel.Controls.Add(titleLabel);
 
         valueLabel = CreateLabel("-", AppFonts.BodyStrong, AppColors.TextPrimary);
-        valueLabel.Dock = DockStyle.Fill;
-        valueLabel.TextAlign = ContentAlignment.BottomLeft;
+        valueLabel.Dock = DockStyle.Bottom;
+        valueLabel.Height = 18;
+        valueLabel.TextAlign = ContentAlignment.MiddleLeft;
         panel.Controls.Add(valueLabel);
 
         return panel;
@@ -888,34 +855,6 @@ public partial class MainForm
         var item = new ToolStripMenuItem(text);
         item.Click += async (_, _) => await onClickAsync();
         return item;
-    }
-
-    private ToolStripButton CreateToolButton(string text, Action onClick)
-    {
-        var button = new ToolStripButton(text)
-        {
-            AutoSize = false,
-            Width = 82,
-            DisplayStyle = ToolStripItemDisplayStyle.Text,
-            Margin = new Padding(AppSpacing.Xs, 0, AppSpacing.Xs, 0)
-        };
-
-        button.Click += (_, _) => onClick();
-        return button;
-    }
-
-    private ToolStripButton CreateToolButton(string text, Func<Task> onClickAsync)
-    {
-        var button = new ToolStripButton(text)
-        {
-            AutoSize = false,
-            Width = 82,
-            DisplayStyle = ToolStripItemDisplayStyle.Text,
-            Margin = new Padding(AppSpacing.Xs, 0, AppSpacing.Xs, 0)
-        };
-
-        button.Click += async (_, _) => await onClickAsync();
-        return button;
     }
 
     private NumericUpDown CreateNumericInput(decimal value, decimal minimum, decimal maximum, decimal increment, int decimalPlaces)

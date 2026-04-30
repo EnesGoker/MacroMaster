@@ -74,6 +74,9 @@ public partial class MainForm
             : ModernButtonVariant.Secondary;
 
         _stopButton.Enabled = canStop;
+        _saveButton.Enabled = canSave;
+        _loadButton.Enabled = canLoad;
+        _clearButton.Enabled = canClear;
 
         _playbackActionButton.Text = _playButton.Text;
         _playbackActionButton.Enabled = canPlay;
@@ -91,17 +94,18 @@ public partial class MainForm
         _playMenuItem.Enabled = canPlay;
 
         _stopMenuItem.Enabled = canStop;
-        _saveToolButton.Enabled = canSave;
         _saveMenuItem.Enabled = canSave;
-        _loadToolButton.Enabled = canLoad;
         _loadMenuItem.Enabled = canLoad;
-        _clearToolButton.Enabled = canClear;
         _clearMenuItem.Enabled = canClear;
+        _hotkeysMenuItem.Enabled = !_macroRecorderService.IsRecording
+            && !_macroPlaybackService.IsPlaying
+            && !_macroPlaybackService.IsPaused;
 
         _statusStripStateLabel.Text = $"Durum: {GetStateDisplayText(currentState)}";
         _statusStripEventCountLabel.Text = $"Olay: {totalEvents}";
         _statusStripSessionLabel.Text = $"Oturum: {(_activeSession?.Name ?? "Hazir oturum yok")}";
-        _statusStripHotkeysLabel.Text = "Kisayol: F8 / F9 / F10";
+        _statusStripHotkeysLabel.Text = $"Kisayol: {GetHotkeySummaryText()}";
+        _controlHintLabel.Text = $"Kisayollar: {GetHotkeyDetailsText()}";
 
         var canEditPlaybackSettings = !_macroRecorderService.IsRecording
             && !_macroPlaybackService.IsPlaying

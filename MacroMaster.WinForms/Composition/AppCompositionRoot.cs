@@ -15,26 +15,29 @@ internal sealed class AppCompositionRoot
     public IMacroPlaybackService MacroPlaybackService { get; }
     public IMacroStorageService MacroStorageService { get; }
     public IHotkeyService HotkeyService { get; }
+    public IMutableHotkeyConfiguration HotkeyConfiguration { get; }
 
     private AppCompositionRoot(
         IApplicationStateService applicationStateService,
         IMacroRecorderService macroRecorderService,
         IMacroPlaybackService macroPlaybackService,
         IMacroStorageService macroStorageService,
-        IHotkeyService hotkeyService)
+        IHotkeyService hotkeyService,
+        IMutableHotkeyConfiguration hotkeyConfiguration)
     {
         ApplicationStateService = applicationStateService;
         MacroRecorderService = macroRecorderService;
         MacroPlaybackService = macroPlaybackService;
         MacroStorageService = macroStorageService;
         HotkeyService = hotkeyService;
+        HotkeyConfiguration = hotkeyConfiguration;
     }
 
     public static AppCompositionRoot Create()
     {
         IApplicationStateService applicationStateService = new ApplicationStateService();
 
-        IHotkeyConfiguration hotkeyConfiguration = new DefaultHotkeyConfiguration();
+        IMutableHotkeyConfiguration hotkeyConfiguration = new DefaultHotkeyConfiguration();
 
         IKeyboardHookSource keyboardHookSource = new WindowsKeyboardHookSource();
         IMouseHookSource mouseHookSource = new WindowsMouseHookSource();
@@ -62,7 +65,8 @@ internal sealed class AppCompositionRoot
             macroRecorderService,
             macroPlaybackService,
             macroStorageService,
-            hotkeyService);
+            hotkeyService,
+            hotkeyConfiguration);
     }
 
     public MainForm CreateMainForm()
@@ -72,6 +76,7 @@ internal sealed class AppCompositionRoot
             MacroRecorderService,
             MacroPlaybackService,
             MacroStorageService,
-            HotkeyService);
+            HotkeyService,
+            HotkeyConfiguration);
     }
 }

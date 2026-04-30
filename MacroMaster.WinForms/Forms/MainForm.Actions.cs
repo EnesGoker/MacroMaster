@@ -148,29 +148,6 @@ public partial class MainForm
             MessageBoxIcon.Error);
     }
 
-    private void ShowHotkeyReference()
-    {
-        MessageBox.Show(
-            this,
-            "Kayit baslat / durdur: F8" + Environment.NewLine +
-            "Oynat / duraklat: F9" + Environment.NewLine +
-            "Acil durdurma: F10",
-            "Global Kisayollar",
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information);
-    }
-
-    private void ShowAboutDialog()
-    {
-        MessageBox.Show(
-            this,
-            "MacroMaster" + Environment.NewLine +
-            "WinForms tabanli klavye ve fare makro kaydedicisi.",
-            "Hakkinda",
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information);
-    }
-
     private PlaybackSettings BuildPlaybackSettings()
     {
         return new PlaybackSettings

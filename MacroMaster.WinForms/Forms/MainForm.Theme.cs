@@ -19,7 +19,6 @@ public partial class MainForm
         }
 
         ApplyToolStripTheme(_menuStrip);
-        ApplyToolStripTheme(_toolStrip);
         ApplyToolStripTheme(_statusStrip);
 
         ResumeLayout(performLayout: true);
