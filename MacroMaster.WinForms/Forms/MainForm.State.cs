@@ -30,12 +30,12 @@ public partial class MainForm
             AppState.Error => "Hata",
             _ => "Hazir"
         };
+        _playbackModeValueLabel.Text = _preserveTimingCheckBox.Checked ? "Gercek zaman" : "Sabit hiz";
+        _playbackSpeedValueLabel.Text = $"{_speedNumeric.Value:0.##}x";
+        _playbackRepeatValueLabel.Text = _loopPlaybackCheckBox.Checked ? "Sonsuz" : $"{_repeatCountNumeric.Value:0}x";
+        _playbackDelayValueLabel.Text = $"{_initialDelayNumeric.Value:0} ms";
 
-        _currentEventValueLabel.Text = _activePlaybackEventId.HasValue
-            ? $"Secili oynatma olayi: {_activePlaybackEventId}"
-            : totalEvents > 0
-                ? $"Toplam olay: {totalEvents}"
-                : "Henuz olay kaydi yok";
+        _currentEventValueLabel.Text = GetPlaybackEventSummary(totalEvents);
 
         _playbackProgressBar.Maximum = Math.Max(totalEvents, 1);
         var progressValue = _activePlaybackEventId.HasValue
@@ -50,6 +50,12 @@ public partial class MainForm
         var canRecord = !_macroPlaybackService.IsPlaying && !_macroPlaybackService.IsPaused;
         var canPlay = !_macroRecorderService.IsRecording && hasSession;
         var canStop = _macroRecorderService.IsRecording || _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused;
+        var canSave = hasSession && !_macroRecorderService.IsRecording;
+        var canLoad = !_macroRecorderService.IsRecording && !_macroPlaybackService.IsPlaying;
+        var canClear = hasSession
+            && !_macroRecorderService.IsRecording
+            && !_macroPlaybackService.IsPlaying
+            && !_macroPlaybackService.IsPaused;
 
         _recordButton.Text = _macroRecorderService.IsRecording ? "Kaydi Durdur" : "Kaydi Baslat";
         _recordButton.Enabled = canRecord;
@@ -68,21 +74,9 @@ public partial class MainForm
             : ModernButtonVariant.Secondary;
 
         _stopButton.Enabled = canStop;
-        _saveButton.Enabled = hasSession && !_macroRecorderService.IsRecording;
-        _loadButton.Enabled = !_macroRecorderService.IsRecording && !_macroPlaybackService.IsPlaying;
-        _clearButton.Enabled = hasSession && !_macroRecorderService.IsRecording && !_macroPlaybackService.IsPlaying && !_macroPlaybackService.IsPaused;
-
-        _recordToolButton.Text = _macroRecorderService.IsRecording ? "Durdur" : "Kayit";
-        _recordToolButton.Enabled = canRecord;
         _recordMenuItem.Text = _macroRecorderService.IsRecording ? "Kaydi Durdur" : "Kaydi Baslat";
         _recordMenuItem.Enabled = canRecord;
 
-        _playToolButton.Text = _macroPlaybackService.IsPaused
-            ? "Devam"
-            : _macroPlaybackService.IsPlaying
-                ? "Duraklat"
-                : "Oynat";
-        _playToolButton.Enabled = canPlay;
         _playMenuItem.Text = _macroPlaybackService.IsPaused
             ? "Devam Et"
             : _macroPlaybackService.IsPlaying
@@ -90,14 +84,13 @@ public partial class MainForm
                 : "Oynat";
         _playMenuItem.Enabled = canPlay;
 
-        _stopToolButton.Enabled = canStop;
         _stopMenuItem.Enabled = canStop;
-        _saveToolButton.Enabled = _saveButton.Enabled;
-        _saveMenuItem.Enabled = _saveButton.Enabled;
-        _loadToolButton.Enabled = _loadButton.Enabled;
-        _loadMenuItem.Enabled = _loadButton.Enabled;
-        _clearToolButton.Enabled = _clearButton.Enabled;
-        _clearMenuItem.Enabled = _clearButton.Enabled;
+        _saveToolButton.Enabled = canSave;
+        _saveMenuItem.Enabled = canSave;
+        _loadToolButton.Enabled = canLoad;
+        _loadMenuItem.Enabled = canLoad;
+        _clearToolButton.Enabled = canClear;
+        _clearMenuItem.Enabled = canClear;
 
         _statusStripStateLabel.Text = $"Durum: {GetStateDisplayText(currentState)}";
         _statusStripEventCountLabel.Text = $"Olay: {totalEvents}";
@@ -160,6 +153,23 @@ public partial class MainForm
     {
         var index = _timelineEvents.FindIndex(macroEvent => macroEvent.Id == eventId);
         return index < 0 ? 0 : index + 1;
+    }
+
+    private string GetPlaybackEventSummary(int totalEvents)
+    {
+        if (_activePlaybackEventId.HasValue)
+        {
+            var index = _timelineEvents.FindIndex(macroEvent => macroEvent.Id == _activePlaybackEventId.Value);
+            if (index >= 0)
+            {
+                var macroEvent = _timelineEvents[index];
+                return $"Su anki olay: #{index + 1:D3} - {GetEventDisplayName(macroEvent)}";
+            }
+        }
+
+        return totalEvents > 0
+            ? $"Hazir. Toplam olay: {totalEvents}"
+            : "Henuz olay kaydi yok";
     }
 
     private static string GetStateDisplayText(AppState state)

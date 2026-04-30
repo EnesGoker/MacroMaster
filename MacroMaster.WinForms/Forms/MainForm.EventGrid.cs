@@ -106,21 +106,35 @@ public partial class MainForm
     {
         if (macroEvent is null)
         {
-            _eventDetailBox.Text = "Bir olay secildiginde detaylar burada gorunecek.";
+            _detailHeaderValueLabel.Text = "Olay secilmedi";
+            _detailTypeValueLabel.Text = "-";
+            _detailActionValueLabel.Text = "-";
+            _detailTimeValueLabel.Text = "-";
+            _detailDelayValueLabel.Text = "-";
+            _detailPositionValueLabel.Text = "-";
+            _detailInputValueLabel.Text = "-";
+            _eventDetailBox.Text = "Bir olay secildiginde aciklama ve ham bilgi burada gorunecek.";
             return;
         }
+
+        var index = _timelineEvents.FindIndex(item => item.Id == macroEvent.Id);
+        var sequence = index >= 0 ? $"#{index + 1:D3}" : "#---";
+        var elapsedText = index >= 0 ? FormatElapsed(CalculateElapsedMs(index)) : FormatElapsed(macroEvent.DelayMs);
+
+        _detailHeaderValueLabel.Text = $"{sequence}  {GetEventDisplayName(macroEvent)}";
+        _detailTypeValueLabel.Text = GetEventTypeText(macroEvent);
+        _detailActionValueLabel.Text = GetActionText(macroEvent);
+        _detailTimeValueLabel.Text = $"{elapsedText} | {macroEvent.TimestampUtc:HH:mm:ss.fff} UTC";
+        _detailDelayValueLabel.Text = $"{macroEvent.DelayMs} ms";
+        _detailPositionValueLabel.Text = GetLocationText(macroEvent);
+        _detailInputValueLabel.Text = GetInputText(macroEvent);
 
         _eventDetailBox.Text = string.Join(
             Environment.NewLine,
             [
-                $"Olay: {GetEventDisplayName(macroEvent)}",
-                $"Tur: {GetEventTypeText(macroEvent)}",
-                $"Aksiyon: {GetActionText(macroEvent)}",
-                $"Gecikme: {macroEvent.DelayMs} ms",
-                $"Zaman (UTC): {macroEvent.TimestampUtc:HH:mm:ss.fff}",
-                $"Konum: {GetLocationText(macroEvent)}",
-                $"Tus: {macroEvent.KeyName ?? "-"}",
-                $"Aciklama: {GetDetailText(macroEvent)}"
+                $"Aciklama: {GetDetailText(macroEvent)}",
+                $"Kimlik: {macroEvent.Id}",
+                $"Zaman damgasi: {macroEvent.TimestampUtc:O}"
             ]);
     }
 
@@ -212,6 +226,26 @@ public partial class MainForm
         if (macroEvent.WheelDelta.HasValue)
         {
             return $"Teker: {macroEvent.WheelDelta.Value}";
+        }
+
+        return "-";
+    }
+
+    private static string GetInputText(MacroEvent macroEvent)
+    {
+        if (macroEvent.EventType == MacroEventType.Keyboard)
+        {
+            if (!string.IsNullOrWhiteSpace(macroEvent.KeyName) && macroEvent.KeyCode.HasValue)
+            {
+                return $"{macroEvent.KeyName} ({macroEvent.KeyCode.Value})";
+            }
+
+            return macroEvent.KeyName ?? "-";
+        }
+
+        if (macroEvent.WheelDelta.HasValue)
+        {
+            return $"Wheel {macroEvent.WheelDelta.Value}";
         }
 
         return "-";
