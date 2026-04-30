@@ -29,10 +29,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
     public event Action? PlaybackStopped;
     public event Action<MacroEvent>? EventPlayed;
 
-    public async Task PlayAsync(
-        MacroSession session,
-        PlaybackSettings settings,
-        CancellationToken cancellationToken = default)
+    public async Task PlayAsync( MacroSession session, PlaybackSettings settings, CancellationToken cancellationToken = default)
     {
         if (session.Events.Count == 0 || IsPlaying)
         {

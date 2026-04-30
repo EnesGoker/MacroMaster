@@ -34,9 +34,7 @@ public sealed class MacroRecorderService : IMacroRecorderService
     public event Action<MacroEvent>? EventRecorded;
     public event Action<MacroSession>? RecordingStopped;
 
-    public async Task StartAsync(
-        string? sessionName = null,
-        CancellationToken cancellationToken = default)
+    public async Task StartAsync(string? sessionName = null,CancellationToken cancellationToken = default)
     {
         if (IsRecording || _applicationStateService.Is(AppState.Playing))
         {
@@ -125,11 +123,7 @@ public sealed class MacroRecorderService : IMacroRecorderService
         EventRecorded?.Invoke(macroEvent);
     }
 
-    private void OnMouseActivityReceived(
-        MouseActionType mouseActionType,
-        int? x,
-        int? y,
-        int? wheelDelta)
+    private void OnMouseActivityReceived(MouseActionType mouseActionType, int? x ,int? y , int? wheelDelta)
     {
         if (!IsRecording)
         {

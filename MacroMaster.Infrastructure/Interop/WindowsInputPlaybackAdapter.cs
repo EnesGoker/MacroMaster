@@ -7,9 +7,7 @@ namespace MacroMaster.Infrastructure.Interop;
 
 public sealed class WindowsInputPlaybackAdapter : IInputPlaybackAdapter
 {
-    public Task PlayEventAsync(
-        MacroEvent macroEvent,
-        CancellationToken cancellationToken = default)
+    public Task PlayEventAsync(MacroEvent macroEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(macroEvent);
         cancellationToken.ThrowIfCancellationRequested();

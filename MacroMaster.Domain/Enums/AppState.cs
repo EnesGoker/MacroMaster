@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace MacroMaster.Domain.Enums;
 
-namespace MacroMaster.Domain.Enums
+public enum AppState
 {
-    internal class AppState
-    {
-    }
+    Idle = 0,
+    Recording = 1,
+    Playing = 2,
+    Paused = 3,
+    Stopping = 4,
+    Error = 5
 }
