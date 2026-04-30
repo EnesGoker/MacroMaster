@@ -204,30 +204,15 @@ public partial class MainForm
         _clearToolButton = CreateToolButton("Temizle", ClearCurrentSession);
         var hotkeysToolButton = CreateToolButton("Kisayollar", ShowHotkeyReference);
         var aboutToolButton = CreateToolButton("Hakkinda", ShowAboutDialog);
-        var sectionLabel = new ToolStripLabel("Dosya ve Yardim")
-        {
-            ForeColor = AppColors.TextSecondary,
-            Font = AppFonts.BodyStrong,
-            Margin = new Padding(0, 0, AppSpacing.Md, 0)
-        };
-        var hintLabel = new ToolStripLabel("Ana kontrol kartlari asagida")
-        {
-            ForeColor = AppColors.TextMuted,
-            Margin = new Padding(AppSpacing.Md, 0, 0, 0)
-        };
 
         toolStrip.Items.AddRange(
             [
-                sectionLabel,
-                new ToolStripSeparator(),
                 _saveToolButton,
                 _loadToolButton,
                 _clearToolButton,
                 new ToolStripSeparator(),
                 hotkeysToolButton,
-                aboutToolButton,
-                new ToolStripSeparator(),
-                hintLabel
+                aboutToolButton
             ]);
 
         return toolStrip;
@@ -347,10 +332,10 @@ public partial class MainForm
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 34f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 18f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 35f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 27f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 18f));
 
         var detailCard = CreateDetailCard();
         detailCard.Margin = new Padding(0, 0, 0, AppSpacing.Lg / 2);
@@ -415,7 +400,7 @@ public partial class MainForm
         sessionPanel.Controls.Add(CreateLabel("Secili Oturum", AppFonts.Caption, AppColors.TextSecondary));
 
         _sessionNameValueLabel = CreateLabel("-", AppFonts.SectionTitle, AppColors.TextPrimary);
-        _sessionNameValueLabel.Dock = DockStyle.Bottom;
+        _sessionNameValueLabel.Dock = DockStyle.Top;
         _sessionNameValueLabel.Height = 30;
         sessionPanel.Controls.Add(_sessionNameValueLabel);
 
@@ -466,7 +451,7 @@ public partial class MainForm
         layout.Controls.Add(buttonsLayout, 0, 1);
 
         _controlHintLabel = CreateLabel(
-            "Kayit ve oynatma burada. Kaydet, yukle ve temizle ust cubukta.",
+            "Kisayollar: F8 kayit, F9 oynat, F10 durdur",
             AppFonts.Caption,
             AppColors.TextSecondary);
         _controlHintLabel.Margin = new Padding(0, AppSpacing.Sm, 0, 0);
@@ -520,8 +505,8 @@ public partial class MainForm
             BackColor = Color.Transparent
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 26f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 144f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 164f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layout.Controls.Add(CreateSectionLabel("Olay Detayi"), 0, 0);
 
@@ -570,7 +555,7 @@ public partial class MainForm
             ScrollBars = RichTextBoxScrollBars.Vertical
         };
 
-        layout.Controls.Add(_eventDetailBox, 0, 1);
+        layout.Controls.Add(_eventDetailBox, 0, 3);
         card.Controls.Add(layout);
         return card;
     }
@@ -588,9 +573,9 @@ public partial class MainForm
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44f));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         layout.Controls.Add(CreateSectionLabel("Oynatma Durumu"), 0, 0);
@@ -601,19 +586,20 @@ public partial class MainForm
         var playbackMetrics = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 2,
+            ColumnCount = 4,
+            RowCount = 1,
             BackColor = Color.Transparent,
             Margin = new Padding(0, AppSpacing.Sm, 0, AppSpacing.Sm)
         };
-        playbackMetrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        playbackMetrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        playbackMetrics.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-        playbackMetrics.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+        for (var column = 0; column < 4; column++)
+        {
+            playbackMetrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+        }
+        playbackMetrics.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         playbackMetrics.Controls.Add(CreateCompactMetricBlock("Mod", out _playbackModeValueLabel), 0, 0);
         playbackMetrics.Controls.Add(CreateCompactMetricBlock("Hiz", out _playbackSpeedValueLabel), 1, 0);
-        playbackMetrics.Controls.Add(CreateCompactMetricBlock("Tekrar", out _playbackRepeatValueLabel), 0, 1);
-        playbackMetrics.Controls.Add(CreateCompactMetricBlock("Gecikme", out _playbackDelayValueLabel), 1, 1);
+        playbackMetrics.Controls.Add(CreateCompactMetricBlock("Tekrar", out _playbackRepeatValueLabel), 2, 0);
+        playbackMetrics.Controls.Add(CreateCompactMetricBlock("Gecikme", out _playbackDelayValueLabel), 3, 0);
         layout.Controls.Add(playbackMetrics, 0, 2);
 
         _currentEventValueLabel = CreateLabel("Hazir", AppFonts.Caption, AppColors.TextSecondary);
@@ -622,8 +608,8 @@ public partial class MainForm
         _playbackProgressBar = new ProgressBar
         {
             Dock = DockStyle.Fill,
-            Height = 18,
-            Margin = new Padding(0, AppSpacing.Sm, 0, AppSpacing.Sm),
+            Height = 14,
+            Margin = new Padding(0, AppSpacing.Xs, 0, AppSpacing.Sm),
             Style = ProgressBarStyle.Continuous
         };
         layout.Controls.Add(_playbackProgressBar, 0, 4);
@@ -679,11 +665,13 @@ public partial class MainForm
 
         var settingsLayout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
             RowCount = 5,
             BackColor = Color.Transparent,
-            Margin = new Padding(0, AppSpacing.Sm, 0, 0)
+            Margin = new Padding(0, AppSpacing.Sm, 0, 0),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
         };
         settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 54f));
         settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 46f));
@@ -769,8 +757,8 @@ public partial class MainForm
         panel.Controls.Add(titleLabel);
 
         valueLabel = CreateLabel("-", AppFonts.BodyStrong, AppColors.TextPrimary);
-        valueLabel.Dock = DockStyle.Bottom;
-        valueLabel.Height = 20;
+        valueLabel.Dock = DockStyle.Fill;
+        valueLabel.TextAlign = ContentAlignment.BottomLeft;
         panel.Controls.Add(valueLabel);
 
         return panel;
