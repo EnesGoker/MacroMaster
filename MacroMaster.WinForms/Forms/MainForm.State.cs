@@ -71,6 +71,49 @@ public partial class MainForm
         _saveButton.Enabled = hasSession && !_macroRecorderService.IsRecording;
         _loadButton.Enabled = !_macroRecorderService.IsRecording && !_macroPlaybackService.IsPlaying;
         _clearButton.Enabled = hasSession && !_macroRecorderService.IsRecording && !_macroPlaybackService.IsPlaying && !_macroPlaybackService.IsPaused;
+
+        _recordToolButton.Text = _macroRecorderService.IsRecording ? "Durdur" : "Kayit";
+        _recordToolButton.Enabled = canRecord;
+        _recordMenuItem.Text = _macroRecorderService.IsRecording ? "Kaydi Durdur" : "Kaydi Baslat";
+        _recordMenuItem.Enabled = canRecord;
+
+        _playToolButton.Text = _macroPlaybackService.IsPaused
+            ? "Devam"
+            : _macroPlaybackService.IsPlaying
+                ? "Duraklat"
+                : "Oynat";
+        _playToolButton.Enabled = canPlay;
+        _playMenuItem.Text = _macroPlaybackService.IsPaused
+            ? "Devam Et"
+            : _macroPlaybackService.IsPlaying
+                ? "Duraklat"
+                : "Oynat";
+        _playMenuItem.Enabled = canPlay;
+
+        _stopToolButton.Enabled = canStop;
+        _stopMenuItem.Enabled = canStop;
+        _saveToolButton.Enabled = _saveButton.Enabled;
+        _saveMenuItem.Enabled = _saveButton.Enabled;
+        _loadToolButton.Enabled = _loadButton.Enabled;
+        _loadMenuItem.Enabled = _loadButton.Enabled;
+        _clearToolButton.Enabled = _clearButton.Enabled;
+        _clearMenuItem.Enabled = _clearButton.Enabled;
+
+        _statusStripStateLabel.Text = $"Durum: {GetStateDisplayText(currentState)}";
+        _statusStripEventCountLabel.Text = $"Olay: {totalEvents}";
+        _statusStripSessionLabel.Text = $"Oturum: {(_activeSession?.Name ?? "Hazir oturum yok")}";
+        _statusStripHotkeysLabel.Text = "Kisayol: F8 / F9 / F10";
+
+        var canEditPlaybackSettings = !_macroRecorderService.IsRecording
+            && !_macroPlaybackService.IsPlaying
+            && !_macroPlaybackService.IsPaused;
+        _speedNumeric.Enabled = canEditPlaybackSettings;
+        _repeatCountNumeric.Enabled = canEditPlaybackSettings && !_loopPlaybackCheckBox.Checked;
+        _initialDelayNumeric.Enabled = canEditPlaybackSettings;
+        _loopPlaybackCheckBox.Enabled = canEditPlaybackSettings;
+        _relativeCoordinatesCheckBox.Enabled = canEditPlaybackSettings;
+        _preserveTimingCheckBox.Enabled = canEditPlaybackSettings;
+        _stopOnErrorCheckBox.Enabled = canEditPlaybackSettings;
     }
 
     private void SetActiveSession(MacroSession? session)

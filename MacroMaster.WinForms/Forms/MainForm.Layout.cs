@@ -5,7 +5,35 @@ namespace MacroMaster.WinForms.Forms;
 
 public partial class MainForm
 {
+    private TableLayoutPanel _chromeLayout = null!;
+    private Panel _contentHost = null!;
     private TableLayoutPanel _rootLayout = null!;
+    private MenuStrip _menuStrip = null!;
+    private ToolStrip _toolStrip = null!;
+    private StatusStrip _statusStrip = null!;
+    private ToolStripMenuItem _recordMenuItem = null!;
+    private ToolStripMenuItem _playMenuItem = null!;
+    private ToolStripMenuItem _stopMenuItem = null!;
+    private ToolStripMenuItem _saveMenuItem = null!;
+    private ToolStripMenuItem _loadMenuItem = null!;
+    private ToolStripMenuItem _clearMenuItem = null!;
+    private ToolStripButton _recordToolButton = null!;
+    private ToolStripButton _playToolButton = null!;
+    private ToolStripButton _stopToolButton = null!;
+    private ToolStripButton _saveToolButton = null!;
+    private ToolStripButton _loadToolButton = null!;
+    private ToolStripButton _clearToolButton = null!;
+    private ToolStripStatusLabel _statusStripStateLabel = null!;
+    private ToolStripStatusLabel _statusStripEventCountLabel = null!;
+    private ToolStripStatusLabel _statusStripSessionLabel = null!;
+    private ToolStripStatusLabel _statusStripHotkeysLabel = null!;
+    private NumericUpDown _speedNumeric = null!;
+    private NumericUpDown _repeatCountNumeric = null!;
+    private NumericUpDown _initialDelayNumeric = null!;
+    private CheckBox _loopPlaybackCheckBox = null!;
+    private CheckBox _relativeCoordinatesCheckBox = null!;
+    private CheckBox _preserveTimingCheckBox = null!;
+    private CheckBox _stopOnErrorCheckBox = null!;
     private Label _sessionStatusValueLabel = null!;
     private Label _totalEventsValueLabel = null!;
     private Label _totalDurationValueLabel = null!;
@@ -34,6 +62,10 @@ public partial class MainForm
         ClientSize = new Size(1440, 920);
         Text = "MacroMaster Kontrol Merkezi";
 
+        _menuStrip = CreateMenuStrip();
+        _toolStrip = CreateToolStrip();
+        _statusStrip = CreateStatusStrip();
+
         _rootLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -51,9 +83,160 @@ public partial class MainForm
         _rootLayout.Controls.Add(CreateSummaryAndActionsRow(), 0, 1);
         _rootLayout.Controls.Add(CreateContentRow(), 0, 2);
 
-        Controls.Add(_rootLayout);
+        _contentHost = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            Padding = AppSpacing.PagePadding
+        };
+        _contentHost.Controls.Add(_rootLayout);
+
+        _chromeLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 4,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        _chromeLayout.RowStyles.Add(new RowStyle());
+        _chromeLayout.RowStyles.Add(new RowStyle());
+        _chromeLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _chromeLayout.RowStyles.Add(new RowStyle());
+
+        _chromeLayout.Controls.Add(_menuStrip, 0, 0);
+        _chromeLayout.Controls.Add(_toolStrip, 0, 1);
+        _chromeLayout.Controls.Add(_contentHost, 0, 2);
+        _chromeLayout.Controls.Add(_statusStrip, 0, 3);
+
+        MainMenuStrip = _menuStrip;
+        Controls.Add(_chromeLayout);
 
         ResumeLayout(performLayout: true);
+    }
+
+    private MenuStrip CreateMenuStrip()
+    {
+        var menuStrip = new MenuStrip
+        {
+            Dock = DockStyle.Fill,
+            Stretch = true
+        };
+
+        var fileMenu = new ToolStripMenuItem("&Dosya");
+        _loadMenuItem = CreateMenuActionItem("Makro Yukle...", async () => await LoadSessionAsync());
+        _saveMenuItem = CreateMenuActionItem("Makro Kaydet...", async () => await SaveSessionAsync());
+        var exitMenuItem = new ToolStripMenuItem("Cikis");
+        exitMenuItem.Click += (_, _) => Close();
+        fileMenu.DropDownItems.AddRange(
+            [
+                _loadMenuItem,
+                _saveMenuItem,
+                new ToolStripSeparator(),
+                exitMenuItem
+            ]);
+
+        var macroMenu = new ToolStripMenuItem("&Makro");
+        _recordMenuItem = CreateMenuActionItem("Kaydi Baslat / Durdur", async () => await ToggleRecordingAsync());
+        _recordMenuItem.ShortcutKeyDisplayString = "F8";
+        _clearMenuItem = CreateMenuActionItem("Oturumu Temizle", ClearCurrentSession);
+        macroMenu.DropDownItems.AddRange(
+            [
+                _recordMenuItem,
+                new ToolStripSeparator(),
+                _clearMenuItem
+            ]);
+
+        var playbackMenu = new ToolStripMenuItem("&Oynatma");
+        _playMenuItem = CreateMenuActionItem("Oynat / Duraklat", async () => await TogglePlaybackAsync());
+        _playMenuItem.ShortcutKeyDisplayString = "F9";
+        _stopMenuItem = CreateMenuActionItem("Durdur", async () => await StopAsync());
+        _stopMenuItem.ShortcutKeyDisplayString = "F10";
+        playbackMenu.DropDownItems.AddRange(
+            [
+                _playMenuItem,
+                _stopMenuItem
+            ]);
+
+        var settingsMenu = new ToolStripMenuItem("&Ayarlar");
+        var hotkeysMenuItem = new ToolStripMenuItem("Kisayol Bilgileri");
+        hotkeysMenuItem.Click += (_, _) => ShowHotkeyReference();
+        settingsMenu.DropDownItems.Add(hotkeysMenuItem);
+
+        var helpMenu = new ToolStripMenuItem("&Yardim");
+        var aboutMenuItem = new ToolStripMenuItem("Hakkinda");
+        aboutMenuItem.Click += (_, _) => ShowAboutDialog();
+        helpMenu.DropDownItems.Add(aboutMenuItem);
+
+        menuStrip.Items.AddRange(
+            [
+                fileMenu,
+                macroMenu,
+                playbackMenu,
+                settingsMenu,
+                helpMenu
+            ]);
+
+        return menuStrip;
+    }
+
+    private ToolStrip CreateToolStrip()
+    {
+        var toolStrip = new ToolStrip
+        {
+            Dock = DockStyle.Fill,
+            GripStyle = ToolStripGripStyle.Hidden,
+            Stretch = true,
+            AutoSize = false,
+            Height = 42,
+            Padding = new Padding(AppSpacing.Sm, AppSpacing.Xs, AppSpacing.Sm, AppSpacing.Xs)
+        };
+
+        _recordToolButton = CreateToolButton("Kayit", async () => await ToggleRecordingAsync());
+        _stopToolButton = CreateToolButton("Durdur", async () => await StopAsync());
+        _playToolButton = CreateToolButton("Oynat", async () => await TogglePlaybackAsync());
+        _saveToolButton = CreateToolButton("Kaydet", async () => await SaveSessionAsync());
+        _loadToolButton = CreateToolButton("Yukle", async () => await LoadSessionAsync());
+        _clearToolButton = CreateToolButton("Temizle", ClearCurrentSession);
+
+        toolStrip.Items.AddRange(
+            [
+                _recordToolButton,
+                _stopToolButton,
+                _playToolButton,
+                new ToolStripSeparator(),
+                _saveToolButton,
+                _loadToolButton,
+                _clearToolButton
+            ]);
+
+        return toolStrip;
+    }
+
+    private StatusStrip CreateStatusStrip()
+    {
+        _statusStripStateLabel = new ToolStripStatusLabel("Durum: Hazir");
+        _statusStripEventCountLabel = new ToolStripStatusLabel("Olay: 0");
+        _statusStripSessionLabel = new ToolStripStatusLabel("Oturum: -")
+        {
+            Spring = true,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        _statusStripHotkeysLabel = new ToolStripStatusLabel("Kisayol: F8 / F9 / F10");
+
+        return new StatusStrip
+        {
+            Dock = DockStyle.Fill,
+            SizingGrip = false,
+            Items =
+            {
+                _statusStripStateLabel,
+                _statusStripEventCountLabel,
+                _statusStripSessionLabel,
+                _statusStripHotkeysLabel
+            }
+        };
     }
 
     private Control CreateHeaderCard()
@@ -140,14 +323,15 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 4,
             BackColor = Color.Transparent,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 44f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 36f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 22f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 22f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
 
         var detailCard = CreateDetailCard();
         detailCard.Margin = new Padding(0, 0, 0, AppSpacing.Lg / 2);
@@ -155,12 +339,16 @@ public partial class MainForm
         var playbackCard = CreatePlaybackCard();
         playbackCard.Margin = new Padding(0, AppSpacing.Lg / 2, 0, AppSpacing.Lg / 2);
 
+        var playbackSettingsCard = CreatePlaybackSettingsCard();
+        playbackSettingsCard.Margin = new Padding(0, AppSpacing.Lg / 2, 0, AppSpacing.Lg / 2);
+
         var hotkeysCard = CreateHotkeysCard();
         hotkeysCard.Margin = new Padding(0, AppSpacing.Lg / 2, 0, 0);
 
         layout.Controls.Add(detailCard, 0, 0);
         layout.Controls.Add(playbackCard, 0, 1);
-        layout.Controls.Add(hotkeysCard, 0, 2);
+        layout.Controls.Add(playbackSettingsCard, 0, 2);
+        layout.Controls.Add(hotkeysCard, 0, 3);
         return layout;
     }
 
@@ -398,6 +586,64 @@ public partial class MainForm
         return card;
     }
 
+    private ModernCard CreatePlaybackSettingsCard()
+    {
+        var card = CreateCard();
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = Color.Transparent
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        layout.Controls.Add(CreateSectionLabel("Oynatma Ayarlari"), 0, 0);
+
+        var settingsLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 7,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, AppSpacing.Sm, 0, 0)
+        };
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56f));
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44f));
+        for (var row = 0; row < 7; row++)
+        {
+            settingsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 14.28f));
+        }
+
+        _speedNumeric = CreateNumericInput(1.00m, 0.25m, 4.00m, 0.25m, 2);
+        _repeatCountNumeric = CreateNumericInput(1, 1, 999, 1, 0);
+        _initialDelayNumeric = CreateNumericInput(0, 0, 60000, 100, 0);
+        _loopPlaybackCheckBox = CreateSettingsCheckBox("Sonsuz dongu");
+        _relativeCoordinatesCheckBox = CreateSettingsCheckBox("Goreceli koordinat");
+        _preserveTimingCheckBox = CreateSettingsCheckBox("Orijinal zamani koru", isChecked: true);
+        _stopOnErrorCheckBox = CreateSettingsCheckBox("Hatada durdur", isChecked: true);
+
+        settingsLayout.Controls.Add(CreateSettingsLabel("Hiz"), 0, 0);
+        settingsLayout.Controls.Add(_speedNumeric, 1, 0);
+        settingsLayout.Controls.Add(CreateSettingsLabel("Tekrar"), 0, 1);
+        settingsLayout.Controls.Add(_repeatCountNumeric, 1, 1);
+        settingsLayout.Controls.Add(CreateSettingsLabel("Baslangic gecikmesi"), 0, 2);
+        settingsLayout.Controls.Add(_initialDelayNumeric, 1, 2);
+        settingsLayout.Controls.Add(_preserveTimingCheckBox, 0, 3);
+        settingsLayout.SetColumnSpan(_preserveTimingCheckBox, 2);
+        settingsLayout.Controls.Add(_loopPlaybackCheckBox, 0, 4);
+        settingsLayout.SetColumnSpan(_loopPlaybackCheckBox, 2);
+        settingsLayout.Controls.Add(_relativeCoordinatesCheckBox, 0, 5);
+        settingsLayout.SetColumnSpan(_relativeCoordinatesCheckBox, 2);
+        settingsLayout.Controls.Add(_stopOnErrorCheckBox, 0, 6);
+        settingsLayout.SetColumnSpan(_stopOnErrorCheckBox, 2);
+
+        layout.Controls.Add(settingsLayout, 0, 1);
+        card.Controls.Add(layout);
+        return card;
+    }
+
     private ModernCard CreateCard()
     {
         return new ModernCard
@@ -453,6 +699,85 @@ public partial class MainForm
 
         button.Click += async (_, _) => await onClickAsync();
         return button;
+    }
+
+    private ToolStripMenuItem CreateMenuActionItem(string text, Action onClick)
+    {
+        var item = new ToolStripMenuItem(text);
+        item.Click += (_, _) => onClick();
+        return item;
+    }
+
+    private ToolStripMenuItem CreateMenuActionItem(string text, Func<Task> onClickAsync)
+    {
+        var item = new ToolStripMenuItem(text);
+        item.Click += async (_, _) => await onClickAsync();
+        return item;
+    }
+
+    private ToolStripButton CreateToolButton(string text, Action onClick)
+    {
+        var button = new ToolStripButton(text)
+        {
+            AutoSize = false,
+            Width = 82,
+            DisplayStyle = ToolStripItemDisplayStyle.Text,
+            Margin = new Padding(AppSpacing.Xs, 0, AppSpacing.Xs, 0)
+        };
+
+        button.Click += (_, _) => onClick();
+        return button;
+    }
+
+    private ToolStripButton CreateToolButton(string text, Func<Task> onClickAsync)
+    {
+        var button = new ToolStripButton(text)
+        {
+            AutoSize = false,
+            Width = 82,
+            DisplayStyle = ToolStripItemDisplayStyle.Text,
+            Margin = new Padding(AppSpacing.Xs, 0, AppSpacing.Xs, 0)
+        };
+
+        button.Click += async (_, _) => await onClickAsync();
+        return button;
+    }
+
+    private NumericUpDown CreateNumericInput(decimal value, decimal minimum, decimal maximum, decimal increment, int decimalPlaces)
+    {
+        return new NumericUpDown
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(AppSpacing.Xs, 0, 0, 0),
+            Value = value,
+            Minimum = minimum,
+            Maximum = maximum,
+            Increment = increment,
+            DecimalPlaces = decimalPlaces,
+            BorderStyle = BorderStyle.FixedSingle,
+            BackColor = Color.FromArgb(10, 15, 28),
+            ForeColor = AppColors.TextPrimary,
+            Font = AppFonts.Body
+        };
+    }
+
+    private CheckBox CreateSettingsCheckBox(string text, bool isChecked = false)
+    {
+        return new CheckBox
+        {
+            Dock = DockStyle.Fill,
+            Text = text,
+            Checked = isChecked,
+            ForeColor = AppColors.TextSecondary,
+            Font = AppFonts.Body,
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+    }
+
+    private Label CreateSettingsLabel(string text)
+    {
+        return CreateLabel(text, AppFonts.Body, AppColors.TextSecondary);
     }
 
     private Label CreateSectionLabel(string text)

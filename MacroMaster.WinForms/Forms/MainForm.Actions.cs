@@ -43,7 +43,7 @@ public partial class MainForm
 
         if (_activeSession is { Events.Count: > 0 } currentSession)
         {
-            await _macroPlaybackService.PlayAsync(currentSession, new PlaybackSettings());
+            await _macroPlaybackService.PlayAsync(currentSession, BuildPlaybackSettings());
         }
     }
 
@@ -146,5 +146,42 @@ public partial class MainForm
             "MacroMaster",
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
+    }
+
+    private void ShowHotkeyReference()
+    {
+        MessageBox.Show(
+            this,
+            "Kayit baslat / durdur: F8" + Environment.NewLine +
+            "Oynat / duraklat: F9" + Environment.NewLine +
+            "Acil durdurma: F10",
+            "Global Kisayollar",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+    }
+
+    private void ShowAboutDialog()
+    {
+        MessageBox.Show(
+            this,
+            "MacroMaster" + Environment.NewLine +
+            "WinForms tabanli klavye ve fare makro kaydedicisi.",
+            "Hakkinda",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+    }
+
+    private PlaybackSettings BuildPlaybackSettings()
+    {
+        return new PlaybackSettings
+        {
+            SpeedMultiplier = (double)_speedNumeric.Value,
+            RepeatCount = (int)_repeatCountNumeric.Value,
+            InitialDelayMs = (int)_initialDelayNumeric.Value,
+            LoopIndefinitely = _loopPlaybackCheckBox.Checked,
+            UseRelativeCoordinates = _relativeCoordinatesCheckBox.Checked,
+            StopOnError = _stopOnErrorCheckBox.Checked,
+            PreserveOriginalTiming = _preserveTimingCheckBox.Checked
+        };
     }
 }
