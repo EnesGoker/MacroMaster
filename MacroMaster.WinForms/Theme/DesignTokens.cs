@@ -2,6 +2,9 @@ namespace MacroMaster.WinForms.Theme;
 
 internal static class DesignTokens
 {
+    private static readonly Size ReferenceWorkingAreaSize = new(1920, 1080);
+    private static readonly Size FallbackWorkingAreaSize = new(1280, 760);
+
     public static readonly float DensityScale = ResolveDensityScale();
 
     public static readonly Color Background = Color.FromArgb(7, 10, 16);
@@ -55,11 +58,11 @@ internal static class DesignTokens
 
     private static float ResolveDensityScale()
     {
-        Size workingAreaSize = Screen.PrimaryScreen?.WorkingArea.Size ?? new Size(1280, 760);
-        float widthScale = workingAreaSize.Width / 1920f;
-        float heightScale = workingAreaSize.Height / 1080f;
+        Size workingAreaSize = Screen.PrimaryScreen?.WorkingArea.Size ?? FallbackWorkingAreaSize;
+        float widthScale = workingAreaSize.Width / (float)ReferenceWorkingAreaSize.Width;
+        float heightScale = workingAreaSize.Height / (float)ReferenceWorkingAreaSize.Height;
         float screenScale = MathF.Min(widthScale, heightScale);
 
-        return Math.Clamp(screenScale, 1f, 1.35f);
+        return Math.Clamp(screenScale, 1f, 2.15f);
     }
 }
