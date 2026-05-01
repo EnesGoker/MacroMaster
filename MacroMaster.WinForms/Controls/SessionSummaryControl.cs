@@ -60,61 +60,39 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 6,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(64)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(86)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(78)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(78)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(68)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(68)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        var statsLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        statsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        statsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        statsLayoutPanel.Controls.Add(CreateStatTile(
-            "Olay",
-            _eventCountValueLabel,
-            new Padding(0, DesignTokens.Scale(8), DesignTokens.Scale(5), DesignTokens.Scale(8))),
-            0,
-            0);
-        statsLayoutPanel.Controls.Add(CreateStatTile(
-            "Sure",
-            _durationValueLabel,
-            new Padding(DesignTokens.Scale(5), DesignTokens.Scale(8), 0, DesignTokens.Scale(8))),
-            1,
-            0);
-
-        rootLayoutPanel.Controls.Add(CreateDetailCard("Durum", _statusValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 0);
-        rootLayoutPanel.Controls.Add(statsLayoutPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(CreateDetailCard(
+        rootLayoutPanel.Controls.Add(CreateSummaryCard("Durum", _statusValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard("Olay", _eventCountValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 1);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard("Sure", _durationValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard(
             "Oturum",
             _sessionNameValueLabel,
-            new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(8))),
-            0,
-            2);
-        rootLayoutPanel.Controls.Add(CreateDetailCard(
-            "Dosya",
-            _fileNameValueLabel,
-            new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(8))),
+            new Padding(0, 0, 0, DesignTokens.Scale(8))),
             0,
             3);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard(
+            "Dosya",
+            _fileNameValueLabel,
+            new Padding(0, 0, 0, DesignTokens.Scale(8))),
+            0,
+            4);
 
         Controls.Add(rootLayoutPanel);
     }
 
-    private static SoftPanel CreateStatTile(string caption, Label valueLabel, Padding margin)
+    private static SoftPanel CreateSummaryCard(string caption, Label valueLabel, Padding margin)
     {
         var panel = new SoftPanel
         {
@@ -124,9 +102,9 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = margin,
             Padding = new Padding(
                 DesignTokens.Scale(12),
-                DesignTokens.Scale(8),
+                DesignTokens.Scale(6),
                 DesignTokens.Scale(12),
-                DesignTokens.Scale(8))
+                DesignTokens.Scale(6))
         };
 
         valueLabel.ForeColor = DesignTokens.TextPrimary;
@@ -140,39 +118,7 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
-        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
-        layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, 0);
-        layoutPanel.Controls.Add(valueLabel, 0, 1);
-        panel.Controls.Add(layoutPanel);
-        return panel;
-    }
-
-    private static SoftPanel CreateDetailCard(string caption, Label valueLabel, Padding margin)
-    {
-        var panel = new SoftPanel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = DesignTokens.SurfaceInset,
-            BorderColor = DesignTokens.BorderSoft,
-            Margin = margin,
-            Padding = new Padding(
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(7),
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(7))
-        };
-
-        var layoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = Color.Transparent,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(24)));
+        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(20)));
         layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, 0);
         layoutPanel.Controls.Add(valueLabel, 0, 1);
@@ -186,10 +132,10 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             Text = text,
-            Font = DesignTokens.FontUiNormal,
+            Font = DesignTokens.FontUiSmall,
             ForeColor = DesignTokens.TextSecondary,
             BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.BottomLeft,
+            TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
     }
@@ -202,7 +148,7 @@ internal sealed class SessionSummaryControl : UserControl
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.TopLeft,
+            TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
     }

@@ -2,67 +2,55 @@ namespace MacroMaster.WinForms.Theme;
 
 internal static class DesignTokens
 {
-    private static readonly Size ReferenceWorkingAreaSize = new(1920, 1080);
-    private static readonly Size FallbackWorkingAreaSize = new(1280, 760);
+    public static float DensityScale => AppScale.DensityScale;
+    public static float FontScale => AppScale.FontScale;
 
-    public static readonly float DensityScale = ResolveDensityScale();
+    public static Color Background => AppColors.Background;
+    public static Color Surface => AppColors.Surface;
+    public static Color Surface2 => AppColors.Surface2;
+    public static Color Surface3 => AppColors.Surface3;
+    public static Color SurfaceInset => AppColors.SurfaceInset;
+    public static Color SurfaceHover => AppColors.SurfaceHover;
 
-    public static readonly Color Background = Color.FromArgb(7, 10, 16);
-    public static readonly Color Surface = Color.FromArgb(18, 21, 31);
-    public static readonly Color Surface2 = Color.FromArgb(25, 30, 45);
-    public static readonly Color Surface3 = Color.FromArgb(34, 41, 62);
-    public static readonly Color SurfaceInset = Color.FromArgb(9, 13, 21);
-    public static readonly Color SurfaceHover = Color.FromArgb(31, 38, 58);
+    public static Color Border => AppColors.Border;
+    public static Color BorderSoft => AppColors.BorderSoft;
+    public static Color BorderBright => AppColors.BorderBright;
 
-    public static readonly Color Border = Color.FromArgb(38, 48, 77);
-    public static readonly Color BorderSoft = Color.FromArgb(27, 35, 56);
-    public static readonly Color BorderBright = Color.FromArgb(62, 75, 112);
+    public static Color Accent => AppColors.Accent;
+    public static Color AccentDeep => AppColors.AccentDeep;
+    public static Color AccentSoft => AppColors.AccentSoft;
+    public static Color AccentPurple => AppColors.AccentPurple;
+    public static Color AccentRed => AppColors.AccentRed;
+    public static Color AccentRedSoft => AppColors.AccentRedSoft;
+    public static Color AccentGreen => AppColors.AccentGreen;
+    public static Color AccentOrange => AppColors.AccentOrange;
 
-    public static readonly Color Accent = Color.FromArgb(79, 158, 255);
-    public static readonly Color AccentDeep = Color.FromArgb(24, 100, 218);
-    public static readonly Color AccentSoft = Color.FromArgb(14, 55, 108);
-    public static readonly Color AccentPurple = Color.FromArgb(123, 95, 255);
-    public static readonly Color AccentRed = Color.FromArgb(255, 79, 106);
-    public static readonly Color AccentRedSoft = Color.FromArgb(76, 27, 44);
-    public static readonly Color AccentGreen = Color.FromArgb(61, 255, 160);
-    public static readonly Color AccentOrange = Color.FromArgb(255, 170, 61);
+    public static Color TextPrimary => AppColors.TextPrimary;
+    public static Color TextSecondary => AppColors.TextSecondary;
+    public static Color TextMuted => AppColors.TextMuted;
 
-    public static readonly Color TextPrimary = Color.FromArgb(240, 244, 255);
-    public static readonly Color TextSecondary = Color.FromArgb(156, 168, 202);
-    public static readonly Color TextMuted = Color.FromArgb(96, 108, 143);
+    public static int TitleBarHeight => AppSpacing.TitleBarHeight;
+    public static int ToolbarHeight => AppSpacing.ToolbarHeight;
+    public static int LibraryPanelWidth => AppSpacing.LibraryPanelWidth;
+    public static int BottomPanelHeight => AppSpacing.BottomPanelHeight;
+    public static int CardPadding => AppSpacing.CardPadding;
+    public static int GapSmall => AppSpacing.GapSmall;
+    public static int GapMedium => AppSpacing.GapMedium;
+    public static int Radius => AppSpacing.Radius;
 
-    public static readonly int TitleBarHeight = Scale(42);
-    public static readonly int ToolbarHeight = Scale(72);
-    public static readonly int LibraryPanelWidth = Scale(380);
-    public static readonly int BottomPanelHeight = Scale(240);
-    public static readonly int CardPadding = Scale(18);
-    public static readonly int GapSmall = Scale(8);
-    public static readonly int GapMedium = Scale(12);
-    public static readonly int Radius = Scale(12);
-
-    public static readonly Font FontMono = new("Consolas", ScaleFont(9.25f), FontStyle.Regular, GraphicsUnit.Point);
-    public static readonly Font FontUiNormal = new("Segoe UI", ScaleFont(9f), FontStyle.Regular, GraphicsUnit.Point);
-    public static readonly Font FontUiBold = new("Segoe UI", ScaleFont(9f), FontStyle.Bold, GraphicsUnit.Point);
-    public static readonly Font FontUiSmall = new("Segoe UI", ScaleFont(8.25f), FontStyle.Regular, GraphicsUnit.Point);
-    public static readonly Font FontUiLarge = new("Segoe UI", ScaleFont(13f), FontStyle.Bold, GraphicsUnit.Point);
+    public static Font FontMono => AppTypography.FontMono;
+    public static Font FontUiNormal => AppTypography.FontUiNormal;
+    public static Font FontUiBold => AppTypography.FontUiBold;
+    public static Font FontUiSmall => AppTypography.FontUiSmall;
+    public static Font FontUiLarge => AppTypography.FontUiLarge;
 
     public static int Scale(int value)
     {
-        return (int)Math.Round(value * DensityScale);
+        return AppScale.Scale(value);
     }
 
     public static float ScaleFont(float value)
     {
-        return MathF.Round(value * DensityScale, 2);
-    }
-
-    private static float ResolveDensityScale()
-    {
-        Size workingAreaSize = Screen.PrimaryScreen?.WorkingArea.Size ?? FallbackWorkingAreaSize;
-        float widthScale = workingAreaSize.Width / (float)ReferenceWorkingAreaSize.Width;
-        float heightScale = workingAreaSize.Height / (float)ReferenceWorkingAreaSize.Height;
-        float screenScale = MathF.Min(widthScale, heightScale);
-
-        return Math.Clamp(screenScale, 1f, 2.15f);
+        return AppScale.ScaleFont(value);
     }
 }

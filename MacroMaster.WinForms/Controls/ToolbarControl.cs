@@ -128,9 +128,9 @@ public partial class ToolbarControl : UserControl
         button.TextAlign = ContentAlignment.MiddleCenter;
         button.Margin = new Padding(
             DesignTokens.Scale(5),
-            DesignTokens.Scale(8),
+            DesignTokens.Scale(6),
             DesignTokens.Scale(5),
-            DesignTokens.Scale(8));
+            DesignTokens.Scale(6));
         button.Cursor = Cursors.Hand;
     }
 
