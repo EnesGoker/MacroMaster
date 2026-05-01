@@ -30,6 +30,7 @@ internal sealed class DashboardCard : UserControl
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Surface,
+            Padding = new Padding(2, 0, 0, 2),
             TextAlign = ContentAlignment.MiddleLeft
         };
 
@@ -51,7 +52,7 @@ internal sealed class DashboardCard : UserControl
             Padding = new Padding(DesignTokens.CardPadding)
         };
         _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30f));
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 32f));
         _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         _rootLayoutPanel.Controls.Add(_titleLabel, 0, 0);
         _rootLayoutPanel.Controls.Add(Body, 0, 1);
@@ -106,12 +107,18 @@ internal sealed class DashboardCard : UserControl
             return;
         }
 
+        var glowBounds = Rectangle.Inflate(bounds, -2, -2);
         using GraphicsPath path = CreateRoundedRectanglePath(bounds, DesignTokens.Radius);
+        using GraphicsPath glowPath = CreateRoundedRectanglePath(glowBounds, Math.Max(2, DesignTokens.Radius - 2));
         using var fillBrush = new SolidBrush(DesignTokens.Surface);
-        using var borderPen = new Pen(DesignTokens.Border);
+        using var glowPen = new Pen(Color.FromArgb(38, DesignTokens.Accent), 1f);
+        using var borderPen = new Pen(DesignTokens.BorderSoft);
+        using var highlightPen = new Pen(Color.FromArgb(45, Color.White));
 
         e.Graphics.FillPath(fillBrush, path);
+        e.Graphics.DrawPath(glowPen, glowPath);
         e.Graphics.DrawPath(borderPen, path);
+        e.Graphics.DrawLine(highlightPen, bounds.Left + DesignTokens.Radius, bounds.Top, bounds.Right - DesignTokens.Radius, bounds.Top);
     }
 
     protected override void OnResize(EventArgs e)
@@ -124,7 +131,7 @@ internal sealed class DashboardCard : UserControl
     private void UpdateHeaderVisibility()
     {
         _titleLabel.Visible = _showHeader;
-        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? 30f : 0f;
+        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? 32f : 0f;
     }
 
     private void UpdateRegion()

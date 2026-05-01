@@ -4,12 +4,12 @@ partial class ToolbarControl
 {
     private System.ComponentModel.IContainer components = null;
     private TableLayoutPanel toolbarLayoutPanel = null!;
-    private Button recordButton = null!;
-    private Button stopButton = null!;
-    private Button playbackButton = null!;
-    private Button saveButton = null!;
-    private Button loadButton = null!;
-    private Button hotkeysButton = null!;
+    private ToolbarButton recordButton = null!;
+    private ToolbarButton stopButton = null!;
+    private ToolbarButton playbackButton = null!;
+    private ToolbarButton saveButton = null!;
+    private ToolbarButton loadButton = null!;
+    private ToolbarButton hotkeysButton = null!;
 
     protected override void Dispose(bool disposing)
     {
@@ -24,12 +24,12 @@ partial class ToolbarControl
     private void InitializeComponent()
     {
         toolbarLayoutPanel = new TableLayoutPanel();
-        recordButton = new Button();
-        stopButton = new Button();
-        playbackButton = new Button();
-        saveButton = new Button();
-        loadButton = new Button();
-        hotkeysButton = new Button();
+        recordButton = new ToolbarButton();
+        stopButton = new ToolbarButton();
+        playbackButton = new ToolbarButton();
+        saveButton = new ToolbarButton();
+        loadButton = new ToolbarButton();
+        hotkeysButton = new ToolbarButton();
         toolbarLayoutPanel.SuspendLayout();
         SuspendLayout();
         // 

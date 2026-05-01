@@ -820,11 +820,11 @@ public partial class MainForm : Form
             ColumnCount = 1,
             RowCount = 4,
             BackColor = DesignTokens.Background,
-            Padding = new Padding(14),
+            Padding = new Padding(18, 14, 18, 16),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 46f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + 16f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + 18f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.BottomPanelHeight));
 
@@ -835,13 +835,13 @@ public partial class MainForm : Form
             RowCount = 1,
             BackColor = Color.Transparent,
             Margin = Padding.Empty,
-            Padding = new Padding(4, 0, 4, 6)
+            Padding = new Padding(4, 0, 4, 8)
         };
         headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
 
         var toolbarHostPanel = CreateCard();
-        toolbarHostPanel.ContentPadding = new Padding(18, 8, 18, 8);
+        toolbarHostPanel.ContentPadding = new Padding(18, 7, 18, 7);
         toolbarHostPanel.Body.Controls.Add(_toolbarControl);
 
         var mainLayoutPanel = new TableLayoutPanel
@@ -850,11 +850,11 @@ public partial class MainForm : Form
             ColumnCount = 3,
             RowCount = 1,
             BackColor = Color.Transparent,
-            Margin = new Padding(0, 6, 0, 8),
+            Margin = new Padding(0, 8, 0, 10),
             Padding = Padding.Empty
         };
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26f));
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25.5f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56.5f));
         mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18f));
 
         var libraryHostPanel = CreateCard();

@@ -125,7 +125,7 @@ internal sealed class PlaybackControl : UserControl
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 54f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var progressLayoutPanel = new TableLayoutPanel
@@ -309,10 +309,10 @@ internal sealed class PlaybackControl : UserControl
             var fillBounds = new Rectangle(left, y, Math.Max(trackHeight, fillWidth), trackHeight);
             int thumbX = left + fillWidth;
 
-            using var trackBrush = new SolidBrush(Color.FromArgb(84, 92, 99));
-            using var fillBrush = new SolidBrush(Color.FromArgb(11, 21, 65));
+            using var trackBrush = new SolidBrush(Color.FromArgb(70, 80, 96));
+            using var fillBrush = new SolidBrush(DesignTokens.AccentDeep);
             using var thumbBrush = new SolidBrush(DesignTokens.Accent);
-            using var thumbBorderPen = new Pen(Color.FromArgb(9, 16, 50), 2f);
+            using var thumbBorderPen = new Pen(DesignTokens.Surface, 2f);
 
             using GraphicsPath trackPath = CreateRoundPath(trackBounds, trackHeight);
             e.Graphics.FillPath(trackBrush, trackPath);
@@ -407,7 +407,7 @@ internal sealed class PlaybackControl : UserControl
                 ? DesignTokens.TextPrimary
                 : DesignTokens.TextMuted;
             Color background = isPrimary
-                ? Color.FromArgb(23, 95, 220)
+                ? DesignTokens.AccentDeep
                 : DesignTokens.Surface2;
             Color border = Enabled
                 ? isPrimary ? DesignTokens.Accent : DesignTokens.BorderBright
@@ -416,7 +416,7 @@ internal sealed class PlaybackControl : UserControl
             if (ClientRectangle.Contains(PointToClient(MousePosition)) && Enabled)
             {
                 background = isPrimary
-                    ? Color.FromArgb(37, 111, 238)
+                    ? Color.FromArgb(35, 116, 239)
                     : DesignTokens.Surface3;
             }
 

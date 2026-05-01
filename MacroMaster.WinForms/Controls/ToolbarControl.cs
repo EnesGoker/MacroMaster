@@ -1,4 +1,5 @@
 using MacroMaster.WinForms.Theme;
+using System.Drawing.Drawing2D;
 
 namespace MacroMaster.WinForms.Controls;
 
@@ -45,7 +46,7 @@ public partial class ToolbarControl : UserControl
     {
         _recordLabel = isRecording ? "Kaydi Durdur" : "Kaydi Baslat";
         SetButtonText(recordButton, _recordLabel, _recordHotkey);
-        ApplyButtonAccent(recordButton, isRecording ? DesignTokens.AccentRed : DesignTokens.AccentRed);
+        ApplyButtonAccent(recordButton, DesignTokens.AccentRed, DesignTokens.AccentRedSoft);
     }
 
     public void UpdatePlaybackButton(PlaybackButtonState state)
@@ -58,7 +59,7 @@ public partial class ToolbarControl : UserControl
         };
 
         SetButtonText(playbackButton, _playbackLabel, _playbackHotkey);
-        ApplyButtonAccent(playbackButton, DesignTokens.Accent);
+        ApplyButtonAccent(playbackButton, DesignTokens.Accent, DesignTokens.AccentSoft);
     }
 
     public void SetButtonsEnabled(ToolbarButtonState state)
@@ -102,32 +103,38 @@ public partial class ToolbarControl : UserControl
 
         foreach (Control control in toolbarLayoutPanel.Controls)
         {
-            if (control is Button button)
+            if (control is ToolbarButton button)
             {
                 ApplyToolbarButtonStyle(button);
             }
         }
 
-        ApplyButtonAccent(recordButton, DesignTokens.AccentRed);
-        ApplyButtonAccent(playbackButton, DesignTokens.Accent);
+        ApplyButtonAccent(recordButton, DesignTokens.AccentRed, DesignTokens.AccentRedSoft);
+        ApplyButtonAccent(playbackButton, DesignTokens.Accent, DesignTokens.AccentSoft);
+        ApplyButtonAccent(stopButton, DesignTokens.BorderBright, DesignTokens.Surface2);
     }
 
-    private static void ApplyToolbarButtonStyle(Button button)
+    private static void ApplyToolbarButtonStyle(ToolbarButton button)
     {
-        button.BackColor = DesignTokens.Surface2;
-        button.ForeColor = DesignTokens.TextPrimary;
-        button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderColor = DesignTokens.BorderBright;
-        button.FlatAppearance.BorderSize = 1;
+        button.FillColor = DesignTokens.Surface2;
+        button.HoverFillColor = DesignTokens.SurfaceHover;
+        button.PressedFillColor = DesignTokens.Surface3;
+        button.BorderColor = DesignTokens.BorderBright;
+        button.TextColor = DesignTokens.TextPrimary;
+        button.DisabledFillColor = Color.FromArgb(21, 25, 38);
+        button.DisabledBorderColor = DesignTokens.BorderSoft;
+        button.DisabledTextColor = DesignTokens.TextMuted;
         button.Font = DesignTokens.FontUiBold;
         button.TextAlign = ContentAlignment.MiddleCenter;
-        button.UseVisualStyleBackColor = false;
+        button.Margin = new Padding(5, 8, 5, 8);
         button.Cursor = Cursors.Hand;
     }
 
-    private static void ApplyButtonAccent(Button button, Color accent)
+    private static void ApplyButtonAccent(ToolbarButton button, Color accent, Color fill)
     {
-        button.FlatAppearance.BorderColor = accent;
+        button.BorderColor = accent;
+        button.FillColor = fill;
+        button.Invalidate();
     }
 
     private static void SetButtonText(Button button, string label, string? hotkey)
@@ -135,5 +142,144 @@ public partial class ToolbarControl : UserControl
         button.Text = string.IsNullOrWhiteSpace(hotkey)
             ? label
             : $"{label} ({hotkey})";
+    }
+
+    private sealed class ToolbarButton : Button
+    {
+        private bool _isPressed;
+
+        public ToolbarButton()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            UseVisualStyleBackColor = false;
+        }
+
+        public Color FillColor { get; set; } = DesignTokens.Surface2;
+
+        public Color HoverFillColor { get; set; } = DesignTokens.SurfaceHover;
+
+        public Color PressedFillColor { get; set; } = DesignTokens.Surface3;
+
+        public Color BorderColor { get; set; } = DesignTokens.BorderBright;
+
+        public Color TextColor { get; set; } = DesignTokens.TextPrimary;
+
+        public Color DisabledFillColor { get; set; } = DesignTokens.Surface;
+
+        public Color DisabledBorderColor { get; set; } = DesignTokens.BorderSoft;
+
+        public Color DisabledTextColor { get; set; } = DesignTokens.TextMuted;
+
+        protected override void OnEnabledChanged(EventArgs e)
+        {
+            base.OnEnabledChanged(e);
+            Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs mevent)
+        {
+            base.OnMouseDown(mevent);
+            _isPressed = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseUp(MouseEventArgs mevent)
+        {
+            base.OnMouseUp(mevent);
+            _isPressed = false;
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _isPressed = false;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            bool isHovered = ClientRectangle.Contains(PointToClient(MousePosition));
+            Color fill = ResolveFillColor(isHovered);
+            Color border = Enabled ? BorderColor : DisabledBorderColor;
+            Color text = Enabled ? TextColor : DisabledTextColor;
+
+            using GraphicsPath path = CreateRoundedRectanglePath(bounds, 8);
+            using var fillBrush = new SolidBrush(fill);
+            using var borderPen = new Pen(border);
+            pevent.Graphics.FillPath(fillBrush, path);
+            pevent.Graphics.DrawPath(borderPen, path);
+
+            TextRenderer.DrawText(
+                pevent.Graphics,
+                Text,
+                Font,
+                bounds,
+                text,
+                TextFormatFlags.HorizontalCenter |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPrefix);
+        }
+
+        private Color ResolveFillColor(bool isHovered)
+        {
+            if (!Enabled)
+            {
+                return DisabledFillColor;
+            }
+
+            if (_isPressed)
+            {
+                return PressedFillColor;
+            }
+
+            return isHovered ? HoverFillColor : FillColor;
+        }
+    }
+
+    private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)
+    {
+        var path = new GraphicsPath();
+        int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+
+        if (diameter <= 1)
+        {
+            path.AddRectangle(bounds);
+            return path;
+        }
+
+        var arc = new Rectangle(bounds.Left, bounds.Top, diameter, diameter);
+        path.AddArc(arc, 180, 90);
+        arc.X = bounds.Right - diameter;
+        path.AddArc(arc, 270, 90);
+        arc.Y = bounds.Bottom - diameter;
+        path.AddArc(arc, 0, 90);
+        arc.X = bounds.Left;
+        path.AddArc(arc, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

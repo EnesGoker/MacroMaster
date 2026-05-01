@@ -131,7 +131,7 @@ internal sealed class EventListControl : UserControl
         var gridHostPanel = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = DesignTokens.Background,
+            BackColor = DesignTokens.SurfaceInset,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
@@ -158,18 +158,18 @@ internal sealed class EventListControl : UserControl
         _eventGridView.AllowUserToDeleteRows = false;
         _eventGridView.AllowUserToResizeRows = false;
         _eventGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        _eventGridView.BackgroundColor = DesignTokens.Background;
+        _eventGridView.BackgroundColor = DesignTokens.SurfaceInset;
         _eventGridView.BorderStyle = BorderStyle.None;
         _eventGridView.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         _eventGridView.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-        _eventGridView.ColumnHeadersHeight = 38;
+        _eventGridView.ColumnHeadersHeight = 40;
         _eventGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         _eventGridView.EnableHeadersVisualStyles = false;
-        _eventGridView.GridColor = DesignTokens.Border;
+        _eventGridView.GridColor = DesignTokens.BorderSoft;
         _eventGridView.MultiSelect = false;
         _eventGridView.ReadOnly = true;
         _eventGridView.RowHeadersVisible = false;
-        _eventGridView.RowTemplate.Height = 34;
+        _eventGridView.RowTemplate.Height = 36;
         _eventGridView.ScrollBars = ScrollBars.Vertical;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
@@ -184,23 +184,23 @@ internal sealed class EventListControl : UserControl
 
     private void ApplyTheme()
     {
-        _emptyStateLabel.BackColor = DesignTokens.Background;
+        _emptyStateLabel.BackColor = DesignTokens.SurfaceInset;
         _emptyStateLabel.ForeColor = DesignTokens.TextSecondary;
         _emptyStateLabel.Font = DesignTokens.FontUiNormal;
 
         _summaryLabel.BackColor = DesignTokens.Surface;
         _summaryLabel.ForeColor = DesignTokens.TextSecondary;
         _summaryLabel.Font = DesignTokens.FontUiNormal;
-        _summaryLabel.Padding = new Padding(2, 6, 0, 0);
+        _summaryLabel.Padding = new Padding(10, 7, 0, 0);
 
-        _eventGridView.DefaultCellStyle.BackColor = DesignTokens.Background;
+        _eventGridView.DefaultCellStyle.BackColor = DesignTokens.SurfaceInset;
         _eventGridView.DefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
         _eventGridView.DefaultCellStyle.Font = DesignTokens.FontUiNormal;
-        _eventGridView.DefaultCellStyle.SelectionBackColor = Color.FromArgb(18, 82, 166);
+        _eventGridView.DefaultCellStyle.SelectionBackColor = Color.FromArgb(24, 93, 188);
         _eventGridView.DefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
-        _eventGridView.DefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
+        _eventGridView.DefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
 
-        _eventGridView.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(13, 17, 26);
+        _eventGridView.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(12, 17, 27);
         _eventGridView.AlternatingRowsDefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
 
         _eventGridView.ColumnHeadersDefaultCellStyle.BackColor = DesignTokens.Surface2;
@@ -208,7 +208,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ColumnHeadersDefaultCellStyle.Font = DesignTokens.FontUiBold;
         _eventGridView.ColumnHeadersDefaultCellStyle.SelectionBackColor = DesignTokens.Surface2;
         _eventGridView.ColumnHeadersDefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
-        _eventGridView.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
+        _eventGridView.ColumnHeadersDefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
     }
 
     private static DataGridViewTextBoxColumn CreateTextColumn(

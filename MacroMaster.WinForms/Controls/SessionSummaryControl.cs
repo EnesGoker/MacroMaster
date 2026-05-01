@@ -1,4 +1,5 @@
 using MacroMaster.WinForms.Theme;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 
 namespace MacroMaster.WinForms.Controls;
@@ -48,6 +49,9 @@ internal sealed class SessionSummaryControl : UserControl
         _durationValueLabel.Text = FormattableString.Invariant($"{Math.Max(0, state.TotalDurationMs)} ms");
         _sessionNameValueLabel.Text = state.SessionName;
         _fileNameValueLabel.Text = state.FileName;
+        _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
+            ? DesignTokens.TextPrimary
+            : DesignTokens.AccentGreen;
     }
 
     private void BuildLayout()
@@ -56,14 +60,16 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 5,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 58f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 78f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 68f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var statsLayoutPanel = new TableLayoutPanel
@@ -77,51 +83,36 @@ internal sealed class SessionSummaryControl : UserControl
         };
         statsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         statsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        statsLayoutPanel.Controls.Add(CreateStatTile("Olay", _eventCountValueLabel), 0, 0);
-        statsLayoutPanel.Controls.Add(CreateStatTile("Sure", _durationValueLabel), 1, 0);
+        statsLayoutPanel.Controls.Add(CreateStatTile("Olay", _eventCountValueLabel, new Padding(0, 8, 5, 8)), 0, 0);
+        statsLayoutPanel.Controls.Add(CreateStatTile("Sure", _durationValueLabel, new Padding(5, 8, 0, 8)), 1, 0);
 
-        rootLayoutPanel.Controls.Add(CreateDetailRow("Durum", _statusValueLabel), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateDetailCard("Durum", _statusValueLabel, new Padding(0, 0, 0, 8)), 0, 0);
         rootLayoutPanel.Controls.Add(statsLayoutPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(CreateStackedDetailPanel(), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateDetailCard("Oturum", _sessionNameValueLabel, new Padding(0, 8, 0, 8)), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateDetailCard("Dosya", _fileNameValueLabel, new Padding(0, 8, 0, 8)), 0, 3);
 
         Controls.Add(rootLayoutPanel);
     }
 
-    private TableLayoutPanel CreateStackedDetailPanel()
+    private static SoftPanel CreateStatTile(string caption, Label valueLabel, Padding margin)
     {
-        var detailLayoutPanel = new TableLayoutPanel
+        var panel = new SoftPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 10, 0, 0),
-            Padding = Padding.Empty
+            BackColor = DesignTokens.SurfaceInset,
+            BorderColor = DesignTokens.BorderSoft,
+            Margin = margin,
+            Padding = new Padding(12, 8, 12, 8)
         };
-        detailLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        detailLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-        detailLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-        detailLayoutPanel.Controls.Add(CreateDetailRow("Oturum", _sessionNameValueLabel), 0, 0);
-        detailLayoutPanel.Controls.Add(CreateDetailRow("Dosya", _fileNameValueLabel), 0, 1);
-        return detailLayoutPanel;
-    }
 
-    private static Panel CreateStatTile(string caption, Label valueLabel)
-    {
-        var panel = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = DesignTokens.Background,
-            Margin = new Padding(0, 0, 8, 0),
-            Padding = new Padding(10, 8, 10, 8)
-        };
+        valueLabel.ForeColor = DesignTokens.TextPrimary;
 
         var layoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
-            BackColor = DesignTokens.Background,
+            BackColor = Color.Transparent,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
@@ -133,22 +124,32 @@ internal sealed class SessionSummaryControl : UserControl
         return panel;
     }
 
-    private static TableLayoutPanel CreateDetailRow(string caption, Label valueLabel)
+    private static SoftPanel CreateDetailCard(string caption, Label valueLabel, Padding margin)
     {
+        var panel = new SoftPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = DesignTokens.SurfaceInset,
+            BorderColor = DesignTokens.BorderSoft,
+            Margin = margin,
+            Padding = new Padding(12, 7, 12, 7)
+        };
+
         var layoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
-            BackColor = DesignTokens.Surface,
+            BackColor = Color.Transparent,
             Margin = Padding.Empty,
-            Padding = new Padding(0, 0, 0, 8)
+            Padding = Padding.Empty
         };
-        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24f));
+        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 22f));
         layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, 0);
         layoutPanel.Controls.Add(valueLabel, 0, 1);
-        return layoutPanel;
+        panel.Controls.Add(layoutPanel);
+        return panel;
     }
 
     private static Label CreateCaptionLabel(string text)
@@ -176,5 +177,66 @@ internal sealed class SessionSummaryControl : UserControl
             TextAlign = ContentAlignment.TopLeft,
             AutoEllipsis = true
         };
+    }
+
+    private sealed class SoftPanel : Panel
+    {
+        public Color BorderColor { get; set; } = DesignTokens.BorderSoft;
+
+        public SoftPanel()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            using GraphicsPath path = CreateRoundPath(bounds, 10);
+            using var fillBrush = new SolidBrush(BackColor);
+            using var borderPen = new Pen(BorderColor);
+            e.Graphics.FillPath(fillBrush, path);
+            e.Graphics.DrawPath(borderPen, path);
+        }
+    }
+
+    private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
+    {
+        var path = new GraphicsPath();
+        int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+
+        if (diameter <= 1)
+        {
+            path.AddRectangle(bounds);
+            return path;
+        }
+
+        var arc = new Rectangle(bounds.Left, bounds.Top, diameter, diameter);
+        path.AddArc(arc, 180, 90);
+        arc.X = bounds.Right - diameter;
+        path.AddArc(arc, 270, 90);
+        arc.Y = bounds.Bottom - diameter;
+        path.AddArc(arc, 0, 90);
+        arc.X = bounds.Left;
+        path.AddArc(arc, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

@@ -60,7 +60,7 @@ partial class PlaybackSettingsControl
         rootLayoutPanel.Location = new Point(0, 0);
         rootLayoutPanel.Margin = Padding.Empty;
         rootLayoutPanel.Name = "rootLayoutPanel";
-        rootLayoutPanel.Padding = new Padding(16, 12, 16, 14);
+        rootLayoutPanel.Padding = new Padding(18, 12, 18, 14);
         rootLayoutPanel.RowCount = 2;
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -186,7 +186,7 @@ partial class PlaybackSettingsControl
         preserveTimingCheckBox.Name = "preserveTimingCheckBox";
         preserveTimingCheckBox.Size = new Size(375, 23);
         preserveTimingCheckBox.TabIndex = 7;
-        preserveTimingCheckBox.Text = "Gercek zamanli";
+        preserveTimingCheckBox.Text = "Zamanlamayi Koru";
         preserveTimingCheckBox.UseVisualStyleBackColor = false;
         // 
         // loopIndefinitelyCheckBox
@@ -198,7 +198,7 @@ partial class PlaybackSettingsControl
         loopIndefinitelyCheckBox.Name = "loopIndefinitelyCheckBox";
         loopIndefinitelyCheckBox.Size = new Size(375, 23);
         loopIndefinitelyCheckBox.TabIndex = 8;
-        loopIndefinitelyCheckBox.Text = "Sonsuza dongu";
+        loopIndefinitelyCheckBox.Text = "Sonsuz Dongu";
         loopIndefinitelyCheckBox.UseVisualStyleBackColor = false;
         // 
         // stopOnErrorCheckBox
@@ -210,7 +210,7 @@ partial class PlaybackSettingsControl
         stopOnErrorCheckBox.Name = "stopOnErrorCheckBox";
         stopOnErrorCheckBox.Size = new Size(375, 23);
         stopOnErrorCheckBox.TabIndex = 9;
-        stopOnErrorCheckBox.Text = "Hata'da durdur";
+        stopOnErrorCheckBox.Text = "Hatada Durdur";
         stopOnErrorCheckBox.UseVisualStyleBackColor = false;
         // 
         // relativeCoordinatesCheckBox

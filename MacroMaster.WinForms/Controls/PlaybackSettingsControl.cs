@@ -22,6 +22,7 @@ public partial class PlaybackSettingsControl : UserControl
         DoubleBuffered = true;
         ApplyTheme();
         PopulateSpeedOptions();
+        speedComboBox.DrawItem += speedComboBox_DrawItem;
         WireEvents();
         ApplySettings(new PlaybackSettings());
     }
@@ -82,15 +83,6 @@ public partial class PlaybackSettingsControl : UserControl
         repeatCountNumericUpDown.Enabled = enabled && !loopIndefinitelyCheckBox.Checked;
     }
 
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
-
-        using var borderPen = new Pen(DesignTokens.Border);
-        var bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
-        e.Graphics.DrawRectangle(borderPen, bounds);
-    }
-
     private void ApplyTheme()
     {
         BackColor = DesignTokens.Surface;
@@ -98,9 +90,11 @@ public partial class PlaybackSettingsControl : UserControl
         Font = DesignTokens.FontUiNormal;
         MinimumSize = new Size(0, DesignTokens.BottomPanelHeight);
 
+        rootLayoutPanel.BackColor = DesignTokens.Surface;
+        settingsLayoutPanel.BackColor = DesignTokens.Surface;
         titleLabel.ForeColor = DesignTokens.TextPrimary;
         titleLabel.Font = DesignTokens.FontUiBold;
-        dividerPanel.BackColor = DesignTokens.Border;
+        dividerPanel.BackColor = DesignTokens.BorderSoft;
 
         foreach (Control control in settingsLayoutPanel.Controls)
         {
@@ -112,7 +106,7 @@ public partial class PlaybackSettingsControl : UserControl
     {
         control.ForeColor = DesignTokens.TextSecondary;
         control.BackColor = control is TextBox or ComboBox or NumericUpDown
-            ? DesignTokens.Background
+            ? DesignTokens.SurfaceInset
             : Color.Transparent;
         control.Font = control is Label label && label == titleLabel
             ? DesignTokens.FontUiBold
@@ -120,7 +114,7 @@ public partial class PlaybackSettingsControl : UserControl
 
         if (control is NumericUpDown numericUpDown)
         {
-            numericUpDown.BackColor = DesignTokens.Background;
+            numericUpDown.BackColor = DesignTokens.SurfaceInset;
             numericUpDown.ForeColor = DesignTokens.TextPrimary;
             numericUpDown.BorderStyle = BorderStyle.FixedSingle;
             numericUpDown.TextAlign = HorizontalAlignment.Right;
@@ -128,15 +122,21 @@ public partial class PlaybackSettingsControl : UserControl
         }
         else if (control is ComboBox comboBox)
         {
-            comboBox.BackColor = DesignTokens.Background;
+            comboBox.BackColor = DesignTokens.SurfaceInset;
             comboBox.ForeColor = DesignTokens.TextPrimary;
             comboBox.FlatStyle = FlatStyle.Flat;
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBox.DrawMode = DrawMode.OwnerDrawFixed;
+            comboBox.ItemHeight = 24;
             return;
         }
         else if (control is CheckBox checkBox)
         {
             checkBox.ForeColor = DesignTokens.TextPrimary;
+            checkBox.FlatStyle = FlatStyle.Flat;
+            checkBox.FlatAppearance.BorderColor = DesignTokens.BorderBright;
+            checkBox.FlatAppearance.CheckedBackColor = DesignTokens.AccentDeep;
+            checkBox.FlatAppearance.MouseOverBackColor = DesignTokens.SurfaceHover;
         }
 
         foreach (Control child in control.Controls)
@@ -150,6 +150,35 @@ public partial class PlaybackSettingsControl : UserControl
         speedComboBox.Items.Clear();
         speedComboBox.Items.AddRange(["0.25x", "0.50x", "1.00x", "2.00x", "4.00x"]);
         speedComboBox.SelectedIndex = 2;
+    }
+
+    private void speedComboBox_DrawItem(object? sender, DrawItemEventArgs e)
+    {
+        _ = sender;
+
+        if (e.Index < 0)
+        {
+            return;
+        }
+
+        bool isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+        Color backColor = isSelected ? DesignTokens.AccentSoft : DesignTokens.SurfaceInset;
+        Color textColor = isSelected ? DesignTokens.TextPrimary : DesignTokens.TextSecondary;
+
+        using var backgroundBrush = new SolidBrush(backColor);
+        e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
+
+        string text = speedComboBox.Items[e.Index]?.ToString() ?? string.Empty;
+        var textBounds = new Rectangle(e.Bounds.Left + 8, e.Bounds.Top, e.Bounds.Width - 12, e.Bounds.Height);
+        TextRenderer.DrawText(
+            e.Graphics,
+            text,
+            DesignTokens.FontUiNormal,
+            textBounds,
+            textColor,
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.Left |
+            TextFormatFlags.EndEllipsis);
     }
 
     private void WireEvents()
