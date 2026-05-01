@@ -21,6 +21,7 @@ public partial class MainForm : Form
     private readonly Button _editHotkeysButton = new();
     private readonly ToolbarControl _toolbarControl = new();
     private readonly PlaybackSettingsControl _playbackSettingsControl = new();
+    private readonly EventListControl _eventListControl = new();
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
@@ -620,7 +621,6 @@ public partial class MainForm : Form
     {
         MacroSession? displayedSession = GetSessionForPlayback();
         bool hasSession = displayedSession is { Events.Count: > 0 };
-        PlaybackSettings playbackSettings = BuildPlaybackSettings();
 
         stateValueLabel.Text = FormatAppState(_applicationStateService.CurrentState);
         sessionNameValueLabel.Text = displayedSession?.Name ?? "Oturum yok";
@@ -639,9 +639,7 @@ public partial class MainForm : Form
         recordToggleButton.Text = _macroRecorderService.IsRecording
             ? "Kaydi Durdur"
             : "Kayit Baslat";
-        sessionPreviewTextBox.Text = BuildSessionPreview(
-            displayedSession,
-            playbackSettings);
+        _eventListControl.SetSession(displayedSession);
 
         bool isIdle = _applicationStateService.IsState(AppState.Idle);
 
@@ -727,6 +725,9 @@ public partial class MainForm : Form
         _playbackSettingsControl.Dock = DockStyle.Fill;
         _playbackSettingsControl.SettingsChanged += playbackSettingsControl_SettingsChanged;
 
+        _eventListControl.Name = "eventListControl";
+        _eventListControl.Dock = DockStyle.Fill;
+
         _editHotkeysButton.AutoSize = true;
         _editHotkeysButton.Name = "editHotkeysButton";
         _editHotkeysButton.Text = "Kisayol Ayarlari";
@@ -765,8 +766,6 @@ public partial class MainForm : Form
         statusTableLayoutPanel.Dock = DockStyle.Fill;
         statusTableLayoutPanel.Margin = Padding.Empty;
 
-        sessionPreviewTextBox.Dock = DockStyle.Fill;
-        sessionPreviewTextBox.Margin = Padding.Empty;
         ApplyLegacyDashboardTheme();
 
         var rootLayoutPanel = new TableLayoutPanel
@@ -817,7 +816,7 @@ public partial class MainForm : Form
         sessionHostPanel.Body.Controls.Add(statusTableLayoutPanel);
 
         var previewHostPanel = CreateSectionCard("Olay / Oturum Onizleme");
-        previewHostPanel.Body.Controls.Add(sessionPreviewTextBox);
+        previewHostPanel.Body.Controls.Add(_eventListControl);
 
         mainLayoutPanel.Controls.Add(sessionHostPanel, 0, 0);
         mainLayoutPanel.Controls.Add(previewHostPanel, 1, 0);
@@ -858,11 +857,6 @@ public partial class MainForm : Form
 
     private void ApplyLegacyDashboardTheme()
     {
-        sessionPreviewTextBox.BackColor = DesignTokens.Background;
-        sessionPreviewTextBox.BorderStyle = BorderStyle.None;
-        sessionPreviewTextBox.ForeColor = DesignTokens.TextSecondary;
-        sessionPreviewTextBox.Font = DesignTokens.FontMono;
-
         ApplyStatusTableTheme(statusTableLayoutPanel);
     }
 
@@ -1106,17 +1100,6 @@ public partial class MainForm : Form
         };
     }
 
-    private static string FormatEventType(MacroEventType eventType)
-    {
-        return eventType switch
-        {
-            MacroEventType.Keyboard => "Klavye",
-            MacroEventType.Mouse => "Fare",
-            MacroEventType.System => "Sistem",
-            _ => eventType.ToString()
-        };
-    }
-
     private static string BuildDefaultFileName(string sessionName, string extension)
     {
         char[] invalidCharacters = Path.GetInvalidFileNameChars();
@@ -1143,63 +1126,5 @@ public partial class MainForm : Form
     private PlaybackSettings BuildPlaybackSettings()
     {
         return _playbackSettingsControl.GetCurrentSettings();
-    }
-
-    private static string BuildSessionPreview(
-        MacroSession? session,
-        PlaybackSettings playbackSettings)
-    {
-        if (session is null)
-        {
-            return "Secili bir oturum yok. Yeni bir makro kaydedin veya diskten yukleyin.";
-        }
-
-        string timingSummary = playbackSettings.PreserveOriginalTiming
-            ? "Orijinal zamanlama korunur; hiz carpani uygulanmaz"
-            : FormattableString.Invariant($"Olceklenmis zamanlama x{playbackSettings.SpeedMultiplier:0.##}");
-        string repeatSummary = playbackSettings.LoopIndefinitely
-            ? "Sonsuz dongu"
-            : FormattableString.Invariant($"{Math.Max(playbackSettings.RepeatCount, 1)} kez tekrar");
-        string errorSummary = playbackSettings.StopOnError
-            ? "Ilk hatada dur"
-            : "Hatalari topla ve devam et";
-
-        List<string> lines =
-        [
-            $"Ad: {session.Name}",
-            $"Olusturulma (UTC): {session.CreatedAtUtc:yyyy-MM-dd HH:mm:ss}",
-            $"Format Surumu: {session.FormatVersion}",
-            FormattableString.Invariant($"Olay Sayisi: {session.Events.Count}"),
-            FormattableString.Invariant($"Sure: {session.TotalDurationMs} ms"),
-            $"Fare Oynatimi: {(playbackSettings.UseRelativeCoordinates ? "Guncel imlece gore goreli" : "Kaydedilen mutlak koordinatlar")}",
-            $"Zamanlama: {timingSummary}",
-            $"Tekrar: {repeatSummary}",
-            FormattableString.Invariant($"Baslangic Gecikmesi: {playbackSettings.InitialDelayMs} ms"),
-            $"Hata Politikasi: {errorSummary}",
-            string.Empty,
-            "Onizleme:"
-        ];
-
-        if (session.Events.Count == 0)
-        {
-            lines.Add("  Henuz kaydedilmis olay yok.");
-        }
-        else
-        {
-            IEnumerable<string> previewLines = session.Events
-                .Take(12)
-                .Select((macroEvent, index) =>
-                    FormattableString.Invariant(
-                        $"{index + 1,2}. {FormatEventType(macroEvent.EventType)} | {macroEvent.Description} | Gecikme {macroEvent.DelayMs} ms"));
-
-            lines.AddRange(previewLines);
-
-            if (session.Events.Count > 12)
-            {
-                lines.Add(FormattableString.Invariant($"... {session.Events.Count - 12} ek olay"));
-            }
-        }
-
-        return string.Join(Environment.NewLine, lines);
     }
 }
