@@ -767,6 +767,7 @@ public partial class MainForm : Form
 
         sessionPreviewTextBox.Dock = DockStyle.Fill;
         sessionPreviewTextBox.Margin = Padding.Empty;
+        ApplyLegacyDashboardTheme();
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -796,9 +797,9 @@ public partial class MainForm : Form
         headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
         headerLayoutPanel.Controls.Add(hotkeySummaryLabel, 0, 1);
 
-        var toolbarHostPanel = CreateHostPanel();
-        toolbarHostPanel.Padding = new Padding(0, 8, 0, 8);
-        toolbarHostPanel.Controls.Add(_toolbarControl);
+        var toolbarHostPanel = CreateCard();
+        toolbarHostPanel.ContentPadding = new Padding(18, 8, 18, 8);
+        toolbarHostPanel.Body.Controls.Add(_toolbarControl);
 
         var mainLayoutPanel = new TableLayoutPanel
         {
@@ -812,11 +813,11 @@ public partial class MainForm : Form
         mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30f));
         mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70f));
 
-        var sessionHostPanel = CreateSectionHostPanel("Oturum Ozeti");
-        sessionHostPanel.Controls.Add(statusTableLayoutPanel);
+        var sessionHostPanel = CreateSectionCard("Oturum Ozeti");
+        sessionHostPanel.Body.Controls.Add(statusTableLayoutPanel);
 
-        var previewHostPanel = CreateSectionHostPanel("Olay / Oturum Onizleme");
-        previewHostPanel.Controls.Add(sessionPreviewTextBox);
+        var previewHostPanel = CreateSectionCard("Olay / Oturum Onizleme");
+        previewHostPanel.Body.Controls.Add(sessionPreviewTextBox);
 
         mainLayoutPanel.Controls.Add(sessionHostPanel, 0, 0);
         mainLayoutPanel.Controls.Add(previewHostPanel, 1, 0);
@@ -836,9 +837,10 @@ public partial class MainForm : Form
         var playbackPlaceholderPanel = CreatePlaybackPlaceholderPanel();
         playbackPlaceholderPanel.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
 
-        var playbackSettingsHostPanel = CreateHostPanel();
+        var playbackSettingsHostPanel = CreateCard();
         playbackSettingsHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
-        playbackSettingsHostPanel.Controls.Add(_playbackSettingsControl);
+        playbackSettingsHostPanel.ContentPadding = Padding.Empty;
+        playbackSettingsHostPanel.Body.Controls.Add(_playbackSettingsControl);
 
         bottomLayoutPanel.Controls.Add(playbackPlaceholderPanel, 0, 0);
         bottomLayoutPanel.Controls.Add(playbackSettingsHostPanel, 1, 0);
@@ -854,51 +856,80 @@ public partial class MainForm : Form
         ResumeLayout(performLayout: true);
     }
 
-    private static Panel CreateHostPanel()
+    private void ApplyLegacyDashboardTheme()
     {
-        return new Panel
+        sessionPreviewTextBox.BackColor = DesignTokens.Background;
+        sessionPreviewTextBox.BorderStyle = BorderStyle.None;
+        sessionPreviewTextBox.ForeColor = DesignTokens.TextSecondary;
+        sessionPreviewTextBox.Font = DesignTokens.FontMono;
+
+        ApplyStatusTableTheme(statusTableLayoutPanel);
+    }
+
+    private static void ApplyStatusTableTheme(TableLayoutPanel tableLayoutPanel)
+    {
+        tableLayoutPanel.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
+        tableLayoutPanel.BackColor = DesignTokens.Surface;
+        tableLayoutPanel.Padding = Padding.Empty;
+
+        foreach (Control control in tableLayoutPanel.Controls)
+        {
+            control.BackColor = DesignTokens.Surface;
+            control.ForeColor = tableLayoutPanel.GetColumn(control) == 0
+                ? DesignTokens.TextPrimary
+                : DesignTokens.TextSecondary;
+            control.Font = tableLayoutPanel.GetColumn(control) == 0
+                ? DesignTokens.FontUiBold
+                : DesignTokens.FontUiNormal;
+            control.Margin = Padding.Empty;
+            control.Padding = new Padding(4, 0, 4, 0);
+
+            if (control is Label label)
+            {
+                label.AutoSize = false;
+                label.Dock = DockStyle.Fill;
+                label.TextAlign = ContentAlignment.MiddleLeft;
+            }
+        }
+    }
+
+    private static DashboardCard CreateCard()
+    {
+        return new DashboardCard
         {
             Dock = DockStyle.Fill,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
+            ShowHeader = false,
+            Margin = Padding.Empty
         };
     }
 
-    private static Panel CreateSectionHostPanel(string title)
+    private static DashboardCard CreateSectionCard(string title)
     {
-        var panel = CreateHostPanel();
-        panel.Padding = new Padding(DesignTokens.GapMedium, 36, DesignTokens.GapMedium, DesignTokens.GapMedium);
-
-        var titleLabel = new Label
-        {
-            Dock = DockStyle.Top,
-            Height = 28,
-            Text = title,
-            Font = DesignTokens.FontUiBold,
-            ForeColor = DesignTokens.TextPrimary,
-            BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-
-        panel.Controls.Add(titleLabel);
-        return panel;
+        var card = CreateCard();
+        card.ShowHeader = true;
+        card.Title = title;
+        card.ContentPadding = new Padding(
+            DesignTokens.CardPadding,
+            12,
+            DesignTokens.CardPadding,
+            DesignTokens.CardPadding);
+        return card;
     }
 
-    private static Panel CreatePlaybackPlaceholderPanel()
+    private static DashboardCard CreatePlaybackPlaceholderPanel()
     {
-        var panel = CreateSectionHostPanel("Oynatma Kontrolu");
+        var panel = CreateSectionCard("Oynatma Kontrolu");
         var placeholderLabel = new Label
         {
             Dock = DockStyle.Fill,
             Text = "PlaybackControl siradaki adimda bu alana yerlesecek.",
             Font = DesignTokens.FontUiNormal,
             ForeColor = DesignTokens.TextSecondary,
-            BackColor = Color.Transparent,
+            BackColor = DesignTokens.Surface,
             TextAlign = ContentAlignment.MiddleCenter
         };
 
-        panel.Controls.Add(placeholderLabel);
+        panel.Body.Controls.Add(placeholderLabel);
         return panel;
     }
 
