@@ -22,9 +22,11 @@ public partial class MainForm : Form
     private readonly ToolbarControl _toolbarControl = new();
     private readonly PlaybackSettingsControl _playbackSettingsControl = new();
     private readonly EventListControl _eventListControl = new();
+    private readonly PlaybackControl _playbackControl = new();
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
+    private int _playedEventCount;
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
@@ -284,10 +286,11 @@ public partial class MainForm : Form
         _macroRecorderService.RecordingStarted += OnRecordingStarted;
         _macroRecorderService.EventRecorded += OnEventRecorded;
         _macroRecorderService.RecordingStopped += OnRecordingStopped;
-        _macroPlaybackService.PlaybackStarted += OnPlaybackStateChanged;
+        _macroPlaybackService.PlaybackStarted += OnPlaybackStarted;
         _macroPlaybackService.PlaybackPaused += OnPlaybackStateChanged;
         _macroPlaybackService.PlaybackResumed += OnPlaybackStateChanged;
         _macroPlaybackService.PlaybackStopped += OnPlaybackStopped;
+        _macroPlaybackService.EventPlayed += OnPlaybackEventPlayed;
 
         _activeSession = _macroRecorderService.CurrentSession;
     }
@@ -298,10 +301,11 @@ public partial class MainForm : Form
         _macroRecorderService.RecordingStarted -= OnRecordingStarted;
         _macroRecorderService.EventRecorded -= OnEventRecorded;
         _macroRecorderService.RecordingStopped -= OnRecordingStopped;
-        _macroPlaybackService.PlaybackStarted -= OnPlaybackStateChanged;
+        _macroPlaybackService.PlaybackStarted -= OnPlaybackStarted;
         _macroPlaybackService.PlaybackPaused -= OnPlaybackStateChanged;
         _macroPlaybackService.PlaybackResumed -= OnPlaybackStateChanged;
         _macroPlaybackService.PlaybackStopped -= OnPlaybackStopped;
+        _macroPlaybackService.EventPlayed -= OnPlaybackEventPlayed;
     }
 
     private void OnApplicationStateChanged(AppState state)
@@ -329,13 +333,27 @@ public partial class MainForm : Form
         RequestUiRefresh();
     }
 
+    private void OnPlaybackStarted()
+    {
+        _playedEventCount = 0;
+        RequestUiRefresh();
+    }
+
     private void OnPlaybackStateChanged()
     {
         RequestUiRefresh();
     }
 
+    private void OnPlaybackEventPlayed(MacroEvent macroEvent)
+    {
+        _ = macroEvent;
+        _playedEventCount++;
+        RequestUiRefresh();
+    }
+
     private void OnPlaybackStopped()
     {
+        _playedEventCount = 0;
         RequestUiRefresh();
     }
 
@@ -531,6 +549,7 @@ public partial class MainForm : Form
         _macroRecorderService.Clear();
         _activeSession = null;
         _lastSessionPath = null;
+        _playedEventCount = 0;
         RefreshUiState();
 
         return Task.CompletedTask;
@@ -540,6 +559,7 @@ public partial class MainForm : Form
     {
         _activeSession = session;
         _lastSessionPath = filePath;
+        _playedEventCount = 0;
         RefreshUiState();
     }
 
@@ -621,6 +641,7 @@ public partial class MainForm : Form
     {
         MacroSession? displayedSession = GetSessionForPlayback();
         bool hasSession = displayedSession is { Events.Count: > 0 };
+        PlaybackSettings playbackSettings = BuildPlaybackSettings();
 
         stateValueLabel.Text = FormatAppState(_applicationStateService.CurrentState);
         sessionNameValueLabel.Text = displayedSession?.Name ?? "Oturum yok";
@@ -688,6 +709,12 @@ public partial class MainForm : Form
                 saveJsonButton.Enabled,
                 loadJsonButton.Enabled,
                 _editHotkeysButton.Enabled));
+        _playbackControl.UpdateState(
+            BuildPlaybackControlState(
+                displayedSession,
+                playbackSettings,
+                playbackToggleButton.Enabled,
+                stopButton.Enabled));
     }
 
     private void RequestUiRefresh()
@@ -727,6 +754,11 @@ public partial class MainForm : Form
 
         _eventListControl.Name = "eventListControl";
         _eventListControl.Dock = DockStyle.Fill;
+
+        _playbackControl.Name = "playbackControl";
+        _playbackControl.Dock = DockStyle.Fill;
+        _playbackControl.PlaybackClicked += playbackToggleButton_Click;
+        _playbackControl.StopClicked += stopButton_Click;
 
         _editHotkeysButton.AutoSize = true;
         _editHotkeysButton.Name = "editHotkeysButton";
@@ -833,15 +865,16 @@ public partial class MainForm : Form
         bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48f));
         bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52f));
 
-        var playbackPlaceholderPanel = CreatePlaybackPlaceholderPanel();
-        playbackPlaceholderPanel.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
+        var playbackControlCard = CreateSectionCard("Oynatma Kontrolu");
+        playbackControlCard.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
+        playbackControlCard.Body.Controls.Add(_playbackControl);
 
         var playbackSettingsHostPanel = CreateCard();
         playbackSettingsHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
         playbackSettingsHostPanel.ContentPadding = Padding.Empty;
         playbackSettingsHostPanel.Body.Controls.Add(_playbackSettingsControl);
 
-        bottomLayoutPanel.Controls.Add(playbackPlaceholderPanel, 0, 0);
+        bottomLayoutPanel.Controls.Add(playbackControlCard, 0, 0);
         bottomLayoutPanel.Controls.Add(playbackSettingsHostPanel, 1, 0);
 
         rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
@@ -908,23 +941,6 @@ public partial class MainForm : Form
             DesignTokens.CardPadding,
             DesignTokens.CardPadding);
         return card;
-    }
-
-    private static DashboardCard CreatePlaybackPlaceholderPanel()
-    {
-        var panel = CreateSectionCard("Oynatma Kontrolu");
-        var placeholderLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "PlaybackControl siradaki adimda bu alana yerlesecek.",
-            Font = DesignTokens.FontUiNormal,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.MiddleCenter
-        };
-
-        panel.Body.Controls.Add(placeholderLabel);
-        return panel;
     }
 
     private void playbackSettingsControl_SettingsChanged(object? sender, EventArgs e)
@@ -1126,5 +1142,41 @@ public partial class MainForm : Form
     private PlaybackSettings BuildPlaybackSettings()
     {
         return _playbackSettingsControl.GetCurrentSettings();
+    }
+
+    private PlaybackControlState BuildPlaybackControlState(
+        MacroSession? session,
+        PlaybackSettings playbackSettings,
+        bool canPlayback,
+        bool canStop)
+    {
+        int repeatCount = Math.Max(playbackSettings.RepeatCount, 1);
+        int sessionEventCount = session?.Events.Count ?? 0;
+        int totalEventCount = playbackSettings.LoopIndefinitely
+            ? sessionEventCount
+            : sessionEventCount * repeatCount;
+        int totalDurationMs = playbackSettings.LoopIndefinitely
+            ? session?.TotalDurationMs ?? 0
+            : (session?.TotalDurationMs ?? 0) * repeatCount + playbackSettings.InitialDelayMs;
+        int playedEventCount = _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused
+            ? _playedEventCount
+            : 0;
+
+        return new PlaybackControlState(
+            FormatAppState(_applicationStateService.CurrentState),
+            playedEventCount,
+            totalEventCount,
+            totalDurationMs,
+            playbackSettings.PreserveOriginalTiming ? 1.0 : playbackSettings.SpeedMultiplier,
+            repeatCount,
+            playbackSettings.LoopIndefinitely,
+            playbackSettings.InitialDelayMs,
+            canPlayback,
+            canStop,
+            _macroPlaybackService.IsPaused
+                ? PlaybackButtonState.Resume
+                : _macroPlaybackService.IsPlaying
+                    ? PlaybackButtonState.Pause
+                    : PlaybackButtonState.Play);
     }
 }
