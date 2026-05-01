@@ -152,19 +152,26 @@ public partial class PlaybackSettingsControl : UserControl
     {
         rootLayoutPanel.Padding = new Padding(
             DesignTokens.Scale(18),
-            DesignTokens.Scale(12),
+            DesignTokens.Scale(14),
             DesignTokens.Scale(18),
             DesignTokens.Scale(14));
-        rootLayoutPanel.RowStyles[0].Height = DesignTokens.Scale(34);
+        rootLayoutPanel.RowStyles[0].Height = DesignTokens.Scale(38);
+        settingsLayoutPanel.Margin = new Padding(0, DesignTokens.Scale(8), 0, 0);
 
         settingsLayoutPanel.ColumnStyles[0].Width = DesignTokens.Scale(150);
-        settingsLayoutPanel.ColumnStyles[2].Width = Math.Max(1, DesignTokens.Scale(1));
+        settingsLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(30);
 
         int inputTopMargin = DesignTokens.Scale(3);
-        int checkLeftMargin = DesignTokens.Scale(15);
+        int checkLeftMargin = DesignTokens.Scale(20);
         speedComboBox.Margin = new Padding(DesignTokens.Scale(3), inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
         repeatCountNumericUpDown.Margin = speedComboBox.Margin;
         initialDelayNumericUpDown.Margin = speedComboBox.Margin;
+        dividerPanel.Dock = DockStyle.Fill;
+        dividerPanel.Margin = new Padding(
+            DesignTokens.Scale(14),
+            DesignTokens.Scale(3),
+            DesignTokens.Scale(14),
+            DesignTokens.Scale(3));
         preserveTimingCheckBox.Margin = new Padding(checkLeftMargin, inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
         loopIndefinitelyCheckBox.Margin = preserveTimingCheckBox.Margin;
         stopOnErrorCheckBox.Margin = preserveTimingCheckBox.Margin;

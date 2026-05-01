@@ -60,32 +60,31 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 6,
+            RowCount = 5,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(68)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(68)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
 
-        rootLayoutPanel.Controls.Add(CreateSummaryCard("Durum", _statusValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateSummaryCard("Olay", _eventCountValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 1);
-        rootLayoutPanel.Controls.Add(CreateSummaryCard("Sure", _durationValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard("Durum", _statusValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(6))), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard("Olay", _eventCountValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(6))), 0, 1);
+        rootLayoutPanel.Controls.Add(CreateSummaryCard("Sure", _durationValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(6))), 0, 2);
         rootLayoutPanel.Controls.Add(CreateSummaryCard(
             "Oturum",
             _sessionNameValueLabel,
-            new Padding(0, 0, 0, DesignTokens.Scale(8))),
+            new Padding(0, 0, 0, DesignTokens.Scale(6))),
             0,
             3);
         rootLayoutPanel.Controls.Add(CreateSummaryCard(
             "Dosya",
             _fileNameValueLabel,
-            new Padding(0, 0, 0, DesignTokens.Scale(8))),
+            new Padding(0, 0, 0, 0)),
             0,
             4);
 
@@ -102,7 +101,7 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = margin,
             Padding = new Padding(
                 DesignTokens.Scale(12),
-                DesignTokens.Scale(6),
+                DesignTokens.Scale(10),
                 DesignTokens.Scale(12),
                 DesignTokens.Scale(6))
         };
