@@ -20,6 +20,7 @@ public partial class MainForm : Form
     private readonly IAppLogger _logger;
     private readonly Button _editHotkeysButton = new();
     private readonly ToolbarControl _toolbarControl = new();
+    private readonly PlaybackSettingsControl _playbackSettingsControl = new();
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
@@ -571,22 +572,7 @@ public partial class MainForm : Form
 
         try
         {
-            speedMultiplierNumericUpDown.Value = ClampDecimal(
-                (decimal)playbackSettings.SpeedMultiplier,
-                speedMultiplierNumericUpDown.Minimum,
-                speedMultiplierNumericUpDown.Maximum);
-            repeatCountNumericUpDown.Value = ClampDecimal(
-                playbackSettings.RepeatCount,
-                repeatCountNumericUpDown.Minimum,
-                repeatCountNumericUpDown.Maximum);
-            initialDelayNumericUpDown.Value = ClampDecimal(
-                playbackSettings.InitialDelayMs,
-                initialDelayNumericUpDown.Minimum,
-                initialDelayNumericUpDown.Maximum);
-            loopIndefinitelyCheckBox.Checked = playbackSettings.LoopIndefinitely;
-            relativeCoordinatesCheckBox.Checked = playbackSettings.UseRelativeCoordinates;
-            stopOnErrorCheckBox.Checked = playbackSettings.StopOnError;
-            preserveTimingCheckBox.Checked = playbackSettings.PreserveOriginalTiming;
+            _playbackSettingsControl.ApplySettings(playbackSettings);
         }
         finally
         {
@@ -687,6 +673,7 @@ public partial class MainForm : Form
             && !preserveTimingCheckBox.Checked;
         repeatCountNumericUpDown.Enabled = playbackSettingsEnabled
             && !loopIndefinitelyCheckBox.Checked;
+        _playbackSettingsControl.SetControlsEnabled(playbackSettingsEnabled);
 
         _toolbarControl.UpdateRecordButton(_macroRecorderService.IsRecording);
         _toolbarControl.UpdatePlaybackButton(
@@ -724,6 +711,7 @@ public partial class MainForm : Form
     private void InitializeDynamicControls()
     {
         actionsFlowLayoutPanel.Visible = false;
+        playbackSettingsPanel.Visible = false;
 
         _toolbarControl.Name = "toolbarControl";
         _toolbarControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -747,6 +735,22 @@ public partial class MainForm : Form
             sessionPreviewTextBox.Height = Math.Max(40, sessionPreviewTextBox.Height - verticalShift);
         }
 
+        _playbackSettingsControl.Name = "playbackSettingsControl";
+        _playbackSettingsControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        _playbackSettingsControl.Location = playbackSettingsPanel.Location;
+        _playbackSettingsControl.Size = new Size(playbackSettingsPanel.Width, Math.Max(150, playbackSettingsPanel.Height + 76));
+        _playbackSettingsControl.SettingsChanged += playbackSettingsControl_SettingsChanged;
+        Controls.Add(_playbackSettingsControl);
+        _playbackSettingsControl.BringToFront();
+
+        int settingsBottom = _playbackSettingsControl.Bottom + 14;
+        int previewShift = Math.Max(0, settingsBottom - sessionPreviewTextBox.Top);
+        if (previewShift > 0)
+        {
+            sessionPreviewTextBox.Top += previewShift;
+            sessionPreviewTextBox.Height = Math.Max(40, sessionPreviewTextBox.Height - previewShift);
+        }
+
         _editHotkeysButton.AutoSize = true;
         _editHotkeysButton.Name = "editHotkeysButton";
         _editHotkeysButton.Text = "Kisayol Ayarlari";
@@ -760,6 +764,19 @@ public partial class MainForm : Form
         {
             actionsFlowLayoutPanel.Controls.SetChildIndex(_editHotkeysButton, relativeCoordinatesIndex);
         }
+    }
+
+    private void playbackSettingsControl_SettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (_applyingPlaybackSettings)
+        {
+            return;
+        }
+
+        RefreshUiState();
     }
 
     private async Task EditHotkeysAsync()
@@ -958,18 +975,7 @@ public partial class MainForm : Form
 
     private PlaybackSettings BuildPlaybackSettings()
     {
-        return new PlaybackSettings
-        {
-            SpeedMultiplier = preserveTimingCheckBox.Checked
-                ? 1.0
-                : (double)speedMultiplierNumericUpDown.Value,
-            RepeatCount = Decimal.ToInt32(repeatCountNumericUpDown.Value),
-            InitialDelayMs = Decimal.ToInt32(initialDelayNumericUpDown.Value),
-            LoopIndefinitely = loopIndefinitelyCheckBox.Checked,
-            UseRelativeCoordinates = relativeCoordinatesCheckBox.Checked,
-            StopOnError = stopOnErrorCheckBox.Checked,
-            PreserveOriginalTiming = preserveTimingCheckBox.Checked
-        };
+        return _playbackSettingsControl.GetCurrentSettings();
     }
 
     private static string BuildSessionPreview(
