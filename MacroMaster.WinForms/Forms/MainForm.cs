@@ -27,6 +27,7 @@ public partial class MainForm : Form
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
     private int _playedEventCount;
+    private int _playedDurationMs;
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
@@ -336,6 +337,7 @@ public partial class MainForm : Form
     private void OnPlaybackStarted()
     {
         _playedEventCount = 0;
+        _playedDurationMs = 0;
         RequestUiRefresh();
     }
 
@@ -348,12 +350,14 @@ public partial class MainForm : Form
     {
         _ = macroEvent;
         _playedEventCount++;
+        _playedDurationMs += Math.Max(0, macroEvent.DelayMs);
         RequestUiRefresh();
     }
 
     private void OnPlaybackStopped()
     {
         _playedEventCount = 0;
+        _playedDurationMs = 0;
         RequestUiRefresh();
     }
 
@@ -550,6 +554,7 @@ public partial class MainForm : Form
         _activeSession = null;
         _lastSessionPath = null;
         _playedEventCount = 0;
+        _playedDurationMs = 0;
         RefreshUiState();
 
         return Task.CompletedTask;
@@ -560,6 +565,7 @@ public partial class MainForm : Form
         _activeSession = session;
         _lastSessionPath = filePath;
         _playedEventCount = 0;
+        _playedDurationMs = 0;
         RefreshUiState();
     }
 
@@ -1161,11 +1167,15 @@ public partial class MainForm : Form
         int playedEventCount = _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused
             ? _playedEventCount
             : 0;
+        int playedDurationMs = _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused
+            ? _playedDurationMs
+            : 0;
 
         return new PlaybackControlState(
             FormatAppState(_applicationStateService.CurrentState),
             playedEventCount,
             totalEventCount,
+            playedDurationMs,
             totalDurationMs,
             playbackSettings.PreserveOriginalTiming ? 1.0 : playbackSettings.SpeedMultiplier,
             repeatCount,
