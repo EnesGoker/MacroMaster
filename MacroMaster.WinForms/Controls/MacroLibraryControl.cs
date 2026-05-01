@@ -137,6 +137,7 @@ internal sealed class MacroLibraryControl : UserControl
         _macroListPanel.BackColor = DesignTokens.Surface;
         _macroListPanel.Margin = Padding.Empty;
         _macroListPanel.Padding = Padding.Empty;
+        _macroListPanel.Resize += (_, _) => ResizeLibraryRows();
 
         rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
         rootLayoutPanel.Controls.Add(searchPanel, 0, 1);
@@ -194,7 +195,20 @@ internal sealed class MacroLibraryControl : UserControl
 
         _totalMacroValueLabel.Text = DesignPreviewItems.Length.ToString(CultureInfo.InvariantCulture);
         _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
+        ResizeLibraryRows();
         _macroListPanel.ResumeLayout();
+    }
+
+    private void ResizeLibraryRows()
+    {
+        int rowWidth = Math.Max(
+            160,
+            _macroListPanel.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 8);
+
+        foreach (Control control in _macroListPanel.Controls)
+        {
+            control.Width = rowWidth;
+        }
     }
 
     private static Label CreateFooterCaptionLabel(string text)
@@ -237,10 +251,10 @@ internal sealed class MacroLibraryControl : UserControl
         public MacroLibraryRow(MacroLibraryItem item)
         {
             _item = item;
-            Height = 66;
+            Height = 76;
             Width = 320;
             Margin = new Padding(0, 0, 0, 8);
-            Padding = new Padding(10, 8, 10, 8);
+            Padding = new Padding(10, 9, 10, 9);
             BackColor = item.IsSelected
                 ? Color.FromArgb(10, 47, 98)
                 : Color.FromArgb(12, 20, 31);
@@ -267,7 +281,9 @@ internal sealed class MacroLibraryControl : UserControl
         {
             if (Parent is not null)
             {
-                Width = Math.Max(120, Parent.ClientSize.Width - 4);
+                Width = Math.Max(
+                    160,
+                    Parent.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 8);
             }
         }
 
@@ -282,15 +298,15 @@ internal sealed class MacroLibraryControl : UserControl
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 32f));
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 26f));
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 54f));
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50f));
 
             var iconLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "*",
-                Font = new Font(DesignTokens.FontUiLarge.FontFamily, 15f, FontStyle.Bold, GraphicsUnit.Point),
+                Text = _item.IsSelected ? ">" : "-",
+                Font = DesignTokens.FontUiBold,
                 ForeColor = _item.IsSelected ? DesignTokens.Accent : DesignTokens.TextSecondary,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter
@@ -305,8 +321,8 @@ internal sealed class MacroLibraryControl : UserControl
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 58f));
-            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 42f));
+            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
+            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
 
             textLayoutPanel.Controls.Add(
                 new Label
@@ -316,7 +332,7 @@ internal sealed class MacroLibraryControl : UserControl
                     Font = DesignTokens.FontUiBold,
                     ForeColor = DesignTokens.TextPrimary,
                     BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.BottomLeft,
+                    TextAlign = ContentAlignment.MiddleLeft,
                     AutoEllipsis = true
                 },
                 0,
@@ -329,7 +345,7 @@ internal sealed class MacroLibraryControl : UserControl
                     Font = DesignTokens.FontUiNormal,
                     ForeColor = DesignTokens.TextSecondary,
                     BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.TopLeft,
+                    TextAlign = ContentAlignment.MiddleLeft,
                     AutoEllipsis = true
                 },
                 0,
@@ -337,13 +353,12 @@ internal sealed class MacroLibraryControl : UserControl
 
             var countBadge = new RoundedPanel
             {
-                Anchor = AnchorStyles.Right,
-                Width = 46,
-                Height = 30,
+                Dock = DockStyle.Fill,
                 BackColor = _item.IsSelected
                     ? Color.FromArgb(9, 68, 135)
                     : DesignTokens.Surface2,
                 BorderColor = Color.Transparent,
+                Margin = new Padding(6, 13, 0, 13),
                 Padding = Padding.Empty
             };
             countBadge.Controls.Add(

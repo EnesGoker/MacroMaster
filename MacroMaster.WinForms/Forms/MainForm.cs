@@ -811,12 +811,8 @@ public partial class MainForm : Form
         titleLabel.Font = DesignTokens.FontUiLarge;
         titleLabel.ForeColor = DesignTokens.TextPrimary;
         titleLabel.Dock = DockStyle.Fill;
-        titleLabel.TextAlign = ContentAlignment.BottomLeft;
-
-        hotkeySummaryLabel.Font = DesignTokens.FontUiNormal;
-        hotkeySummaryLabel.ForeColor = DesignTokens.TextSecondary;
-        hotkeySummaryLabel.Dock = DockStyle.Fill;
-        hotkeySummaryLabel.TextAlign = ContentAlignment.TopLeft;
+        titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+        hotkeySummaryLabel.Visible = false;
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -827,7 +823,7 @@ public partial class MainForm : Form
             Padding = new Padding(14),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 58f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 46f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + 16f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.BottomPanelHeight));
@@ -836,15 +832,13 @@ public partial class MainForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 1,
             BackColor = Color.Transparent,
             Margin = Padding.Empty,
-            Padding = new Padding(4, 0, 4, 8)
+            Padding = new Padding(4, 0, 4, 6)
         };
-        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 58f));
-        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 42f));
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
-        headerLayoutPanel.Controls.Add(hotkeySummaryLabel, 0, 1);
 
         var toolbarHostPanel = CreateCard();
         toolbarHostPanel.ContentPadding = new Padding(18, 8, 18, 8);
@@ -859,8 +853,8 @@ public partial class MainForm : Form
             Margin = new Padding(0, 6, 0, 8),
             Padding = Padding.Empty
         };
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 24f));
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56f));
         mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18f));
 
         var libraryHostPanel = CreateCard();
@@ -1094,10 +1088,7 @@ public partial class MainForm : Form
         string playbackHotkey = FormatHotkey(_hotkeyConfiguration.PlaybackToggleHotkey);
         string stopHotkey = FormatHotkey(_hotkeyConfiguration.StopHotkey);
 
-        hotkeySummaryLabel.Text =
-            $"Kisayollar: Kayit {recordHotkey}  |  " +
-            $"Oynatma {playbackHotkey}  |  " +
-            $"Durdur {stopHotkey}";
+        hotkeySummaryLabel.Text = string.Empty;
         _toolbarControl.SetHotkeyHints(recordHotkey, stopHotkey, playbackHotkey, "F12");
     }
 

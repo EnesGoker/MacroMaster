@@ -19,6 +19,13 @@ public readonly record struct ToolbarButtonState(
 
 public partial class ToolbarControl : UserControl
 {
+    private string? _recordHotkey = "F8";
+    private string? _stopHotkey = "F10";
+    private string? _playbackHotkey = "F9";
+    private string? _hotkeysHotkey = "F12";
+    private string _recordLabel = "Kaydi Baslat";
+    private string _playbackLabel = "Oynat";
+
     public event EventHandler? RecordToggleClicked;
     public event EventHandler? StopClicked;
     public event EventHandler? PlaybackToggleClicked;
@@ -31,24 +38,26 @@ public partial class ToolbarControl : UserControl
         InitializeComponent();
         ApplyTheme();
         WireEvents();
-        SetHotkeyHints("F8", "F9", "F10", "F12");
+        SetHotkeyHints("F8", "F10", "F9", "F12");
     }
 
     public void UpdateRecordButton(bool isRecording)
     {
-        recordButton.Text = isRecording ? "Kaydi Durdur" : "Kaydi Baslat";
+        _recordLabel = isRecording ? "Kaydi Durdur" : "Kaydi Baslat";
+        SetButtonText(recordButton, _recordLabel, _recordHotkey);
         ApplyButtonAccent(recordButton, isRecording ? DesignTokens.AccentRed : DesignTokens.AccentRed);
     }
 
     public void UpdatePlaybackButton(PlaybackButtonState state)
     {
-        playbackButton.Text = state switch
+        _playbackLabel = state switch
         {
             PlaybackButtonState.Pause => "Duraklat",
             PlaybackButtonState.Resume => "Devam Et",
             _ => "Oynat"
         };
 
+        SetButtonText(playbackButton, _playbackLabel, _playbackHotkey);
         ApplyButtonAccent(playbackButton, DesignTokens.Accent);
     }
 
@@ -64,10 +73,15 @@ public partial class ToolbarControl : UserControl
 
     public void SetHotkeyHints(string record, string stop, string playback, string hotkeys)
     {
-        SetButtonText(recordButton, recordButton.Text, record);
-        SetButtonText(stopButton, "Durdur", stop);
-        SetButtonText(playbackButton, playbackButton.Text, playback);
-        SetButtonText(hotkeysButton, "Kisayollar", hotkeys);
+        _recordHotkey = record;
+        _stopHotkey = stop;
+        _playbackHotkey = playback;
+        _hotkeysHotkey = hotkeys;
+
+        SetButtonText(recordButton, _recordLabel, _recordHotkey);
+        SetButtonText(stopButton, "Durdur", _stopHotkey);
+        SetButtonText(playbackButton, _playbackLabel, _playbackHotkey);
+        SetButtonText(hotkeysButton, "Kisayollar", _hotkeysHotkey);
     }
 
     private void WireEvents()
@@ -120,6 +134,6 @@ public partial class ToolbarControl : UserControl
     {
         button.Text = string.IsNullOrWhiteSpace(hotkey)
             ? label
-            : $"{label}   {hotkey}";
+            : $"{label} ({hotkey})";
     }
 }
