@@ -23,6 +23,8 @@ public partial class MainForm : Form
     private readonly PlaybackSettingsControl _playbackSettingsControl = new();
     private readonly EventListControl _eventListControl = new();
     private readonly PlaybackControl _playbackControl = new();
+    private readonly MacroLibraryControl _macroLibraryControl = new();
+    private readonly SessionSummaryControl _sessionSummaryControl = new();
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
@@ -721,6 +723,15 @@ public partial class MainForm : Form
                 playbackSettings,
                 playbackToggleButton.Enabled,
                 stopButton.Enabled));
+        _sessionSummaryControl.UpdateState(
+            new SessionSummaryState(
+                FormatAppState(_applicationStateService.CurrentState),
+                displayedSession?.Name ?? "Oturum yok",
+                displayedSession?.Events.Count ?? 0,
+                displayedSession?.TotalDurationMs ?? 0,
+                string.IsNullOrWhiteSpace(_lastSessionPath)
+                    ? "Kaydedilmedi"
+                    : Path.GetFileName(_lastSessionPath)));
     }
 
     private void RequestUiRefresh()
@@ -760,6 +771,12 @@ public partial class MainForm : Form
 
         _eventListControl.Name = "eventListControl";
         _eventListControl.Dock = DockStyle.Fill;
+
+        _macroLibraryControl.Name = "macroLibraryControl";
+        _macroLibraryControl.Dock = DockStyle.Fill;
+
+        _sessionSummaryControl.Name = "sessionSummaryControl";
+        _sessionSummaryControl.Dock = DockStyle.Fill;
 
         _playbackControl.Name = "playbackControl";
         _playbackControl.Dock = DockStyle.Fill;
@@ -801,11 +818,6 @@ public partial class MainForm : Form
         hotkeySummaryLabel.Dock = DockStyle.Fill;
         hotkeySummaryLabel.TextAlign = ContentAlignment.TopLeft;
 
-        statusTableLayoutPanel.Dock = DockStyle.Fill;
-        statusTableLayoutPanel.Margin = Padding.Empty;
-
-        ApplyLegacyDashboardTheme();
-
         var rootLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -841,23 +853,32 @@ public partial class MainForm : Form
         var mainLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 1,
             BackColor = Color.Transparent,
             Margin = new Padding(0, 6, 0, 8),
             Padding = Padding.Empty
         };
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30f));
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 24f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18f));
 
-        var sessionHostPanel = CreateSectionCard("Oturum Ozeti");
-        sessionHostPanel.Body.Controls.Add(statusTableLayoutPanel);
+        var libraryHostPanel = CreateCard();
+        libraryHostPanel.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
+        libraryHostPanel.ContentPadding = new Padding(DesignTokens.CardPadding);
+        libraryHostPanel.Body.Controls.Add(_macroLibraryControl);
 
         var previewHostPanel = CreateSectionCard("Olay / Oturum Onizleme");
+        previewHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, DesignTokens.GapMedium / 2, 0);
         previewHostPanel.Body.Controls.Add(_eventListControl);
 
-        mainLayoutPanel.Controls.Add(sessionHostPanel, 0, 0);
+        var sessionHostPanel = CreateSectionCard("Oturum Ozeti");
+        sessionHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
+        sessionHostPanel.Body.Controls.Add(_sessionSummaryControl);
+
+        mainLayoutPanel.Controls.Add(libraryHostPanel, 0, 0);
         mainLayoutPanel.Controls.Add(previewHostPanel, 1, 0);
+        mainLayoutPanel.Controls.Add(sessionHostPanel, 2, 0);
 
         var bottomLayoutPanel = new TableLayoutPanel
         {
