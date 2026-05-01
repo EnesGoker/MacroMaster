@@ -657,22 +657,22 @@ public partial class MainForm
             RowCount = 2,
             BackColor = Color.Transparent
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layout.Controls.Add(CreateSectionLabel("Oynatma Ayarlari"), 0, 0);
 
         var settingsLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 3,
+            ColumnCount = 3,
+            RowCount = 1,
             BackColor = Color.Transparent,
-            Margin = new Padding(0, AppSpacing.Sm, 0, 0)
+            Margin = new Padding(0, AppSpacing.Md, 0, 0)
         };
-        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        settingsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
-        settingsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
-        settingsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60f));
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56f));
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 24f));
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44f));
+        settingsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _speedNumeric = CreateNumericInput(1.00m, 0.25m, 4.00m, 0.25m, 2);
         _repeatCountNumeric = CreateNumericInput(1, 1, 999, 1, 0);
@@ -682,56 +682,74 @@ public partial class MainForm
         _preserveTimingCheckBox = CreateSettingsCheckBox("Orijinal zaman", isChecked: true);
         _stopOnErrorCheckBox = CreateSettingsCheckBox("Hatada durdur", isChecked: true);
 
-        var numericLayout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 4,
-            RowCount = 1,
-            BackColor = Color.Transparent,
-            Margin = Padding.Empty
-        };
-        numericLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34f));
-        numericLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        numericLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 48f));
-        numericLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        numericLayout.Controls.Add(CreateSettingsLabel("Hiz"), 0, 0);
-        numericLayout.Controls.Add(_speedNumeric, 1, 0);
-        numericLayout.Controls.Add(CreateSettingsLabel("Tekrar"), 2, 0);
-        numericLayout.Controls.Add(_repeatCountNumeric, 3, 0);
-
-        var delayLayout = new TableLayoutPanel
+        var inputLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
-            RowCount = 1,
+            RowCount = 3,
             BackColor = Color.Transparent,
             Margin = Padding.Empty
         };
-        delayLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 54f));
-        delayLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 46f));
-        delayLayout.Controls.Add(CreateSettingsLabel("Baslangic gecikmesi"), 0, 0);
-        delayLayout.Controls.Add(_initialDelayNumeric, 1, 0);
+        inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        inputLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 32f));
+        inputLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
+        inputLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
+        inputLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
+        inputLayout.Controls.Add(_speedNumeric, 0, 0);
+        inputLayout.SetColumnSpan(_speedNumeric, 2);
+        inputLayout.Controls.Add(_repeatCountNumeric, 0, 1);
+        inputLayout.SetColumnSpan(_repeatCountNumeric, 2);
+        inputLayout.Controls.Add(_initialDelayNumeric, 0, 2);
+        inputLayout.Controls.Add(CreateLabel("ms", AppFonts.Body, AppColors.TextSecondary), 1, 2);
+
+        var leftColumn = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 3,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty
+        };
+        leftColumn.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120f));
+        leftColumn.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        leftColumn.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
+        leftColumn.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
+        leftColumn.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
+        leftColumn.Controls.Add(CreateSettingsLabel("Hiz"), 0, 0);
+        leftColumn.Controls.Add(CreateSettingsLabel("Tekrar"), 0, 1);
+        leftColumn.Controls.Add(CreateSettingsLabel("Baslangic Gecikmesi"), 0, 2);
+        leftColumn.Controls.Add(inputLayout, 1, 0);
+        leftColumn.SetRowSpan(inputLayout, 3);
 
         var optionsLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 2,
+            ColumnCount = 1,
+            RowCount = 4,
             BackColor = Color.Transparent,
-            Margin = Padding.Empty
+            Margin = new Padding(AppSpacing.Lg, 0, 0, 0)
         };
-        optionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        optionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        optionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        optionsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+        optionsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
         optionsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
         optionsLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
         optionsLayout.Controls.Add(_preserveTimingCheckBox, 0, 0);
-        optionsLayout.Controls.Add(_stopOnErrorCheckBox, 1, 0);
         optionsLayout.Controls.Add(_loopPlaybackCheckBox, 0, 1);
-        optionsLayout.Controls.Add(_relativeCoordinatesCheckBox, 1, 1);
+        optionsLayout.Controls.Add(_stopOnErrorCheckBox, 0, 2);
+        optionsLayout.Controls.Add(_relativeCoordinatesCheckBox, 0, 3);
 
-        settingsLayout.Controls.Add(numericLayout, 0, 0);
-        settingsLayout.Controls.Add(delayLayout, 0, 1);
-        settingsLayout.Controls.Add(optionsLayout, 0, 2);
+        var dividerPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Width = 1,
+            Margin = new Padding(AppSpacing.Md, 0, AppSpacing.Md, 0),
+            BackColor = Color.FromArgb(95, AppColors.CardBorder)
+        };
+
+        settingsLayout.Controls.Add(leftColumn, 0, 0);
+        settingsLayout.Controls.Add(dividerPanel, 1, 0);
+        settingsLayout.Controls.Add(optionsLayout, 2, 0);
 
         _speedNumeric.ValueChanged += (_, _) => RefreshUiState();
         _repeatCountNumeric.ValueChanged += (_, _) => RefreshUiState();
