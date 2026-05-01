@@ -227,7 +227,7 @@ partial class PlaybackSettingsControl
         // 
         // PlaybackSettingsControl
         // 
-        AutoScaleMode = AutoScaleMode.Font;
+        AutoScaleMode = AutoScaleMode.Dpi;
         Controls.Add(rootLayoutPanel);
         Name = "PlaybackSettingsControl";
         Size = new Size(938, 174);

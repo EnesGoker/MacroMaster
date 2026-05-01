@@ -114,7 +114,7 @@ partial class ToolbarControl
         // 
         // ToolbarControl
         // 
-        AutoScaleMode = AutoScaleMode.Font;
+        AutoScaleMode = AutoScaleMode.Dpi;
         Controls.Add(toolbarLayoutPanel);
         Name = "ToolbarControl";
         Size = new Size(1200, 62);

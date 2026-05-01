@@ -66,10 +66,10 @@ internal sealed class SessionSummaryControl : UserControl
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 58f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 78f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(64)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(86)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(78)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(78)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var statsLayoutPanel = new TableLayoutPanel
@@ -83,13 +83,33 @@ internal sealed class SessionSummaryControl : UserControl
         };
         statsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         statsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        statsLayoutPanel.Controls.Add(CreateStatTile("Olay", _eventCountValueLabel, new Padding(0, 8, 5, 8)), 0, 0);
-        statsLayoutPanel.Controls.Add(CreateStatTile("Sure", _durationValueLabel, new Padding(5, 8, 0, 8)), 1, 0);
+        statsLayoutPanel.Controls.Add(CreateStatTile(
+            "Olay",
+            _eventCountValueLabel,
+            new Padding(0, DesignTokens.Scale(8), DesignTokens.Scale(5), DesignTokens.Scale(8))),
+            0,
+            0);
+        statsLayoutPanel.Controls.Add(CreateStatTile(
+            "Sure",
+            _durationValueLabel,
+            new Padding(DesignTokens.Scale(5), DesignTokens.Scale(8), 0, DesignTokens.Scale(8))),
+            1,
+            0);
 
-        rootLayoutPanel.Controls.Add(CreateDetailCard("Durum", _statusValueLabel, new Padding(0, 0, 0, 8)), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateDetailCard("Durum", _statusValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(8))), 0, 0);
         rootLayoutPanel.Controls.Add(statsLayoutPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(CreateDetailCard("Oturum", _sessionNameValueLabel, new Padding(0, 8, 0, 8)), 0, 2);
-        rootLayoutPanel.Controls.Add(CreateDetailCard("Dosya", _fileNameValueLabel, new Padding(0, 8, 0, 8)), 0, 3);
+        rootLayoutPanel.Controls.Add(CreateDetailCard(
+            "Oturum",
+            _sessionNameValueLabel,
+            new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(8))),
+            0,
+            2);
+        rootLayoutPanel.Controls.Add(CreateDetailCard(
+            "Dosya",
+            _fileNameValueLabel,
+            new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(8))),
+            0,
+            3);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -102,7 +122,11 @@ internal sealed class SessionSummaryControl : UserControl
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
             Margin = margin,
-            Padding = new Padding(12, 8, 12, 8)
+            Padding = new Padding(
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(8),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(8))
         };
 
         valueLabel.ForeColor = DesignTokens.TextPrimary;
@@ -132,7 +156,11 @@ internal sealed class SessionSummaryControl : UserControl
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
             Margin = margin,
-            Padding = new Padding(12, 7, 12, 7)
+            Padding = new Padding(
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(7),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(7))
         };
 
         var layoutPanel = new TableLayoutPanel
@@ -144,7 +172,7 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 22f));
+        layoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(24)));
         layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, 0);
         layoutPanel.Controls.Add(valueLabel, 0, 1);
@@ -209,7 +237,7 @@ internal sealed class SessionSummaryControl : UserControl
                 return;
             }
 
-            using GraphicsPath path = CreateRoundPath(bounds, 10);
+            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(10));
             using var fillBrush = new SolidBrush(BackColor);
             using var borderPen = new Pen(BorderColor);
             e.Graphics.FillPath(fillBrush, path);

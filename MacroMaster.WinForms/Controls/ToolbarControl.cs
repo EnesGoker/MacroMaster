@@ -126,7 +126,11 @@ public partial class ToolbarControl : UserControl
         button.DisabledTextColor = DesignTokens.TextMuted;
         button.Font = DesignTokens.FontUiBold;
         button.TextAlign = ContentAlignment.MiddleCenter;
-        button.Margin = new Padding(5, 8, 5, 8);
+        button.Margin = new Padding(
+            DesignTokens.Scale(5),
+            DesignTokens.Scale(8),
+            DesignTokens.Scale(5),
+            DesignTokens.Scale(8));
         button.Cursor = Cursors.Hand;
     }
 
@@ -226,7 +230,7 @@ public partial class ToolbarControl : UserControl
             Color border = Enabled ? BorderColor : DisabledBorderColor;
             Color text = Enabled ? TextColor : DisabledTextColor;
 
-            using GraphicsPath path = CreateRoundedRectanglePath(bounds, 8);
+            using GraphicsPath path = CreateRoundedRectanglePath(bounds, DesignTokens.Scale(8));
             using var fillBrush = new SolidBrush(fill);
             using var borderPen = new Pen(border);
             pevent.Graphics.FillPath(fillBrush, path);

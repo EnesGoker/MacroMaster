@@ -126,7 +126,7 @@ internal sealed class EventListControl : UserControl
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(34)));
 
         var gridHostPanel = new Panel
         {
@@ -162,14 +162,14 @@ internal sealed class EventListControl : UserControl
         _eventGridView.BorderStyle = BorderStyle.None;
         _eventGridView.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         _eventGridView.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-        _eventGridView.ColumnHeadersHeight = 40;
+        _eventGridView.ColumnHeadersHeight = DesignTokens.Scale(42);
         _eventGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         _eventGridView.EnableHeadersVisualStyles = false;
         _eventGridView.GridColor = DesignTokens.BorderSoft;
         _eventGridView.MultiSelect = false;
         _eventGridView.ReadOnly = true;
         _eventGridView.RowHeadersVisible = false;
-        _eventGridView.RowTemplate.Height = 36;
+        _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
         _eventGridView.ScrollBars = ScrollBars.Vertical;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
@@ -191,14 +191,14 @@ internal sealed class EventListControl : UserControl
         _summaryLabel.BackColor = DesignTokens.Surface;
         _summaryLabel.ForeColor = DesignTokens.TextSecondary;
         _summaryLabel.Font = DesignTokens.FontUiNormal;
-        _summaryLabel.Padding = new Padding(10, 7, 0, 0);
+        _summaryLabel.Padding = new Padding(DesignTokens.Scale(10), DesignTokens.Scale(7), 0, 0);
 
         _eventGridView.DefaultCellStyle.BackColor = DesignTokens.SurfaceInset;
         _eventGridView.DefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
         _eventGridView.DefaultCellStyle.Font = DesignTokens.FontUiNormal;
         _eventGridView.DefaultCellStyle.SelectionBackColor = Color.FromArgb(24, 93, 188);
         _eventGridView.DefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
-        _eventGridView.DefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
+        _eventGridView.DefaultCellStyle.Padding = new Padding(DesignTokens.Scale(10), 0, DesignTokens.Scale(10), 0);
 
         _eventGridView.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(12, 17, 27);
         _eventGridView.AlternatingRowsDefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
@@ -208,7 +208,11 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ColumnHeadersDefaultCellStyle.Font = DesignTokens.FontUiBold;
         _eventGridView.ColumnHeadersDefaultCellStyle.SelectionBackColor = DesignTokens.Surface2;
         _eventGridView.ColumnHeadersDefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
-        _eventGridView.ColumnHeadersDefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
+        _eventGridView.ColumnHeadersDefaultCellStyle.Padding = new Padding(
+            DesignTokens.Scale(10),
+            0,
+            DesignTokens.Scale(10),
+            0);
     }
 
     private static DataGridViewTextBoxColumn CreateTextColumn(

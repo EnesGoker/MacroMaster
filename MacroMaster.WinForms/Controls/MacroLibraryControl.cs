@@ -54,10 +54,10 @@ internal sealed class MacroLibraryControl : UserControl
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(46)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(46)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
 
         var headerLayoutPanel = new TableLayoutPanel
         {
@@ -68,15 +68,15 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34f));
+        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(34)));
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 42f));
+        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(42)));
 
         var iconLabel = new Label
         {
             Dock = DockStyle.Fill,
             Text = "M",
-            Font = new Font(DesignTokens.FontUiLarge.FontFamily, 11f, FontStyle.Bold, GraphicsUnit.Point),
+            Font = new Font(DesignTokens.FontUiLarge.FontFamily, DesignTokens.ScaleFont(11f), FontStyle.Bold, GraphicsUnit.Point),
             ForeColor = DesignTokens.Accent,
             BackColor = DesignTokens.Surface,
             TextAlign = ContentAlignment.MiddleCenter
@@ -100,8 +100,8 @@ internal sealed class MacroLibraryControl : UserControl
             BackColor = DesignTokens.Surface2,
             ForeColor = DesignTokens.TextPrimary,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font(DesignTokens.FontUiLarge.FontFamily, 16f, FontStyle.Bold, GraphicsUnit.Point),
-            Margin = new Padding(6, 2, 0, 6),
+            Font = new Font(DesignTokens.FontUiLarge.FontFamily, DesignTokens.ScaleFont(16f), FontStyle.Bold, GraphicsUnit.Point),
+            Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(2), 0, DesignTokens.Scale(6)),
             UseVisualStyleBackColor = false
         };
         addButton.FlatAppearance.BorderColor = DesignTokens.BorderBright;
@@ -116,8 +116,8 @@ internal sealed class MacroLibraryControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.Border,
-            Margin = new Padding(0, 3, 0, 8),
-            Padding = new Padding(14, 0, 10, 0)
+            Margin = new Padding(0, DesignTokens.Scale(3), 0, DesignTokens.Scale(8)),
+            Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
         };
         var searchLabel = new Label
         {
@@ -154,8 +154,8 @@ internal sealed class MacroLibraryControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
-            Margin = new Padding(0, 8, 0, 0),
-            Padding = new Padding(12, 0, 12, 0)
+            Margin = new Padding(0, DesignTokens.Scale(8), 0, 0),
+            Padding = new Padding(DesignTokens.Scale(12), 0, DesignTokens.Scale(12), 0)
         };
 
         var footerLayoutPanel = new TableLayoutPanel
@@ -251,10 +251,14 @@ internal sealed class MacroLibraryControl : UserControl
         public MacroLibraryRow(MacroLibraryItem item)
         {
             _item = item;
-            Height = 74;
+            Height = DesignTokens.Scale(78);
             Width = 320;
-            Margin = new Padding(0, 0, 0, 8);
-            Padding = new Padding(12, 9, 12, 9);
+            Margin = new Padding(0, 0, 0, DesignTokens.Scale(9));
+            Padding = new Padding(
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(9),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(9));
             BackColor = item.IsSelected
                 ? DesignTokens.AccentSoft
                 : DesignTokens.SurfaceInset;
@@ -298,9 +302,9 @@ internal sealed class MacroLibraryControl : UserControl
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 28f));
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(28)));
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50f));
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(50)));
 
             var iconLabel = new Label
             {
@@ -358,7 +362,7 @@ internal sealed class MacroLibraryControl : UserControl
                     ? DesignTokens.AccentDeep
                     : DesignTokens.Surface3,
                 BorderColor = Color.Transparent,
-                Margin = new Padding(8, 14, 0, 14),
+                Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(14), 0, DesignTokens.Scale(14)),
                 Padding = Padding.Empty
             };
             countBadge.Controls.Add(

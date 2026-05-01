@@ -54,7 +54,7 @@ internal sealed class PlaybackControl : UserControl
         _eventCounterLabel = CreateMetaLabel(ContentAlignment.MiddleCenter);
         _settingsLabel = CreateMetaLabel(ContentAlignment.MiddleRight);
         _backButton = new IconButton(IconButtonKind.Previous);
-        _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSize = 56 };
+        _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSize = DesignTokens.Scale(56) };
         _stopButton = new IconButton(IconButtonKind.Stop);
         _toolTip = new ToolTip();
 
@@ -121,11 +121,11 @@ internal sealed class PlaybackControl : UserControl
             RowCount = 3,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
-            Padding = new Padding(0, 2, 0, 0)
+            Padding = new Padding(0, DesignTokens.Scale(2), 0, 0)
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 54f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(62)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(34)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var progressLayoutPanel = new TableLayoutPanel
@@ -139,7 +139,7 @@ internal sealed class PlaybackControl : UserControl
         };
         progressLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         progressLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        progressLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 26f));
+        progressLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(30)));
         progressLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         progressLayoutPanel.Controls.Add(_progressBar, 0, 0);
         progressLayoutPanel.SetColumnSpan(_progressBar, 2);
@@ -152,7 +152,7 @@ internal sealed class PlaybackControl : UserControl
             ColumnCount = 3,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 0, 0, 2),
+            Margin = new Padding(0, 0, 0, DesignTokens.Scale(2)),
             Padding = Padding.Empty
         };
         metaLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
@@ -172,9 +172,9 @@ internal sealed class PlaybackControl : UserControl
             Padding = Padding.Empty
         };
         controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72f));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92f));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72f));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(72)));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(92)));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(72)));
         controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         controlsLayoutPanel.Controls.Add(_backButton, 1, 0);
         controlsLayoutPanel.Controls.Add(_playbackButton, 2, 0);
@@ -298,8 +298,8 @@ internal sealed class PlaybackControl : UserControl
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            int trackHeight = 7;
-            int thumbRadius = 7;
+            int trackHeight = DesignTokens.Scale(7);
+            int thumbRadius = DesignTokens.Scale(7);
             int left = thumbRadius;
             int right = Width - thumbRadius;
             int y = Height / 2 - trackHeight / 2;
@@ -348,10 +348,10 @@ internal sealed class PlaybackControl : UserControl
 
             _kind = kind;
             Dock = DockStyle.Fill;
-            Margin = new Padding(4);
+            Margin = new Padding(DesignTokens.Scale(4));
             BackColor = DesignTokens.Surface;
             Cursor = Cursors.Hand;
-            ButtonSize = 46;
+            ButtonSize = DesignTokens.Scale(46);
         }
 
         public int ButtonSize { get; init; }
@@ -396,7 +396,8 @@ internal sealed class PlaybackControl : UserControl
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            int size = Math.Min(ButtonSize, Math.Min(Width - 4, Height - 4));
+            int inset = DesignTokens.Scale(4);
+            int size = Math.Min(ButtonSize, Math.Min(Width - inset, Height - inset));
             var bounds = new Rectangle(
                 (Width - size) / 2,
                 (Height - size) / 2,

@@ -89,6 +89,7 @@ public partial class PlaybackSettingsControl : UserControl
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
         MinimumSize = new Size(0, DesignTokens.BottomPanelHeight);
+        ApplyDensityScale();
 
         rootLayoutPanel.BackColor = DesignTokens.Surface;
         settingsLayoutPanel.BackColor = DesignTokens.Surface;
@@ -118,6 +119,7 @@ public partial class PlaybackSettingsControl : UserControl
             numericUpDown.ForeColor = DesignTokens.TextPrimary;
             numericUpDown.BorderStyle = BorderStyle.FixedSingle;
             numericUpDown.TextAlign = HorizontalAlignment.Right;
+            numericUpDown.MinimumSize = new Size(0, DesignTokens.Scale(28));
             return;
         }
         else if (control is ComboBox comboBox)
@@ -127,7 +129,8 @@ public partial class PlaybackSettingsControl : UserControl
             comboBox.FlatStyle = FlatStyle.Flat;
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox.DrawMode = DrawMode.OwnerDrawFixed;
-            comboBox.ItemHeight = 24;
+            comboBox.ItemHeight = DesignTokens.Scale(24);
+            comboBox.MinimumSize = new Size(0, DesignTokens.Scale(30));
             return;
         }
         else if (control is CheckBox checkBox)
@@ -143,6 +146,29 @@ public partial class PlaybackSettingsControl : UserControl
         {
             ApplyChildTheme(child);
         }
+    }
+
+    private void ApplyDensityScale()
+    {
+        rootLayoutPanel.Padding = new Padding(
+            DesignTokens.Scale(18),
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(18),
+            DesignTokens.Scale(14));
+        rootLayoutPanel.RowStyles[0].Height = DesignTokens.Scale(34);
+
+        settingsLayoutPanel.ColumnStyles[0].Width = DesignTokens.Scale(150);
+        settingsLayoutPanel.ColumnStyles[2].Width = Math.Max(1, DesignTokens.Scale(1));
+
+        int inputTopMargin = DesignTokens.Scale(3);
+        int checkLeftMargin = DesignTokens.Scale(15);
+        speedComboBox.Margin = new Padding(DesignTokens.Scale(3), inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
+        repeatCountNumericUpDown.Margin = speedComboBox.Margin;
+        initialDelayNumericUpDown.Margin = speedComboBox.Margin;
+        preserveTimingCheckBox.Margin = new Padding(checkLeftMargin, inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
+        loopIndefinitelyCheckBox.Margin = preserveTimingCheckBox.Margin;
+        stopOnErrorCheckBox.Margin = preserveTimingCheckBox.Margin;
+        relativeCoordinatesCheckBox.Margin = preserveTimingCheckBox.Margin;
     }
 
     private void PopulateSpeedOptions()
