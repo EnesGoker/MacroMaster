@@ -120,15 +120,19 @@ public partial class PlaybackSettingsControl : UserControl
 
         if (control is NumericUpDown numericUpDown)
         {
+            numericUpDown.BackColor = DesignTokens.Background;
             numericUpDown.ForeColor = DesignTokens.TextPrimary;
             numericUpDown.BorderStyle = BorderStyle.FixedSingle;
             numericUpDown.TextAlign = HorizontalAlignment.Right;
+            return;
         }
         else if (control is ComboBox comboBox)
         {
+            comboBox.BackColor = DesignTokens.Background;
             comboBox.ForeColor = DesignTokens.TextPrimary;
             comboBox.FlatStyle = FlatStyle.Flat;
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            return;
         }
         else if (control is CheckBox checkBox)
         {

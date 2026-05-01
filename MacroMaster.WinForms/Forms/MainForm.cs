@@ -712,44 +712,20 @@ public partial class MainForm : Form
     {
         actionsFlowLayoutPanel.Visible = false;
         playbackSettingsPanel.Visible = false;
+        BuildResponsiveHostLayout();
 
         _toolbarControl.Name = "toolbarControl";
-        _toolbarControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _toolbarControl.Location = actionsFlowLayoutPanel.Location;
-        _toolbarControl.Size = new Size(actionsFlowLayoutPanel.Width, DesignTokens.ToolbarHeight);
+        _toolbarControl.Dock = DockStyle.Fill;
         _toolbarControl.RecordToggleClicked += recordToggleButton_Click;
         _toolbarControl.PlaybackToggleClicked += playbackToggleButton_Click;
         _toolbarControl.StopClicked += stopButton_Click;
         _toolbarControl.SaveClicked += saveJsonButton_Click;
         _toolbarControl.LoadClicked += loadJsonButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;
-        Controls.Add(_toolbarControl);
-        _toolbarControl.BringToFront();
-
-        int toolbarBottom = _toolbarControl.Bottom + 12;
-        int verticalShift = Math.Max(0, toolbarBottom - playbackSettingsPanel.Top);
-        if (verticalShift > 0)
-        {
-            playbackSettingsPanel.Top += verticalShift;
-            sessionPreviewTextBox.Top += verticalShift;
-            sessionPreviewTextBox.Height = Math.Max(40, sessionPreviewTextBox.Height - verticalShift);
-        }
 
         _playbackSettingsControl.Name = "playbackSettingsControl";
-        _playbackSettingsControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _playbackSettingsControl.Location = playbackSettingsPanel.Location;
-        _playbackSettingsControl.Size = new Size(playbackSettingsPanel.Width, Math.Max(150, playbackSettingsPanel.Height + 76));
+        _playbackSettingsControl.Dock = DockStyle.Fill;
         _playbackSettingsControl.SettingsChanged += playbackSettingsControl_SettingsChanged;
-        Controls.Add(_playbackSettingsControl);
-        _playbackSettingsControl.BringToFront();
-
-        int settingsBottom = _playbackSettingsControl.Bottom + 14;
-        int previewShift = Math.Max(0, settingsBottom - sessionPreviewTextBox.Top);
-        if (previewShift > 0)
-        {
-            sessionPreviewTextBox.Top += previewShift;
-            sessionPreviewTextBox.Height = Math.Max(40, sessionPreviewTextBox.Height - previewShift);
-        }
 
         _editHotkeysButton.AutoSize = true;
         _editHotkeysButton.Name = "editHotkeysButton";
@@ -764,6 +740,166 @@ public partial class MainForm : Form
         {
             actionsFlowLayoutPanel.Controls.SetChildIndex(_editHotkeysButton, relativeCoordinatesIndex);
         }
+    }
+
+    private void BuildResponsiveHostLayout()
+    {
+        SuspendLayout();
+
+        BackColor = DesignTokens.Background;
+        ForeColor = DesignTokens.TextPrimary;
+        ClientSize = new Size(1280, 760);
+        MinimumSize = new Size(1000, 620);
+        Padding = Padding.Empty;
+
+        titleLabel.Font = DesignTokens.FontUiLarge;
+        titleLabel.ForeColor = DesignTokens.TextPrimary;
+        titleLabel.Dock = DockStyle.Fill;
+        titleLabel.TextAlign = ContentAlignment.BottomLeft;
+
+        hotkeySummaryLabel.Font = DesignTokens.FontUiNormal;
+        hotkeySummaryLabel.ForeColor = DesignTokens.TextSecondary;
+        hotkeySummaryLabel.Dock = DockStyle.Fill;
+        hotkeySummaryLabel.TextAlign = ContentAlignment.TopLeft;
+
+        statusTableLayoutPanel.Dock = DockStyle.Fill;
+        statusTableLayoutPanel.Margin = Padding.Empty;
+
+        sessionPreviewTextBox.Dock = DockStyle.Fill;
+        sessionPreviewTextBox.Margin = Padding.Empty;
+
+        var rootLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 4,
+            BackColor = DesignTokens.Background,
+            Padding = new Padding(14),
+            Margin = Padding.Empty
+        };
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 58f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + 16f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.BottomPanelHeight));
+
+        var headerLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = new Padding(4, 0, 4, 8)
+        };
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 58f));
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 42f));
+        headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
+        headerLayoutPanel.Controls.Add(hotkeySummaryLabel, 0, 1);
+
+        var toolbarHostPanel = CreateHostPanel();
+        toolbarHostPanel.Padding = new Padding(0, 8, 0, 8);
+        toolbarHostPanel.Controls.Add(_toolbarControl);
+
+        var mainLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 6, 0, 8),
+            Padding = Padding.Empty
+        };
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70f));
+
+        var sessionHostPanel = CreateSectionHostPanel("Oturum Ozeti");
+        sessionHostPanel.Controls.Add(statusTableLayoutPanel);
+
+        var previewHostPanel = CreateSectionHostPanel("Olay / Oturum Onizleme");
+        previewHostPanel.Controls.Add(sessionPreviewTextBox);
+
+        mainLayoutPanel.Controls.Add(sessionHostPanel, 0, 0);
+        mainLayoutPanel.Controls.Add(previewHostPanel, 1, 0);
+
+        var bottomLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48f));
+        bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52f));
+
+        var playbackPlaceholderPanel = CreatePlaybackPlaceholderPanel();
+        playbackPlaceholderPanel.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
+
+        var playbackSettingsHostPanel = CreateHostPanel();
+        playbackSettingsHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
+        playbackSettingsHostPanel.Controls.Add(_playbackSettingsControl);
+
+        bottomLayoutPanel.Controls.Add(playbackPlaceholderPanel, 0, 0);
+        bottomLayoutPanel.Controls.Add(playbackSettingsHostPanel, 1, 0);
+
+        rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
+        rootLayoutPanel.Controls.Add(toolbarHostPanel, 0, 1);
+        rootLayoutPanel.Controls.Add(mainLayoutPanel, 0, 2);
+        rootLayoutPanel.Controls.Add(bottomLayoutPanel, 0, 3);
+
+        Controls.Clear();
+        Controls.Add(rootLayoutPanel);
+
+        ResumeLayout(performLayout: true);
+    }
+
+    private static Panel CreateHostPanel()
+    {
+        return new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+    }
+
+    private static Panel CreateSectionHostPanel(string title)
+    {
+        var panel = CreateHostPanel();
+        panel.Padding = new Padding(DesignTokens.GapMedium, 36, DesignTokens.GapMedium, DesignTokens.GapMedium);
+
+        var titleLabel = new Label
+        {
+            Dock = DockStyle.Top,
+            Height = 28,
+            Text = title,
+            Font = DesignTokens.FontUiBold,
+            ForeColor = DesignTokens.TextPrimary,
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+
+        panel.Controls.Add(titleLabel);
+        return panel;
+    }
+
+    private static Panel CreatePlaybackPlaceholderPanel()
+    {
+        var panel = CreateSectionHostPanel("Oynatma Kontrolu");
+        var placeholderLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "PlaybackControl siradaki adimda bu alana yerlesecek.",
+            Font = DesignTokens.FontUiNormal,
+            ForeColor = DesignTokens.TextSecondary,
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleCenter
+        };
+
+        panel.Controls.Add(placeholderLabel);
+        return panel;
     }
 
     private void playbackSettingsControl_SettingsChanged(object? sender, EventArgs e)
