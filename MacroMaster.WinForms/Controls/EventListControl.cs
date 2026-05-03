@@ -1,6 +1,7 @@
 using MacroMaster.Domain.Enums;
 using MacroMaster.Domain.Models;
 using MacroMaster.WinForms.Theme;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 
 namespace MacroMaster.WinForms.Controls;
@@ -184,6 +185,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ScrollBars = ScrollBars.Both;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _eventGridView.CellMouseDown += EventGridView_CellMouseDown;
+        _eventGridView.CellPainting += EventGridView_CellPainting;
 
         _eventGridView.Columns.Add(CreateTextColumn("#", "#", 32, 5));
         _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 70, 12));
@@ -230,6 +232,82 @@ internal sealed class EventListControl : UserControl
         _eventGridView.CurrentCell = _eventGridView.Rows[e.RowIndex].Cells[Math.Max(0, e.ColumnIndex)];
         _eventContextMenu.Tag = e.RowIndex;
         _eventContextMenu.Show(_eventGridView, _eventGridView.PointToClient(Cursor.Position));
+    }
+
+    private void EventGridView_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+    {
+        _ = sender;
+
+        if (e.RowIndex < 0 || e.ColumnIndex != _eventGridView.Columns["Type"].Index)
+        {
+            return;
+        }
+
+        string eventType = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(eventType))
+        {
+            return;
+        }
+
+        Graphics? graphics = e.Graphics;
+        Font font = e.CellStyle?.Font ?? _eventGridView.Font;
+        if (graphics is null)
+        {
+            return;
+        }
+
+        e.Paint(
+            e.CellBounds,
+            DataGridViewPaintParts.Background |
+            DataGridViewPaintParts.Border |
+            DataGridViewPaintParts.SelectionBackground);
+
+        Color accentColor = eventType switch
+        {
+            "Fare" => Color.FromArgb(79, 158, 255),
+            "Klavye" => Color.FromArgb(123, 95, 255),
+            "Sistem" => Color.FromArgb(52, 199, 89),
+            _ => DesignTokens.TextSecondary
+        };
+        Color pillBackColor = Color.FromArgb(
+            _eventGridView.Rows[e.RowIndex].Selected ? 44 : 26,
+            accentColor);
+
+        int horizontalPadding = DesignTokens.Scale(8);
+        int verticalPadding = DesignTokens.Scale(7);
+        Size textSize = TextRenderer.MeasureText(eventType, font);
+        int pillWidth = Math.Min(
+            e.CellBounds.Width - horizontalPadding * 2,
+            Math.Max(DesignTokens.Scale(54), textSize.Width + DesignTokens.Scale(18)));
+        int pillHeight = Math.Min(
+            e.CellBounds.Height - verticalPadding * 2,
+            Math.Max(DesignTokens.Scale(22), textSize.Height + DesignTokens.Scale(4)));
+
+        var pillBounds = new Rectangle(
+            e.CellBounds.Left + (e.CellBounds.Width - pillWidth) / 2,
+            e.CellBounds.Top + (e.CellBounds.Height - pillHeight) / 2,
+            Math.Max(1, pillWidth),
+            Math.Max(1, pillHeight));
+
+        using GraphicsPath pillPath = CreateRoundedRectanglePath(pillBounds, DesignTokens.Scale(10));
+        using var backgroundBrush = new SolidBrush(pillBackColor);
+        using var borderPen = new Pen(Color.FromArgb(120, accentColor));
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        graphics.FillPath(backgroundBrush, pillPath);
+        graphics.DrawPath(borderPen, pillPath);
+
+        TextRenderer.DrawText(
+            graphics,
+            eventType,
+            font,
+            pillBounds,
+            accentColor,
+            TextFormatFlags.HorizontalCenter |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis |
+            TextFormatFlags.NoPrefix);
+
+        e.Handled = true;
     }
 
     private void RequestEditForRow(int rowIndex)
@@ -296,6 +374,29 @@ internal sealed class EventListControl : UserControl
             FillWeight = fillWeight,
             SortMode = DataGridViewColumnSortMode.NotSortable
         };
+    }
+
+    private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)
+    {
+        var path = new GraphicsPath();
+        int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+
+        if (diameter <= 1)
+        {
+            path.AddRectangle(bounds);
+            return path;
+        }
+
+        var arc = new Rectangle(bounds.Left, bounds.Top, diameter, diameter);
+        path.AddArc(arc, 180, 90);
+        arc.X = bounds.Right - diameter;
+        path.AddArc(arc, 270, 90);
+        arc.Y = bounds.Bottom - diameter;
+        path.AddArc(arc, 0, 90);
+        arc.X = bounds.Left;
+        path.AddArc(arc, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private static string FormatElapsedTime(int elapsedMs)

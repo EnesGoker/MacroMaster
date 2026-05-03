@@ -14,12 +14,22 @@ public readonly record struct ToolbarButtonState(
     bool CanRecord,
     bool CanStop,
     bool CanPlayback,
-    bool CanSave,
-    bool CanLoad,
+    bool CanSaveLibrary,
+    bool CanSaveJson,
+    bool CanSaveXml,
+    bool CanLoadJson,
+    bool CanLoadXml,
     bool CanEditHotkeys);
 
 public partial class ToolbarControl : UserControl
 {
+    private readonly ContextMenuStrip _saveMenu = new();
+    private readonly ContextMenuStrip _loadMenu = new();
+    private readonly ToolStripMenuItem _saveLibraryMenuItem = new("Kutuphaneye Kaydet");
+    private readonly ToolStripMenuItem _saveJsonMenuItem = new("JSON Kaydet");
+    private readonly ToolStripMenuItem _saveXmlMenuItem = new("XML Kaydet");
+    private readonly ToolStripMenuItem _loadJsonMenuItem = new("JSON Yukle");
+    private readonly ToolStripMenuItem _loadXmlMenuItem = new("XML Yukle");
     private string? _recordHotkey = "F8";
     private string? _stopHotkey = "F10";
     private string? _playbackHotkey = "F9";
@@ -30,13 +40,17 @@ public partial class ToolbarControl : UserControl
     public event EventHandler? RecordToggleClicked;
     public event EventHandler? StopClicked;
     public event EventHandler? PlaybackToggleClicked;
-    public event EventHandler? SaveClicked;
-    public event EventHandler? LoadClicked;
+    public event EventHandler? SaveLibraryClicked;
+    public event EventHandler? SaveJsonClicked;
+    public event EventHandler? SaveXmlClicked;
+    public event EventHandler? LoadJsonClicked;
+    public event EventHandler? LoadXmlClicked;
     public event EventHandler? HotkeysClicked;
 
     public ToolbarControl()
     {
         InitializeComponent();
+        ConfigureMenus();
         ApplyTheme();
         WireEvents();
         SetHotkeyHints("F8", "F10", "F9", "F12");
@@ -67,9 +81,15 @@ public partial class ToolbarControl : UserControl
         recordButton.Enabled = state.CanRecord;
         stopButton.Enabled = state.CanStop;
         playbackButton.Enabled = state.CanPlayback;
-        saveButton.Enabled = state.CanSave;
-        loadButton.Enabled = state.CanLoad;
+        saveButton.Enabled = state.CanSaveLibrary || state.CanSaveJson || state.CanSaveXml;
+        loadButton.Enabled = state.CanLoadJson || state.CanLoadXml;
         hotkeysButton.Enabled = state.CanEditHotkeys;
+
+        _saveLibraryMenuItem.Enabled = state.CanSaveLibrary;
+        _saveJsonMenuItem.Enabled = state.CanSaveJson;
+        _saveXmlMenuItem.Enabled = state.CanSaveXml;
+        _loadJsonMenuItem.Enabled = state.CanLoadJson;
+        _loadXmlMenuItem.Enabled = state.CanLoadXml;
     }
 
     public void SetHotkeyHints(string record, string stop, string playback, string hotkeys)
@@ -90,9 +110,57 @@ public partial class ToolbarControl : UserControl
         recordButton.Click += (_, _) => RecordToggleClicked?.Invoke(this, EventArgs.Empty);
         stopButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
         playbackButton.Click += (_, _) => PlaybackToggleClicked?.Invoke(this, EventArgs.Empty);
-        saveButton.Click += (_, _) => SaveClicked?.Invoke(this, EventArgs.Empty);
-        loadButton.Click += (_, _) => LoadClicked?.Invoke(this, EventArgs.Empty);
+        saveButton.Click += (_, _) => ShowMenu(saveButton, _saveMenu);
+        loadButton.Click += (_, _) => ShowMenu(loadButton, _loadMenu);
         hotkeysButton.Click += (_, _) => HotkeysClicked?.Invoke(this, EventArgs.Empty);
+
+        _saveLibraryMenuItem.Click += (_, _) => SaveLibraryClicked?.Invoke(this, EventArgs.Empty);
+        _saveJsonMenuItem.Click += (_, _) => SaveJsonClicked?.Invoke(this, EventArgs.Empty);
+        _saveXmlMenuItem.Click += (_, _) => SaveXmlClicked?.Invoke(this, EventArgs.Empty);
+        _loadJsonMenuItem.Click += (_, _) => LoadJsonClicked?.Invoke(this, EventArgs.Empty);
+        _loadXmlMenuItem.Click += (_, _) => LoadXmlClicked?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ConfigureMenus()
+    {
+        components ??= new System.ComponentModel.Container();
+        components.Add(_saveMenu);
+        components.Add(_loadMenu);
+
+        ConfigureMenu(_saveMenu);
+        ConfigureMenu(_loadMenu);
+
+        _saveMenu.Items.Add(_saveLibraryMenuItem);
+        _saveMenu.Items.Add(new ToolStripSeparator());
+        _saveMenu.Items.Add(_saveJsonMenuItem);
+        _saveMenu.Items.Add(_saveXmlMenuItem);
+        _loadMenu.Items.Add(_loadJsonMenuItem);
+        _loadMenu.Items.Add(_loadXmlMenuItem);
+    }
+
+    private static void ConfigureMenu(ContextMenuStrip menu)
+    {
+        menu.BackColor = DesignTokens.Surface2;
+        menu.ForeColor = DesignTokens.TextPrimary;
+        menu.ShowImageMargin = false;
+        menu.RenderMode = ToolStripRenderMode.System;
+        menu.Font = DesignTokens.FontUiNormal;
+
+        menu.Opening += (_, _) =>
+        {
+            foreach (ToolStripItem item in menu.Items)
+            {
+                item.BackColor = DesignTokens.Surface2;
+                item.ForeColor = item.Enabled
+                    ? DesignTokens.TextPrimary
+                    : DesignTokens.TextMuted;
+            }
+        };
+    }
+
+    private static void ShowMenu(Control owner, ContextMenuStrip menu)
+    {
+        menu.Show(owner, new Point(0, owner.Height + DesignTokens.Scale(4)));
     }
 
     private void ApplyTheme()

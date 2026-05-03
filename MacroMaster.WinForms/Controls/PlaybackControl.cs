@@ -26,7 +26,6 @@ internal sealed class PlaybackControl : UserControl
     private readonly Label _statusLabel;
     private readonly Label _eventCounterLabel;
     private readonly Label _settingsLabel;
-    private readonly IconButton _backButton;
     private readonly IconButton _playbackButton;
     private readonly IconButton _stopButton;
     private readonly ToolTip _toolTip;
@@ -61,7 +60,6 @@ internal sealed class PlaybackControl : UserControl
         };
         _eventCounterLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
         _settingsLabel = CreateMetaLabel(ContentAlignment.MiddleRight);
-        _backButton = new IconButton(IconButtonKind.SkipBack);
         _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSizeOverride = DesignTokens.Scale(52) };
         _stopButton = new IconButton(IconButtonKind.Stop);
         _toolTip = new ToolTip();
@@ -101,9 +99,7 @@ internal sealed class PlaybackControl : UserControl
 
         _playbackButton.Enabled = state.CanPlayback;
         _stopButton.Enabled = state.CanStop;
-        _backButton.Enabled = state.CanStop;
 
-        _toolTip.SetToolTip(_backButton, "Başa al");
         _toolTip.SetToolTip(_playbackButton, state.PlaybackButtonState switch
         {
             PlaybackButtonState.Pause => "Duraklat",
@@ -209,6 +205,9 @@ internal sealed class PlaybackControl : UserControl
         var skipBackButton = new IconButton(IconButtonKind.SkipBack);
         var stepBackButton = new IconButton(IconButtonKind.StepBack);
         var stepForwardButton = new IconButton(IconButtonKind.StepForward);
+        skipBackButton.Enabled = false;
+        stepBackButton.Enabled = false;
+        stepForwardButton.Enabled = false;
         _playbackButton.ButtonSizeOverride = DesignTokens.Scale(52);
 
         controlsLayoutPanel.Controls.Add(skipBackButton, 1, 0);
@@ -217,10 +216,9 @@ internal sealed class PlaybackControl : UserControl
         controlsLayoutPanel.Controls.Add(stepForwardButton, 4, 0);
         controlsLayoutPanel.Controls.Add(_stopButton, 5, 0);
 
-        // Wire new buttons to stop (functional equivalent for now)
-        skipBackButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
-        stepBackButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
-        stepForwardButton.Click += (_, _) => { };
+        _toolTip.SetToolTip(skipBackButton, "Onceki kayit adimi henuz aktif degil");
+        _toolTip.SetToolTip(stepBackButton, "Geri adim henuz aktif degil");
+        _toolTip.SetToolTip(stepForwardButton, "Ileri adim henuz aktif degil");
 
         rootLayoutPanel.Controls.Add(statusPanel, 0, 0);
         rootLayoutPanel.Controls.Add(_progressBar, 0, 1);
@@ -244,7 +242,6 @@ internal sealed class PlaybackControl : UserControl
 
     private void WireEvents()
     {
-        _backButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
         _playbackButton.Click += (_, _) => PlaybackClicked?.Invoke(this, EventArgs.Empty);
         _stopButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
     }

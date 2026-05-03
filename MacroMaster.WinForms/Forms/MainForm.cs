@@ -19,7 +19,6 @@ public partial class MainForm : Form
     private readonly IMutableHotkeyConfiguration _hotkeyConfiguration;
     private readonly IHotkeyService _hotkeyService;
     private readonly IAppLogger _logger;
-    private readonly Button _editHotkeysButton = new();
     private readonly ToolbarControl _toolbarControl = new();
     private readonly PlaybackSettingsControl _playbackSettingsControl = new();
     private readonly EventListControl _eventListControl = new();
@@ -820,55 +819,24 @@ public partial class MainForm : Form
         bool hasSession = displayedSession is { Events.Count: > 0 };
         PlaybackSettings playbackSettings = BuildPlaybackSettings();
 
-        stateValueLabel.Text = FormatAppState(_applicationStateService.CurrentState);
-        sessionNameValueLabel.Text = displayedSession?.Name ?? "Oturum yok";
-        eventCountValueLabel.Text = displayedSession?.Events.Count.ToString(CultureInfo.InvariantCulture) ?? "0";
-        durationValueLabel.Text = displayedSession is null
-            ? "0 ms"
-            : FormattableString.Invariant($"{displayedSession.TotalDurationMs} ms");
-        sessionFileValueLabel.Text = string.IsNullOrWhiteSpace(_lastSessionPath)
-            ? "Kaydedilmedi"
-            : Path.GetFileName(_lastSessionPath);
-        playbackToggleButton.Text = _macroPlaybackService.IsPaused
-            ? "Devam Et"
-            : _macroPlaybackService.IsPlaying
-                ? "Duraklat"
-                : "Oynat";
-        recordToggleButton.Text = _macroRecorderService.IsRecording
-            ? "Kaydi Durdur"
-            : "Kayit Baslat";
         _eventListControl.SetSession(displayedSession, forceEventListReload);
 
         bool isIdle = _applicationStateService.IsState(AppState.Idle);
-
-        recordToggleButton.Enabled = !_shutdownInProgress
+        bool canRecord = !_shutdownInProgress
             && !_macroPlaybackService.IsPlaying
             && !_macroPlaybackService.IsPaused;
-        playbackToggleButton.Enabled = !_shutdownInProgress
+        bool canPlayback = !_shutdownInProgress
             && !_macroRecorderService.IsRecording
             && (_macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused || hasSession);
-        stopButton.Enabled = !_shutdownInProgress
+        bool canStop = !_shutdownInProgress
             && (_macroRecorderService.IsRecording || _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused);
-        saveJsonButton.Enabled = !_shutdownInProgress && isIdle && hasSession;
-        saveXmlButton.Enabled = !_shutdownInProgress && isIdle && hasSession;
-        loadJsonButton.Enabled = !_shutdownInProgress && isIdle;
-        loadXmlButton.Enabled = !_shutdownInProgress && isIdle;
-        clearSessionButton.Enabled = !_shutdownInProgress && isIdle
-            && (displayedSession is not null || !string.IsNullOrWhiteSpace(_lastSessionPath));
-        _editHotkeysButton.Enabled = !_shutdownInProgress && isIdle;
+        bool canSaveSession = !_shutdownInProgress && isIdle && hasSession;
+        bool canLoadSession = !_shutdownInProgress && isIdle;
+        bool canEditHotkeys = !_shutdownInProgress && isIdle;
         bool playbackSettingsEnabled = !_shutdownInProgress
             && !_macroRecorderService.IsRecording
             && !_macroPlaybackService.IsPlaying
             && !_macroPlaybackService.IsPaused;
-        relativeCoordinatesCheckBox.Enabled = playbackSettingsEnabled;
-        stopOnErrorCheckBox.Enabled = playbackSettingsEnabled;
-        preserveTimingCheckBox.Enabled = playbackSettingsEnabled;
-        loopIndefinitelyCheckBox.Enabled = playbackSettingsEnabled;
-        initialDelayNumericUpDown.Enabled = playbackSettingsEnabled;
-        speedMultiplierNumericUpDown.Enabled = playbackSettingsEnabled
-            && !preserveTimingCheckBox.Checked;
-        repeatCountNumericUpDown.Enabled = playbackSettingsEnabled
-            && !loopIndefinitelyCheckBox.Checked;
         _playbackSettingsControl.SetControlsEnabled(playbackSettingsEnabled);
 
         _toolbarControl.UpdateRecordButton(_macroRecorderService.IsRecording);
@@ -880,18 +848,21 @@ public partial class MainForm : Form
                     : PlaybackButtonState.Play);
         _toolbarControl.SetButtonsEnabled(
             new ToolbarButtonState(
-                recordToggleButton.Enabled,
-                stopButton.Enabled,
-                playbackToggleButton.Enabled,
-                saveJsonButton.Enabled,
-                loadJsonButton.Enabled,
-                _editHotkeysButton.Enabled));
+                canRecord,
+                canStop,
+                canPlayback,
+                canSaveSession,
+                canSaveSession,
+                canSaveSession,
+                canLoadSession,
+                canLoadSession,
+                canEditHotkeys));
         _playbackControl.UpdateState(
             BuildPlaybackControlState(
                 displayedSession,
                 playbackSettings,
-                playbackToggleButton.Enabled,
-                stopButton.Enabled));
+                canPlayback,
+                canStop));
         _sessionSummaryControl.UpdateState(
             new SessionSummaryState(
                 FormatAppState(_applicationStateService.CurrentState),
@@ -921,8 +892,6 @@ public partial class MainForm : Form
 
     private void InitializeDynamicControls()
     {
-        actionsFlowLayoutPanel.Visible = false;
-        playbackSettingsPanel.Visible = false;
         BuildResponsiveHostLayout();
 
         _toolbarControl.Name = "toolbarControl";
@@ -930,8 +899,11 @@ public partial class MainForm : Form
         _toolbarControl.RecordToggleClicked += recordToggleButton_Click;
         _toolbarControl.PlaybackToggleClicked += playbackToggleButton_Click;
         _toolbarControl.StopClicked += stopButton_Click;
-        _toolbarControl.SaveClicked += saveLibraryButton_Click;
-        _toolbarControl.LoadClicked += loadJsonButton_Click;
+        _toolbarControl.SaveLibraryClicked += saveLibraryButton_Click;
+        _toolbarControl.SaveJsonClicked += saveJsonButton_Click;
+        _toolbarControl.SaveXmlClicked += saveXmlButton_Click;
+        _toolbarControl.LoadJsonClicked += loadJsonButton_Click;
+        _toolbarControl.LoadXmlClicked += loadXmlButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;
 
         _playbackSettingsControl.Name = "playbackSettingsControl";
@@ -956,20 +928,6 @@ public partial class MainForm : Form
         _playbackControl.Dock = DockStyle.Fill;
         _playbackControl.PlaybackClicked += playbackToggleButton_Click;
         _playbackControl.StopClicked += stopButton_Click;
-
-        _editHotkeysButton.AutoSize = true;
-        _editHotkeysButton.Name = "editHotkeysButton";
-        _editHotkeysButton.Text = "Kisayol Ayarlari";
-        _editHotkeysButton.UseVisualStyleBackColor = true;
-        _editHotkeysButton.Click += editHotkeysButton_Click;
-
-        actionsFlowLayoutPanel.Controls.Add(_editHotkeysButton);
-
-        int relativeCoordinatesIndex = actionsFlowLayoutPanel.Controls.IndexOf(relativeCoordinatesCheckBox);
-        if (relativeCoordinatesIndex >= 0)
-        {
-            actionsFlowLayoutPanel.Controls.SetChildIndex(_editHotkeysButton, relativeCoordinatesIndex);
-        }
     }
 
     private void BuildResponsiveHostLayout()
@@ -987,7 +945,6 @@ public partial class MainForm : Form
         titleLabel.ForeColor = DesignTokens.TextPrimary;
         titleLabel.Dock = DockStyle.Fill;
         titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-        hotkeySummaryLabel.Visible = false;
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -1090,38 +1047,6 @@ public partial class MainForm : Form
         Controls.Add(rootLayoutPanel);
 
         ResumeLayout(performLayout: true);
-    }
-
-    private void ApplyLegacyDashboardTheme()
-    {
-        ApplyStatusTableTheme(statusTableLayoutPanel);
-    }
-
-    private static void ApplyStatusTableTheme(TableLayoutPanel tableLayoutPanel)
-    {
-        tableLayoutPanel.CellBorderStyle = TableLayoutPanelCellBorderStyle.None;
-        tableLayoutPanel.BackColor = DesignTokens.Surface;
-        tableLayoutPanel.Padding = Padding.Empty;
-
-        foreach (Control control in tableLayoutPanel.Controls)
-        {
-            control.BackColor = DesignTokens.Surface;
-            control.ForeColor = tableLayoutPanel.GetColumn(control) == 0
-                ? DesignTokens.TextPrimary
-                : DesignTokens.TextSecondary;
-            control.Font = tableLayoutPanel.GetColumn(control) == 0
-                ? DesignTokens.FontUiBold
-                : DesignTokens.FontUiNormal;
-            control.Margin = Padding.Empty;
-            control.Padding = new Padding(4, 0, 4, 0);
-
-            if (control is Label label)
-            {
-                label.AutoSize = false;
-                label.Dock = DockStyle.Fill;
-                label.TextAlign = ContentAlignment.MiddleLeft;
-            }
-        }
     }
 
     private static DashboardCard CreateCard()
@@ -1271,7 +1196,6 @@ public partial class MainForm : Form
         string playbackHotkey = FormatHotkey(_hotkeyConfiguration.PlaybackToggleHotkey);
         string stopHotkey = FormatHotkey(_hotkeyConfiguration.StopHotkey);
 
-        hotkeySummaryLabel.Text = string.Empty;
         _toolbarControl.SetHotkeyHints(recordHotkey, stopHotkey, playbackHotkey, "F12");
     }
 
