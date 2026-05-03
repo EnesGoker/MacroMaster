@@ -5,8 +5,8 @@ namespace MacroMaster.WinForms.Forms;
 
 public sealed class HotkeySettingsDialog : Form
 {
-    private const int ComboBoxWidth = 170;
-    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(620), DesignTokens.Scale(300));
+    private const int ComboBoxWidth = 190;
+    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(720), DesignTokens.Scale(392));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
     private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
@@ -17,6 +17,8 @@ public sealed class HotkeySettingsDialog : Form
     private readonly ComboBox _playbackKeyComboBox = CreateComboBox();
     private readonly ComboBox _stopModifierComboBox = CreateComboBox();
     private readonly ComboBox _stopKeyComboBox = CreateComboBox();
+    private readonly ComboBox _hotkeySettingsModifierComboBox = CreateComboBox();
+    private readonly ComboBox _hotkeySettingsKeyComboBox = CreateComboBox();
 
     public HotkeySettingsDialog(HotkeySettings currentSettings)
     {
@@ -53,9 +55,11 @@ public sealed class HotkeySettingsDialog : Form
         PopulateComboBox(_recordModifierComboBox, ModifierOptions);
         PopulateComboBox(_playbackModifierComboBox, ModifierOptions);
         PopulateComboBox(_stopModifierComboBox, ModifierOptions);
+        PopulateComboBox(_hotkeySettingsModifierComboBox, ModifierOptions);
         PopulateComboBox(_recordKeyComboBox, KeyOptions);
         PopulateComboBox(_playbackKeyComboBox, KeyOptions);
         PopulateComboBox(_stopKeyComboBox, KeyOptions);
+        PopulateComboBox(_hotkeySettingsKeyComboBox, KeyOptions);
 
         TableLayoutPanel settingsTableLayoutPanel = CreateSettingsTableLayoutPanel();
         AddHeaderRow(settingsTableLayoutPanel);
@@ -77,6 +81,12 @@ public sealed class HotkeySettingsDialog : Form
             "Durdur",
             _stopModifierComboBox,
             _stopKeyComboBox);
+        AddHotkeyRow(
+            settingsTableLayoutPanel,
+            4,
+            "Kisayol Ayarlari",
+            _hotkeySettingsModifierComboBox,
+            _hotkeySettingsKeyComboBox);
 
         FlowLayoutPanel buttonFlowLayoutPanel = CreateButtonFlowLayoutPanel(
             cancelButton,
@@ -136,9 +146,11 @@ public sealed class HotkeySettingsDialog : Form
         SelectModifier(_recordModifierComboBox, hotkeySettings.RecordToggleHotkey.Modifiers);
         SelectModifier(_playbackModifierComboBox, hotkeySettings.PlaybackToggleHotkey.Modifiers);
         SelectModifier(_stopModifierComboBox, hotkeySettings.StopHotkey.Modifiers);
+        SelectModifier(_hotkeySettingsModifierComboBox, hotkeySettings.HotkeySettingsHotkey.Modifiers);
         SelectKey(_recordKeyComboBox, hotkeySettings.RecordToggleHotkey.VirtualKeyCode);
         SelectKey(_playbackKeyComboBox, hotkeySettings.PlaybackToggleHotkey.VirtualKeyCode);
         SelectKey(_stopKeyComboBox, hotkeySettings.StopHotkey.VirtualKeyCode);
+        SelectKey(_hotkeySettingsKeyComboBox, hotkeySettings.HotkeySettingsHotkey.VirtualKeyCode);
     }
 
     private HotkeySettings BuildHotkeySettings()
@@ -153,7 +165,10 @@ public sealed class HotkeySettingsDialog : Form
                 GetSelectedModifiers(_playbackModifierComboBox)),
             StopHotkey = new HotkeyBinding(
                 GetSelectedKey(_stopKeyComboBox),
-                GetSelectedModifiers(_stopModifierComboBox))
+                GetSelectedModifiers(_stopModifierComboBox)),
+            HotkeySettingsHotkey = new HotkeyBinding(
+                GetSelectedKey(_hotkeySettingsKeyComboBox),
+                GetSelectedModifiers(_hotkeySettingsModifierComboBox))
         };
     }
 
@@ -174,9 +189,9 @@ public sealed class HotkeySettingsDialog : Form
         };
 
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(64)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(56)));
         rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(settingsTableLayoutPanel, 0, 1);
         rootLayoutPanel.Controls.Add(buttonFlowLayoutPanel, 0, 2);
@@ -233,7 +248,7 @@ public sealed class HotkeySettingsDialog : Form
         {
             AutoSize = false,
             ColumnCount = 3,
-            RowCount = 4,
+            RowCount = 5,
             Dock = DockStyle.Fill,
             Margin = Padding.Empty,
             Padding = new Padding(DesignTokens.Scale(14), DesignTokens.Scale(12), DesignTokens.Scale(14), DesignTokens.Scale(12)),
@@ -331,7 +346,7 @@ public sealed class HotkeySettingsDialog : Form
         ComboBox modifierComboBox,
         ComboBox keyComboBox)
     {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
 
         modifierComboBox.Dock = DockStyle.Fill;
         keyComboBox.Dock = DockStyle.Fill;
@@ -461,35 +476,7 @@ public sealed class HotkeySettingsDialog : Form
 
     private static string GetKeyDisplayText(int virtualKeyCode)
     {
-        return virtualKeyCode switch
-        {
-            0x08 => "Geri Sil",
-            0x09 => "Tab",
-            0x0D => "Enter",
-            0x1B => "Esc",
-            0x20 => "Bosluk",
-            0x21 => "Sayfa Yukari",
-            0x22 => "Sayfa Asagi",
-            0x23 => "End",
-            0x24 => "Home",
-            0x25 => "Sol Ok",
-            0x26 => "Yukari Ok",
-            0x27 => "Sag Ok",
-            0x28 => "Asagi Ok",
-            0x2D => "Araya Ekle",
-            0x2E => "Sil",
-            0x2C => "Ekran Goruntusu",
-            0x13 => "Duraklat",
-            0x14 => "Buyuk Harf Kilidi",
-            0x90 => "Sayi Kilidi",
-            0x91 => "Kaydirma Kilidi",
-            0x6A => "NumPad *",
-            0x6B => "NumPad +",
-            0x6D => "NumPad -",
-            0x6E => "NumPad .",
-            0x6F => "NumPad /",
-            _ => FormatEnumKeyName(virtualKeyCode)
-        };
+        return VirtualKeyDisplayNameFormatter.Format(virtualKeyCode);
     }
 
     private static string FormatEnumKeyName(int virtualKeyCode)

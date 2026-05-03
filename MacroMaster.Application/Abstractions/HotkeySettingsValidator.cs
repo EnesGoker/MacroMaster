@@ -43,25 +43,14 @@ public static class HotkeySettingsValidator
         ValidateBinding(settings.RecordToggleHotkey, "Kayit degistirme kisayolu", context);
         ValidateBinding(settings.PlaybackToggleHotkey, "Oynatma degistirme kisayolu", context);
         ValidateBinding(settings.StopHotkey, "Durdurma kisayolu", context);
+        ValidateBinding(settings.HotkeySettingsHotkey, "Kisayol ayarlari kisayolu", context);
 
-        EnsureDistinct(
-            settings.RecordToggleHotkey,
-            "Kayit degistirme kisayolu",
-            settings.PlaybackToggleHotkey,
-            "Oynatma degistirme kisayolu",
-            context);
-        EnsureDistinct(
-            settings.RecordToggleHotkey,
-            "Kayit degistirme kisayolu",
-            settings.StopHotkey,
-            "Durdurma kisayolu",
-            context);
-        EnsureDistinct(
-            settings.PlaybackToggleHotkey,
-            "Oynatma degistirme kisayolu",
-            settings.StopHotkey,
-            "Durdurma kisayolu",
-            context);
+        EnsureAllDistinct(
+            context,
+            ("Kayit degistirme kisayolu", settings.RecordToggleHotkey),
+            ("Oynatma degistirme kisayolu", settings.PlaybackToggleHotkey),
+            ("Durdurma kisayolu", settings.StopHotkey),
+            ("Kisayol ayarlari kisayolu", settings.HotkeySettingsHotkey));
     }
 
     private static void ValidateBinding(
@@ -98,18 +87,21 @@ public static class HotkeySettingsValidator
         }
     }
 
-    private static void EnsureDistinct(
-        HotkeyBinding firstBinding,
-        string firstName,
-        HotkeyBinding secondBinding,
-        string secondName,
-        string context)
+    private static void EnsureAllDistinct(
+        string context,
+        params (string Name, HotkeyBinding Binding)[] bindings)
     {
-        if (firstBinding == secondBinding)
+        for (int firstIndex = 0; firstIndex < bindings.Length; firstIndex++)
         {
-            throw CreateValidationException(
-                context,
-                $"{firstName} ve {secondName} ayni kisayolu kullanamaz ({Format(firstBinding)}).");
+            for (int secondIndex = firstIndex + 1; secondIndex < bindings.Length; secondIndex++)
+            {
+                if (bindings[firstIndex].Binding == bindings[secondIndex].Binding)
+                {
+                    throw CreateValidationException(
+                        context,
+                        $"{bindings[firstIndex].Name} ve {bindings[secondIndex].Name} ayni kisayolu kullanamaz ({Format(bindings[firstIndex].Binding)}).");
+                }
+            }
         }
     }
 
@@ -144,7 +136,7 @@ public static class HotkeySettingsValidator
             parts.Add("Win");
         }
 
-        parts.Add(hotkeyBinding.VirtualKeyCode.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        parts.Add(VirtualKeyDisplayNameFormatter.Format(hotkeyBinding.VirtualKeyCode));
         return string.Join("+", parts);
     }
 }

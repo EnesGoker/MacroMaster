@@ -20,6 +20,8 @@ public sealed class MutableHotkeyConfiguration : IMutableHotkeyConfiguration
 
     public HotkeyBinding StopHotkey { get; private set; } = HotkeySettings.DefaultStopHotkey;
 
+    public HotkeyBinding HotkeySettingsHotkey { get; private set; } = HotkeySettings.DefaultHotkeySettingsHotkey;
+
     public void Apply(HotkeySettings settings)
     {
         HotkeySettingsValidator.Validate(settings, "Hotkey configuration update");
@@ -27,6 +29,7 @@ public sealed class MutableHotkeyConfiguration : IMutableHotkeyConfiguration
         RecordToggleHotkey = settings.RecordToggleHotkey;
         PlaybackToggleHotkey = settings.PlaybackToggleHotkey;
         StopHotkey = settings.StopHotkey;
+        HotkeySettingsHotkey = settings.HotkeySettingsHotkey;
     }
 
     public HotkeySettings Snapshot()

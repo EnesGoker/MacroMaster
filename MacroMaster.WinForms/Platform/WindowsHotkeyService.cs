@@ -9,6 +9,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
     private const int RecordToggleHotkeyId = 1001;
     private const int PlaybackToggleHotkeyId = 1002;
     private const int StopHotkeyId = 1003;
+    private const int HotkeySettingsHotkeyId = 1004;
 
     private const uint ModNone = 0x0000;
     private const uint ModAlt = 0x0001;
@@ -35,6 +36,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
     public event Action? RecordToggleRequested;
     public event Action? PlaybackToggleRequested;
     public event Action? StopRequested;
+    public event Action? HotkeySettingsRequested;
 
     public Task RegisterAsync(CancellationToken cancellationToken = default)
     {
@@ -81,6 +83,12 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
                 MapModifiers(_hotkeyConfiguration.StopHotkey.Modifiers),
                 unchecked((uint)_hotkeyConfiguration.StopHotkey.VirtualKeyCode));
             registeredHotkeyIds.Add(StopHotkeyId);
+
+            RegisterSingleHotkey(
+                HotkeySettingsHotkeyId,
+                MapModifiers(_hotkeyConfiguration.HotkeySettingsHotkey.Modifiers),
+                unchecked((uint)_hotkeyConfiguration.HotkeySettingsHotkey.VirtualKeyCode));
+            registeredHotkeyIds.Add(HotkeySettingsHotkeyId);
         }
         catch
         {
@@ -118,6 +126,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         UnregisterSingleHotkey(RecordToggleHotkeyId);
         UnregisterSingleHotkey(PlaybackToggleHotkeyId);
         UnregisterSingleHotkey(StopHotkeyId);
+        UnregisterSingleHotkey(HotkeySettingsHotkeyId);
 
         IsRegistered = false;
         _logger.Log(
@@ -140,6 +149,10 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
             case StopHotkeyId:
                 StopRequested?.Invoke();
+                break;
+
+            case HotkeySettingsHotkeyId:
+                HotkeySettingsRequested?.Invoke();
                 break;
         }
     }

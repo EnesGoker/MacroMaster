@@ -24,6 +24,12 @@ public sealed class NullHotkeyService : IHotkeyService
         remove { }
     }
 
+    public event Action? HotkeySettingsRequested
+    {
+        add { }
+        remove { }
+    }
+
     public Task RegisterAsync(CancellationToken cancellationToken = default)
     {
         IsRegistered = true;

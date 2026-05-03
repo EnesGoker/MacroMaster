@@ -11,6 +11,9 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _emptyStateLabel;
     private readonly Label _totalMacroValueLabel;
     private readonly Label _totalEventValueLabel;
+    private readonly TextBox _searchTextBox;
+    private IReadOnlyList<MacroLibraryEntry> _items = [];
+    private string? _selectedFilePath;
 
     public event EventHandler? AddRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? LoadRequested;
@@ -34,6 +37,7 @@ internal sealed class MacroLibraryControl : UserControl
         _emptyStateLabel = CreateEmptyStateLabel();
         _totalMacroValueLabel = CreateFooterValueLabel();
         _totalEventValueLabel = CreateFooterValueLabel();
+        _searchTextBox = CreateSearchTextBox();
 
         BuildLayout();
         SetItems([], null);
@@ -45,18 +49,35 @@ internal sealed class MacroLibraryControl : UserControl
     {
         ArgumentNullException.ThrowIfNull(items);
 
+        _items = items;
+        _selectedFilePath = selectedFilePath;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        string searchTerm = _searchTextBox.Text.Trim();
+        IReadOnlyList<MacroLibraryEntry> filteredItems = string.IsNullOrWhiteSpace(searchTerm)
+            ? _items
+            : _items
+                .Where(item => item.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
         _macroListPanel.SuspendLayout();
         _macroListPanel.Controls.Clear();
 
-        if (items.Count == 0)
+        if (filteredItems.Count == 0)
         {
+            _emptyStateLabel.Text = _items.Count == 0
+                ? "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin."
+                : "Arama ile eslesen makro bulunamadi.";
             _macroListPanel.Controls.Add(_emptyStateLabel);
         }
         else
         {
-            foreach (MacroLibraryEntry item in items)
+            foreach (MacroLibraryEntry item in filteredItems)
             {
-                bool isSelected = IsSamePath(item.FilePath, selectedFilePath);
+                bool isSelected = IsSamePath(item.FilePath, _selectedFilePath);
                 var row = new MacroLibraryRow(item, isSelected);
                 row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
@@ -65,8 +86,8 @@ internal sealed class MacroLibraryControl : UserControl
             }
         }
 
-        int totalEventCount = items.Sum(item => Math.Max(0, item.EventCount));
-        _totalMacroValueLabel.Text = items.Count.ToString(CultureInfo.InvariantCulture);
+        int totalEventCount = filteredItems.Sum(item => Math.Max(0, item.EventCount));
+        _totalMacroValueLabel.Text = filteredItems.Count.ToString(CultureInfo.InvariantCulture);
         _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
         ResizeLibraryRows();
         _macroListPanel.ResumeLayout();
@@ -142,16 +163,8 @@ internal sealed class MacroLibraryControl : UserControl
                 DesignTokens.Scale(8)),
             Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
         };
-        var searchLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "Makro ara...",
-            ForeColor = DesignTokens.TextMuted,
-            Font = DesignTokens.FontUiNormal,
-            BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-        searchPanel.Controls.Add(searchLabel);
+        searchPanel.Click += (_, _) => _searchTextBox.Focus();
+        searchPanel.Controls.Add(_searchTextBox);
 
         _macroListPanel.Dock = DockStyle.Fill;
         _macroListPanel.FlowDirection = FlowDirection.TopDown;
@@ -255,6 +268,23 @@ internal sealed class MacroLibraryControl : UserControl
             TextAlign = ContentAlignment.MiddleCenter,
             AutoEllipsis = true
         };
+    }
+
+    private TextBox CreateSearchTextBox()
+    {
+        var textBox = new TextBox
+        {
+            BorderStyle = BorderStyle.None,
+            Dock = DockStyle.Fill,
+            PlaceholderText = "Makro ara...",
+            BackColor = DesignTokens.SurfaceInset,
+            ForeColor = DesignTokens.TextPrimary,
+            Font = DesignTokens.FontUiNormal,
+            Margin = Padding.Empty
+        };
+
+        textBox.TextChanged += (_, _) => ApplyFilter();
+        return textBox;
     }
 
     private sealed class MacroLibraryRow : RoundedPanel

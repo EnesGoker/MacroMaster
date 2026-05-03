@@ -13,4 +13,5 @@ public interface IHotkeyService
     event Action? RecordToggleRequested;
     event Action? PlaybackToggleRequested;
     event Action? StopRequested;
+    event Action? HotkeySettingsRequested;
 }

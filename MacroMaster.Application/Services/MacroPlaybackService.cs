@@ -325,6 +325,72 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
         return Task.CompletedTask;
     }
 
+    public async Task<MacroEvent> PlayEventAtAsync(
+        MacroSession session,
+        PlaybackSettings settings,
+        int eventIndex,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(settings);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_applicationStateService.IsState(AppState.Idle))
+        {
+            throw new InvalidOperationException(
+                "Tek olay oynatma yalnizca uygulama bostayken kullanilabilir.");
+        }
+
+        if (eventIndex < 0 || eventIndex >= session.Events.Count)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(eventIndex),
+                eventIndex,
+                "Oynatilacak olay dizin araligi disinda.");
+        }
+
+        PlaybackSettings effectiveSettings = NormalizeSettingsForExecution(settings);
+        MacroEvent sourceEvent = session.Events[eventIndex];
+        CursorPosition? recordedMouseAnchor = effectiveSettings.UseRelativeCoordinates
+            ? GetRecordedMouseAnchor(session)
+            : null;
+        CursorPosition? playbackMouseAnchor = recordedMouseAnchor.HasValue
+            ? await _cursorPositionProvider.GetCursorPositionAsync(cancellationToken)
+            : null;
+        MacroEvent playbackEvent = ResolvePlaybackEvent(
+            sourceEvent,
+            recordedMouseAnchor,
+            playbackMouseAnchor);
+
+        try
+        {
+            await _inputPlaybackAdapter.PlayEventAsync(playbackEvent, cancellationToken);
+            _logger.Log(
+                AppLogLevel.Information,
+                nameof(MacroPlaybackService),
+                $"Tek olay oynatildi. Oturum: {session.Name}, olay: {eventIndex + 1}.");
+            return playbackEvent;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            InvalidOperationException playbackException = CreatePlaybackException(
+                0,
+                eventIndex,
+                playbackEvent,
+                ex);
+            _logger.Log(
+                AppLogLevel.Error,
+                nameof(MacroPlaybackService),
+                "Tek olay oynatilirken hata olustu.",
+                playbackException);
+            throw playbackException;
+        }
+    }
+
     private async Task WaitIfPausedAsync(CancellationToken cancellationToken)
     {
         Task waitTask;

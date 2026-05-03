@@ -5,6 +5,7 @@ public sealed class HotkeySettings
     public static HotkeyBinding DefaultRecordToggleHotkey { get; } = HotkeyBinding.None(0x77);     // F8
     public static HotkeyBinding DefaultPlaybackToggleHotkey { get; } = HotkeyBinding.None(0x78);   // F9
     public static HotkeyBinding DefaultStopHotkey { get; } = HotkeyBinding.None(0x79);             // F10
+    public static HotkeyBinding DefaultHotkeySettingsHotkey { get; } = HotkeyBinding.None(0x7B);   // F12
 
     public HotkeyBinding RecordToggleHotkey { get; set; } = DefaultRecordToggleHotkey;
 
@@ -12,13 +13,16 @@ public sealed class HotkeySettings
 
     public HotkeyBinding StopHotkey { get; set; } = DefaultStopHotkey;
 
+    public HotkeyBinding HotkeySettingsHotkey { get; set; } = DefaultHotkeySettingsHotkey;
+
     public static HotkeySettings CreateDefault()
     {
         return new HotkeySettings
         {
             RecordToggleHotkey = DefaultRecordToggleHotkey,
             PlaybackToggleHotkey = DefaultPlaybackToggleHotkey,
-            StopHotkey = DefaultStopHotkey
+            StopHotkey = DefaultStopHotkey,
+            HotkeySettingsHotkey = DefaultHotkeySettingsHotkey
         };
     }
 
@@ -30,7 +34,8 @@ public sealed class HotkeySettings
         {
             RecordToggleHotkey = hotkeyConfiguration.RecordToggleHotkey,
             PlaybackToggleHotkey = hotkeyConfiguration.PlaybackToggleHotkey,
-            StopHotkey = hotkeyConfiguration.StopHotkey
+            StopHotkey = hotkeyConfiguration.StopHotkey,
+            HotkeySettingsHotkey = hotkeyConfiguration.HotkeySettingsHotkey
         };
     }
 
@@ -40,7 +45,8 @@ public sealed class HotkeySettings
         {
             RecordToggleHotkey = RecordToggleHotkey,
             PlaybackToggleHotkey = PlaybackToggleHotkey,
-            StopHotkey = StopHotkey
+            StopHotkey = StopHotkey,
+            HotkeySettingsHotkey = HotkeySettingsHotkey
         };
     }
 }

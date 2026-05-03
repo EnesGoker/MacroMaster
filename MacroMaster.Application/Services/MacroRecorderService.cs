@@ -306,6 +306,7 @@ public sealed class MacroRecorderService : IMacroRecorderService
     private MacroEvent CreateKeyboardMacroEventUnsafe(KeyboardActivityInfo keyboardActivity)
     {
         DateTime nowUtc = DateTime.UtcNow;
+        string keyName = VirtualKeyDisplayNameFormatter.Format(keyboardActivity.VirtualKeyCode);
 
         return new MacroEvent
         {
@@ -316,12 +317,12 @@ public sealed class MacroRecorderService : IMacroRecorderService
             KeyCode = keyboardActivity.VirtualKeyCode,
             ScanCode = keyboardActivity.ScanCode,
             IsExtendedKey = keyboardActivity.IsExtendedKey,
-            KeyName = keyboardActivity.VirtualKeyCode.ToString(CultureInfo.InvariantCulture),
+            KeyName = keyName,
             TimestampUtc = nowUtc,
             DelayMs = CalculateDelayMsUnsafe(nowUtc),
             Description = string.Create(
                 CultureInfo.InvariantCulture,
-                $"{(keyboardActivity.IsKeyDown ? "Tus basildi" : "Tus birakildi")} - {keyboardActivity.VirtualKeyCode}")
+                $"{(keyboardActivity.IsKeyDown ? "Tus basildi" : "Tus birakildi")} - {keyName}")
         };
     }
 
@@ -360,7 +361,8 @@ public sealed class MacroRecorderService : IMacroRecorderService
         [
             _hotkeyConfiguration.RecordToggleHotkey,
             _hotkeyConfiguration.PlaybackToggleHotkey,
-            _hotkeyConfiguration.StopHotkey
+            _hotkeyConfiguration.StopHotkey,
+            _hotkeyConfiguration.HotkeySettingsHotkey
         ];
 
         foreach (HotkeyBinding candidateHotkey in hotkeys)

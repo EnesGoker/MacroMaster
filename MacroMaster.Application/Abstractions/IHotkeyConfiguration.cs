@@ -7,4 +7,6 @@ public interface IHotkeyConfiguration
     HotkeyBinding PlaybackToggleHotkey { get; }
 
     HotkeyBinding StopHotkey { get; }
+
+    HotkeyBinding HotkeySettingsHotkey { get; }
 }

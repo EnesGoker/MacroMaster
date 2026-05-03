@@ -18,6 +18,12 @@ public interface IMacroPlaybackService
 
     Task StopAsync(CancellationToken cancellationToken = default);
 
+    Task<MacroEvent> PlayEventAtAsync(
+        MacroSession session,
+        PlaybackSettings settings,
+        int eventIndex,
+        CancellationToken cancellationToken = default);
+
     event Action? PlaybackStarted;
     event Action? PlaybackPaused;
     event Action? PlaybackResumed;

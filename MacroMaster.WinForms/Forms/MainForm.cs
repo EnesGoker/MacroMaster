@@ -147,6 +147,7 @@ public partial class MainForm : Form
         _hotkeyService.RecordToggleRequested += OnRecordToggleRequested;
         _hotkeyService.PlaybackToggleRequested += OnPlaybackToggleRequested;
         _hotkeyService.StopRequested += OnStopRequested;
+        _hotkeyService.HotkeySettingsRequested += OnHotkeySettingsRequested;
 
         try
         {
@@ -157,6 +158,7 @@ public partial class MainForm : Form
             _hotkeyService.RecordToggleRequested -= OnRecordToggleRequested;
             _hotkeyService.PlaybackToggleRequested -= OnPlaybackToggleRequested;
             _hotkeyService.StopRequested -= OnStopRequested;
+            _hotkeyService.HotkeySettingsRequested -= OnHotkeySettingsRequested;
             throw;
         }
     }
@@ -219,6 +221,11 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(HandleStopAsync, "Durdurma istegi");
     }
 
+    private void OnHotkeySettingsRequested()
+    {
+        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayol ayarlari");
+    }
+
     private async Task HandleStopAsync()
     {
         if (_macroRecorderService.IsRecording)
@@ -232,11 +239,56 @@ public partial class MainForm : Form
         }
     }
 
+    private Task ResetPlaybackCursorAsync()
+    {
+        if (!CanNavigatePlayback(GetSessionForPlayback(), BuildPlaybackSettings()))
+        {
+            return Task.CompletedTask;
+        }
+
+        _playedEventCount = 0;
+        _playedDurationMs = 0;
+        RefreshUiState();
+        return Task.CompletedTask;
+    }
+
+    private async Task StepPlaybackAsync(int stepDirection)
+    {
+        MacroSession? session = GetSessionForPlayback();
+        PlaybackSettings playbackSettings = BuildPlaybackSettings();
+
+        if (session is null || !CanNavigatePlayback(session, playbackSettings))
+        {
+            return;
+        }
+
+        int totalPlaybackEvents = GetTotalPlaybackEventCount(session, playbackSettings);
+        int targetLogicalIndex = stepDirection > 0
+            ? _playedEventCount
+            : _playedEventCount - 2;
+
+        if (targetLogicalIndex < 0 || targetLogicalIndex >= totalPlaybackEvents)
+        {
+            return;
+        }
+
+        int sourceEventIndex = targetLogicalIndex % session.Events.Count;
+        await _macroPlaybackService.PlayEventAtAsync(
+            session,
+            playbackSettings,
+            sourceEventIndex);
+
+        _playedEventCount = targetLogicalIndex + 1;
+        _playedDurationMs = CalculatePlayedDurationMs(session, targetLogicalIndex);
+        RefreshUiState();
+    }
+
     private async Task ShutdownAsync()
     {
         _hotkeyService.RecordToggleRequested -= OnRecordToggleRequested;
         _hotkeyService.PlaybackToggleRequested -= OnPlaybackToggleRequested;
         _hotkeyService.StopRequested -= OnStopRequested;
+        _hotkeyService.HotkeySettingsRequested -= OnHotkeySettingsRequested;
         UnsubscribeFromServiceEvents();
 
         if (_hotkeyService.IsRegistered)
@@ -335,6 +387,8 @@ public partial class MainForm : Form
     {
         _activeSession = _macroRecorderService.CurrentSession;
         _lastSessionPath = null;
+        _playedEventCount = 0;
+        _playedDurationMs = 0;
         RequestUiRefresh();
     }
 
@@ -396,6 +450,27 @@ public partial class MainForm : Form
         _ = sender;
         _ = e;
         OnStopRequested();
+    }
+
+    private void playbackSkipBackButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(ResetPlaybackCursorAsync, "Oynatma basa alma");
+    }
+
+    private void playbackStepBackButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(() => StepPlaybackAsync(stepDirection: -1), "Oynatma geri adim");
+    }
+
+    private void playbackStepForwardButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(() => StepPlaybackAsync(stepDirection: 1), "Oynatma ileri adim");
     }
 
     private void saveJsonButton_Click(object? sender, EventArgs e)
@@ -830,6 +905,7 @@ public partial class MainForm : Form
             && (_macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused || hasSession);
         bool canStop = !_shutdownInProgress
             && (_macroRecorderService.IsRecording || _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused);
+        bool canNavigatePlayback = CanNavigatePlayback(displayedSession, playbackSettings);
         bool canSaveSession = !_shutdownInProgress && isIdle && hasSession;
         bool canLoadSession = !_shutdownInProgress && isIdle;
         bool canEditHotkeys = !_shutdownInProgress && isIdle;
@@ -862,7 +938,8 @@ public partial class MainForm : Form
                 displayedSession,
                 playbackSettings,
                 canPlayback,
-                canStop));
+                canStop,
+                canNavigatePlayback));
         _sessionSummaryControl.UpdateState(
             new SessionSummaryState(
                 FormatAppState(_applicationStateService.CurrentState),
@@ -926,7 +1003,10 @@ public partial class MainForm : Form
 
         _playbackControl.Name = "playbackControl";
         _playbackControl.Dock = DockStyle.Fill;
+        _playbackControl.SkipBackClicked += playbackSkipBackButton_Click;
+        _playbackControl.StepBackClicked += playbackStepBackButton_Click;
         _playbackControl.PlaybackClicked += playbackToggleButton_Click;
+        _playbackControl.StepForwardClicked += playbackStepForwardButton_Click;
         _playbackControl.StopClicked += stopButton_Click;
     }
 
@@ -1195,8 +1275,13 @@ public partial class MainForm : Form
         string recordHotkey = FormatHotkey(_hotkeyConfiguration.RecordToggleHotkey);
         string playbackHotkey = FormatHotkey(_hotkeyConfiguration.PlaybackToggleHotkey);
         string stopHotkey = FormatHotkey(_hotkeyConfiguration.StopHotkey);
+        string hotkeySettingsHotkey = FormatHotkey(_hotkeyConfiguration.HotkeySettingsHotkey);
 
-        _toolbarControl.SetHotkeyHints(recordHotkey, stopHotkey, playbackHotkey, "F12");
+        _toolbarControl.SetHotkeyHints(
+            recordHotkey,
+            stopHotkey,
+            playbackHotkey,
+            hotkeySettingsHotkey);
     }
 
     private static string FormatHotkey(HotkeyBinding hotkeyBinding)
@@ -1223,7 +1308,7 @@ public partial class MainForm : Form
             parts.Add("Win");
         }
 
-        parts.Add(((Keys)hotkeyBinding.VirtualKeyCode).ToString());
+        parts.Add(VirtualKeyDisplayNameFormatter.Format(hotkeyBinding.VirtualKeyCode));
         return string.Join("+", parts);
     }
 
@@ -1282,7 +1367,8 @@ public partial class MainForm : Form
         MacroSession? session,
         PlaybackSettings playbackSettings,
         bool canPlayback,
-        bool canStop)
+        bool canStop,
+        bool canNavigatePlayback)
     {
         int repeatCount = Math.Max(playbackSettings.RepeatCount, 1);
         int sessionEventCount = session?.Events.Count ?? 0;
@@ -1292,12 +1378,8 @@ public partial class MainForm : Form
         int totalDurationMs = playbackSettings.LoopIndefinitely
             ? session?.TotalDurationMs ?? 0
             : (session?.TotalDurationMs ?? 0) * repeatCount + playbackSettings.InitialDelayMs;
-        int playedEventCount = _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused
-            ? _playedEventCount
-            : 0;
-        int playedDurationMs = _macroPlaybackService.IsPlaying || _macroPlaybackService.IsPaused
-            ? _playedDurationMs
-            : 0;
+        int playedEventCount = Math.Clamp(_playedEventCount, 0, Math.Max(0, totalEventCount));
+        int playedDurationMs = Math.Clamp(_playedDurationMs, 0, Math.Max(0, totalDurationMs));
 
         return new PlaybackControlState(
             FormatAppState(_applicationStateService.CurrentState),
@@ -1311,10 +1393,63 @@ public partial class MainForm : Form
             playbackSettings.InitialDelayMs,
             canPlayback,
             canStop,
+            canNavigatePlayback,
             _macroPlaybackService.IsPaused
                 ? PlaybackButtonState.Resume
                 : _macroPlaybackService.IsPlaying
                     ? PlaybackButtonState.Pause
                     : PlaybackButtonState.Play);
+    }
+
+    private bool CanNavigatePlayback(
+        MacroSession? session,
+        PlaybackSettings playbackSettings)
+    {
+        return !_shutdownInProgress
+            && session is { Events.Count: > 0 }
+            && !_macroRecorderService.IsRecording
+            && !_macroPlaybackService.IsPlaying
+            && !_macroPlaybackService.IsPaused
+            && _applicationStateService.IsState(AppState.Idle)
+            && GetTotalPlaybackEventCount(session, playbackSettings) > 0;
+    }
+
+    private static int GetTotalPlaybackEventCount(
+        MacroSession session,
+        PlaybackSettings playbackSettings)
+    {
+        if (session.Events.Count == 0)
+        {
+            return 0;
+        }
+
+        int repeatCount = playbackSettings.LoopIndefinitely
+            ? 1
+            : Math.Max(playbackSettings.RepeatCount, 1);
+
+        return session.Events.Count * repeatCount;
+    }
+
+    private static int CalculatePlayedDurationMs(
+        MacroSession session,
+        int inclusiveLogicalIndex)
+    {
+        if (session.Events.Count == 0 || inclusiveLogicalIndex < 0)
+        {
+            return 0;
+        }
+
+        int completedCycles = inclusiveLogicalIndex / session.Events.Count;
+        int partialEventIndex = inclusiveLogicalIndex % session.Events.Count;
+        long playedDurationMs = (long)completedCycles * Math.Max(0, session.TotalDurationMs);
+
+        for (int eventIndex = 0; eventIndex <= partialEventIndex; eventIndex++)
+        {
+            playedDurationMs += Math.Max(0, session.Events[eventIndex].DelayMs);
+        }
+
+        return playedDurationMs > int.MaxValue
+            ? int.MaxValue
+            : (int)playedDurationMs;
     }
 }

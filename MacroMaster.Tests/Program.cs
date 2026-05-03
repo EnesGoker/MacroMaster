@@ -530,6 +530,10 @@ public sealed class MacroMasterTests
                 HotkeySettings.DefaultStopHotkey,
                 settings.StopHotkey,
                 "Missing hotkey settings files should fall back to the default stop hotkey.");
+            Assert.Equal(
+                HotkeySettings.DefaultHotkeySettingsHotkey,
+                settings.HotkeySettingsHotkey,
+                "Missing hotkey settings files should fall back to the default hotkey settings shortcut.");
         }
         finally
         {
@@ -549,7 +553,8 @@ public sealed class MacroMasterTests
             {
                 RecordToggleHotkey = new HotkeyBinding(0x70, HotkeyModifiers.Control),
                 PlaybackToggleHotkey = new HotkeyBinding(0x71, HotkeyModifiers.Control | HotkeyModifiers.Shift),
-                StopHotkey = new HotkeyBinding(0x72, HotkeyModifiers.Alt)
+                StopHotkey = new HotkeyBinding(0x72, HotkeyModifiers.Alt),
+                HotkeySettingsHotkey = new HotkeyBinding(0x73, HotkeyModifiers.Control | HotkeyModifiers.Alt)
             };
 
             await hotkeySettingsStore.SaveAsync(expectedSettings);
@@ -558,6 +563,7 @@ public sealed class MacroMasterTests
             Assert.Equal(expectedSettings.RecordToggleHotkey, loadedSettings.RecordToggleHotkey, "Record hotkey should round-trip.");
             Assert.Equal(expectedSettings.PlaybackToggleHotkey, loadedSettings.PlaybackToggleHotkey, "Playback hotkey should round-trip.");
             Assert.Equal(expectedSettings.StopHotkey, loadedSettings.StopHotkey, "Stop hotkey should round-trip.");
+            Assert.Equal(expectedSettings.HotkeySettingsHotkey, loadedSettings.HotkeySettingsHotkey, "Hotkey settings shortcut should round-trip.");
         }
         finally
         {
@@ -604,11 +610,11 @@ public sealed class MacroMasterTests
             dialog.PerformLayout();
 
             Assert.True(
-                dialog.ClientSize.Width >= 520,
+                dialog.ClientSize.Width >= 720,
                 $"Hotkey settings dialog should allocate enough width to show all selector columns. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
 
             List<ComboBox> comboBoxes = GetDescendants<ComboBox>(dialog).ToList();
-            Assert.Equal(6, comboBoxes.Count, "Hotkey settings dialog should expose six combo boxes.");
+            Assert.Equal(8, comboBoxes.Count, "Hotkey settings dialog should expose eight combo boxes.");
 
             List<Button> buttons = GetDescendants<Button>(dialog).ToList();
             Assert.Equal(3, buttons.Count, "Hotkey settings dialog should expose three action buttons.");
@@ -1755,11 +1761,13 @@ internal sealed class TestHotkeyConfiguration : IHotkeyConfiguration
     public TestHotkeyConfiguration(
         HotkeyBinding recordToggleHotkey,
         HotkeyBinding playbackToggleHotkey,
-        HotkeyBinding stopHotkey)
+        HotkeyBinding stopHotkey,
+        HotkeyBinding? hotkeySettingsHotkey = null)
     {
         RecordToggleHotkey = recordToggleHotkey;
         PlaybackToggleHotkey = playbackToggleHotkey;
         StopHotkey = stopHotkey;
+        HotkeySettingsHotkey = hotkeySettingsHotkey ?? HotkeySettings.DefaultHotkeySettingsHotkey;
     }
 
     public HotkeyBinding RecordToggleHotkey { get; }
@@ -1767,6 +1775,8 @@ internal sealed class TestHotkeyConfiguration : IHotkeyConfiguration
     public HotkeyBinding PlaybackToggleHotkey { get; }
 
     public HotkeyBinding StopHotkey { get; }
+
+    public HotkeyBinding HotkeySettingsHotkey { get; }
 }
 
 internal sealed class RecordingTestLogger : IAppLogger
