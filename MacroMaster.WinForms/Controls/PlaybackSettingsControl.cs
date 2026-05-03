@@ -117,8 +117,8 @@ public partial class PlaybackSettingsControl : UserControl
             numericUpDown.BackColor = DesignTokens.SurfaceInset;
             numericUpDown.ForeColor = DesignTokens.TextPrimary;
             numericUpDown.BorderStyle = BorderStyle.FixedSingle;
-            numericUpDown.TextAlign = HorizontalAlignment.Right;
-            numericUpDown.MinimumSize = new Size(0, DesignTokens.Scale(28));
+            numericUpDown.TextAlign = HorizontalAlignment.Left;
+            numericUpDown.MinimumSize = new Size(0, DesignTokens.Scale(32));
             return;
         }
         else if (control is ComboBox comboBox)
@@ -128,8 +128,8 @@ public partial class PlaybackSettingsControl : UserControl
             comboBox.FlatStyle = FlatStyle.Flat;
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox.DrawMode = DrawMode.OwnerDrawFixed;
-            comboBox.ItemHeight = DesignTokens.Scale(24);
-            comboBox.MinimumSize = new Size(0, DesignTokens.Scale(30));
+            comboBox.ItemHeight = DesignTokens.Scale(26);
+            comboBox.MinimumSize = new Size(0, DesignTokens.Scale(32));
             return;
         }
         else if (control is CheckBox checkBox)

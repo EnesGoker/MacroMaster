@@ -52,7 +52,7 @@ internal sealed class DashboardCard : UserControl
             Padding = new Padding(DesignTokens.CardPadding)
         };
         _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(34)));
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
         _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         _rootLayoutPanel.Controls.Add(_titleLabel, 0, 0);
         _rootLayoutPanel.Controls.Add(Body, 0, 1);
@@ -119,6 +119,18 @@ internal sealed class DashboardCard : UserControl
         e.Graphics.DrawPath(glowPen, glowPath);
         e.Graphics.DrawPath(borderPen, path);
         e.Graphics.DrawLine(highlightPen, bounds.Left + DesignTokens.Radius, bounds.Top, bounds.Right - DesignTokens.Radius, bounds.Top);
+
+        // Header divider line
+        if (_showHeader)
+        {
+            int dividerY = bounds.Top + DesignTokens.Scale(38);
+            using var dividerPen = new Pen(DesignTokens.BorderSoft, 1f);
+            e.Graphics.DrawLine(dividerPen,
+                bounds.Left + DesignTokens.Scale(12),
+                dividerY,
+                bounds.Right - DesignTokens.Scale(12),
+                dividerY);
+        }
     }
 
     protected override void OnResize(EventArgs e)
@@ -131,7 +143,7 @@ internal sealed class DashboardCard : UserControl
     private void UpdateHeaderVisibility()
     {
         _titleLabel.Visible = _showHeader;
-        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? DesignTokens.Scale(34) : 0f;
+        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? DesignTokens.Scale(38) : 0f;
     }
 
     private void UpdateRegion()

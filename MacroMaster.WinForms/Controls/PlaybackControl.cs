@@ -49,18 +49,26 @@ internal sealed class PlaybackControl : UserControl
 
         _progressBar = new PlaybackProgressBar();
         _elapsedTimeLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
-        _remainingTimeLabel = CreateTimeLabel(ContentAlignment.MiddleRight);
-        _statusLabel = CreateMetaLabel(ContentAlignment.MiddleLeft);
-        _eventCounterLabel = CreateMetaLabel(ContentAlignment.MiddleCenter);
+        _remainingTimeLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
+        _statusLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            Font = DesignTokens.FontUiBold,
+            ForeColor = Color.FromArgb(52, 199, 89), // green — Hazır
+            BackColor = DesignTokens.Surface,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true
+        };
+        _eventCounterLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
         _settingsLabel = CreateMetaLabel(ContentAlignment.MiddleRight);
-        _backButton = new IconButton(IconButtonKind.Previous);
-        _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSize = DesignTokens.Scale(56) };
+        _backButton = new IconButton(IconButtonKind.SkipBack);
+        _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSizeOverride = DesignTokens.Scale(52) };
         _stopButton = new IconButton(IconButtonKind.Stop);
         _toolTip = new ToolTip();
 
         BuildLayout();
         WireEvents();
-        UpdateState(new PlaybackControlState("Hazir", 0, 0, 0, 0, 1, 1, false, 0, false, false, PlaybackButtonState.Play));
+        UpdateState(new PlaybackControlState("Hazır", 0, 0, 0, 0, 1, 1, false, 0, false, false, PlaybackButtonState.Play));
     }
 
     public void UpdateState(PlaybackControlState state)
@@ -77,9 +85,12 @@ internal sealed class PlaybackControl : UserControl
 
         _progressBar.Progress = progress;
         _elapsedTimeLabel.Text = FormatDuration(safePlayedDurationMs);
-        _remainingTimeLabel.Text = "-" + FormatDuration(Math.Max(0, safeTotalDurationMs - safePlayedDurationMs));
+        _remainingTimeLabel.Text = FormatDuration(Math.Max(0, safeTotalDurationMs - safePlayedDurationMs));
         _statusLabel.Text = state.StatusText;
-        _eventCounterLabel.Text = FormattableString.Invariant($"{safePlayedEvents} / {safeTotalEvents} olay");
+        _statusLabel.ForeColor = state.StatusText is "Hazır" or "Hazir" or "Bos" or "Boş"
+            ? Color.FromArgb(52, 199, 89)
+            : DesignTokens.TextPrimary;
+        _eventCounterLabel.Text = FormattableString.Invariant($"{safePlayedEvents} / {safeTotalEvents}");
         _settingsLabel.Text = FormatSettingsSummary(state);
 
         _playbackButton.Kind = state.PlaybackButtonState switch
@@ -92,7 +103,7 @@ internal sealed class PlaybackControl : UserControl
         _stopButton.Enabled = state.CanStop;
         _backButton.Enabled = state.CanStop;
 
-        _toolTip.SetToolTip(_backButton, "Oynatmayi durdur");
+        _toolTip.SetToolTip(_backButton, "Başa al");
         _toolTip.SetToolTip(_playbackButton, state.PlaybackButtonState switch
         {
             PlaybackButtonState.Pause => "Duraklat",
@@ -118,72 +129,117 @@ internal sealed class PlaybackControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 4,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
-            Padding = new Padding(0, DesignTokens.Scale(2), 0, 0)
+            Padding = new Padding(
+                DesignTokens.Scale(16),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(16),
+                DesignTokens.Scale(8))
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(62)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(34)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(36))); // status row
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28))); // progress bar
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(20))); // progress % label
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));                    // buttons
 
-        var progressLayoutPanel = new TableLayoutPanel
+        // Row 0: Status info — Durum | Mevcut Olay | Geçen Süre | Kalan Süre
+        var statusPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
+            ColumnCount = 4,
             RowCount = 2,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        progressLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        progressLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        progressLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(30)));
-        progressLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        progressLayoutPanel.Controls.Add(_progressBar, 0, 0);
-        progressLayoutPanel.SetColumnSpan(_progressBar, 2);
-        progressLayoutPanel.Controls.Add(_elapsedTimeLabel, 0, 1);
-        progressLayoutPanel.Controls.Add(_remainingTimeLabel, 1, 1);
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+        statusPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(16)));
+        statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        var metaLayoutPanel = new TableLayoutPanel
+        var captionDurum = CreateCaptionLabel("Durum");
+        var captionOlay = CreateCaptionLabel("Mevcut Olay");
+        var captionGecen = CreateCaptionLabel("Geçen Süre");
+        var captionKalan = CreateCaptionLabel("Kalan Süre");
+
+        statusPanel.Controls.Add(captionDurum, 0, 0);
+        statusPanel.Controls.Add(captionOlay, 1, 0);
+        statusPanel.Controls.Add(captionGecen, 2, 0);
+        statusPanel.Controls.Add(captionKalan, 3, 0);
+        statusPanel.Controls.Add(_statusLabel, 0, 1);
+        statusPanel.Controls.Add(_eventCounterLabel, 1, 1);
+        statusPanel.Controls.Add(_elapsedTimeLabel, 2, 1);
+        statusPanel.Controls.Add(_remainingTimeLabel, 3, 1);
+
+        // Row 1: Progress bar
+        // Row 2: Progress % (right-aligned)
+        var progressPercentLabel = new Label
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 3,
-            RowCount = 1,
+            Font = DesignTokens.FontUiSmall,
+            ForeColor = DesignTokens.TextSecondary,
             BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 0, 0, DesignTokens.Scale(2)),
-            Padding = Padding.Empty
+            TextAlign = ContentAlignment.MiddleRight,
+            AutoEllipsis = true
         };
-        metaLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
-        metaLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32f));
-        metaLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
-        metaLayoutPanel.Controls.Add(_statusLabel, 0, 0);
-        metaLayoutPanel.Controls.Add(_eventCounterLabel, 1, 0);
-        metaLayoutPanel.Controls.Add(_settingsLabel, 2, 0);
+        _progressBar.PercentLabel = progressPercentLabel;
 
+        // Row 3: Buttons — centered, 5 buttons like reference
         var controlsLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 5,
+            ColumnCount = 7,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
         controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(72)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(92)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(72)));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
         controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        controlsLayoutPanel.Controls.Add(_backButton, 1, 0);
-        controlsLayoutPanel.Controls.Add(_playbackButton, 2, 0);
-        controlsLayoutPanel.Controls.Add(_stopButton, 3, 0);
 
-        rootLayoutPanel.Controls.Add(progressLayoutPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(metaLayoutPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(controlsLayoutPanel, 0, 2);
+        var skipBackButton = new IconButton(IconButtonKind.SkipBack);
+        var stepBackButton = new IconButton(IconButtonKind.StepBack);
+        var stepForwardButton = new IconButton(IconButtonKind.StepForward);
+        _playbackButton.ButtonSizeOverride = DesignTokens.Scale(52);
+
+        controlsLayoutPanel.Controls.Add(skipBackButton, 1, 0);
+        controlsLayoutPanel.Controls.Add(stepBackButton, 2, 0);
+        controlsLayoutPanel.Controls.Add(_playbackButton, 3, 0);
+        controlsLayoutPanel.Controls.Add(stepForwardButton, 4, 0);
+        controlsLayoutPanel.Controls.Add(_stopButton, 5, 0);
+
+        // Wire new buttons to stop (functional equivalent for now)
+        skipBackButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
+        stepBackButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
+        stepForwardButton.Click += (_, _) => { };
+
+        rootLayoutPanel.Controls.Add(statusPanel, 0, 0);
+        rootLayoutPanel.Controls.Add(_progressBar, 0, 1);
+        rootLayoutPanel.Controls.Add(progressPercentLabel, 0, 2);
+        rootLayoutPanel.Controls.Add(controlsLayoutPanel, 0, 3);
         Controls.Add(rootLayoutPanel);
+    }
+
+    private static Label CreateCaptionLabel(string text)
+    {
+        return new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = text,
+            Font = DesignTokens.FontUiSmall,
+            ForeColor = DesignTokens.TextSecondary,
+            BackColor = DesignTokens.Surface,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
     }
 
     private void WireEvents()
@@ -262,6 +318,8 @@ internal sealed class PlaybackControl : UserControl
     {
         private double _progress;
 
+        public Label? PercentLabel { get; set; }
+
         public PlaybackProgressBar()
         {
             SetStyle(
@@ -282,12 +340,10 @@ internal sealed class PlaybackControl : UserControl
             set
             {
                 double normalized = Math.Clamp(value, 0, 1);
-                if (Math.Abs(_progress - normalized) < 0.001)
-                {
-                    return;
-                }
-
+                if (Math.Abs(_progress - normalized) < 0.001) return;
                 _progress = normalized;
+                if (PercentLabel != null)
+                    PercentLabel.Text = FormattableString.Invariant($"{_progress * 100:0}%");
                 Invalidate();
             }
         }
@@ -351,21 +407,24 @@ internal sealed class PlaybackControl : UserControl
             Margin = new Padding(DesignTokens.Scale(4));
             BackColor = DesignTokens.Surface;
             Cursor = Cursors.Hand;
-            ButtonSize = DesignTokens.Scale(46);
+            ButtonSizeOverride = DesignTokens.Scale(46);
         }
 
-        public int ButtonSize { get; init; }
+        public int ButtonSizeOverride { get; set; }
+
+        // Keep old name working
+        public int ButtonSize
+        {
+            get => ButtonSizeOverride;
+            init => ButtonSizeOverride = value;
+        }
 
         public IconButtonKind Kind
         {
             get => _kind;
             set
             {
-                if (_kind == value)
-                {
-                    return;
-                }
-
+                if (_kind == value) return;
                 _kind = value;
                 Invalidate();
             }
@@ -397,29 +456,21 @@ internal sealed class PlaybackControl : UserControl
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
             int inset = DesignTokens.Scale(4);
-            int size = Math.Min(ButtonSize, Math.Min(Width - inset, Height - inset));
+            int size = Math.Min(ButtonSizeOverride, Math.Min(Width - inset, Height - inset));
             var bounds = new Rectangle(
                 (Width - size) / 2,
                 (Height - size) / 2,
                 size,
                 size);
             bool isPrimary = Kind is IconButtonKind.Play or IconButtonKind.Pause;
-            Color iconColor = Enabled
-                ? DesignTokens.TextPrimary
-                : DesignTokens.TextMuted;
-            Color background = isPrimary
-                ? DesignTokens.AccentDeep
-                : DesignTokens.Surface2;
+            Color iconColor = Enabled ? DesignTokens.TextPrimary : DesignTokens.TextMuted;
+            Color background = isPrimary ? DesignTokens.AccentDeep : DesignTokens.Surface2;
             Color border = Enabled
                 ? isPrimary ? DesignTokens.Accent : DesignTokens.BorderBright
                 : DesignTokens.Border;
 
             if (ClientRectangle.Contains(PointToClient(MousePosition)) && Enabled)
-            {
-                background = isPrimary
-                    ? Color.FromArgb(35, 116, 239)
-                    : DesignTokens.Surface3;
-            }
+                background = isPrimary ? Color.FromArgb(35, 116, 239) : DesignTokens.Surface3;
 
             using GraphicsPath backgroundPath = CreateRoundPath(bounds, Math.Min(20, size / 2));
             using var backgroundBrush = new SolidBrush(background);
@@ -431,90 +482,103 @@ internal sealed class PlaybackControl : UserControl
             DrawIcon(e.Graphics, bounds, iconBrush);
         }
 
-        private void DrawIcon(Graphics graphics, Rectangle bounds, Brush brush)
+        private void DrawIcon(Graphics g, Rectangle b, Brush brush)
         {
             switch (Kind)
             {
-                case IconButtonKind.Previous:
-                    DrawPreviousIcon(graphics, bounds, brush);
-                    break;
-                case IconButtonKind.Pause:
-                    DrawPauseIcon(graphics, bounds, brush);
-                    break;
-                case IconButtonKind.Stop:
-                    DrawStopIcon(graphics, bounds, brush);
-                    break;
-                default:
-                    DrawPlayIcon(graphics, bounds, brush);
-                    break;
+                case IconButtonKind.SkipBack:    DrawSkipBackIcon(g, b, brush); break;
+                case IconButtonKind.StepBack:    DrawStepBackIcon(g, b, brush); break;
+                case IconButtonKind.StepForward: DrawStepForwardIcon(g, b, brush); break;
+                case IconButtonKind.Pause:       DrawPauseIcon(g, b, brush); break;
+                case IconButtonKind.Stop:        DrawStopIcon(g, b, brush); break;
+                default:                         DrawPlayIcon(g, b, brush); break;
             }
         }
 
-        private static void DrawPlayIcon(Graphics graphics, Rectangle bounds, Brush brush)
+        private static void DrawPlayIcon(Graphics g, Rectangle b, Brush brush)
         {
-            int iconSize = bounds.Width / 3;
-            int x = bounds.Left + bounds.Width / 2 - iconSize / 3;
-            int y = bounds.Top + bounds.Height / 2;
-            Point[] points =
-            [
-                new(x - iconSize / 2, y - iconSize),
-                new(x - iconSize / 2, y + iconSize),
-                new(x + iconSize, y)
-            ];
-            graphics.FillPolygon(brush, points);
+            int s = b.Width / 3;
+            int x = b.Left + b.Width / 2 - s / 3;
+            int y = b.Top + b.Height / 2;
+            g.FillPolygon(brush, new Point[] {
+                new(x - s / 2, y - s), new(x - s / 2, y + s), new(x + s, y)
+            });
         }
 
-        private static void DrawPauseIcon(Graphics graphics, Rectangle bounds, Brush brush)
+        private static void DrawPauseIcon(Graphics g, Rectangle b, Brush brush)
         {
-            int barWidth = Math.Max(4, bounds.Width / 9);
-            int barHeight = bounds.Height / 3;
-            int gap = barWidth;
-            int x = bounds.Left + bounds.Width / 2 - barWidth - gap / 2;
-            int y = bounds.Top + bounds.Height / 2 - barHeight / 2;
-            graphics.FillRectangle(brush, x, y, barWidth, barHeight);
-            graphics.FillRectangle(brush, x + barWidth + gap, y, barWidth, barHeight);
+            int bw = Math.Max(4, b.Width / 9);
+            int bh = b.Height / 3;
+            int gap = bw;
+            int x = b.Left + b.Width / 2 - bw - gap / 2;
+            int y = b.Top + b.Height / 2 - bh / 2;
+            g.FillRectangle(brush, x, y, bw, bh);
+            g.FillRectangle(brush, x + bw + gap, y, bw, bh);
         }
 
-        private static void DrawPreviousIcon(Graphics graphics, Rectangle bounds, Brush brush)
+        private static void DrawStopIcon(Graphics g, Rectangle b, Brush brush)
         {
-            int iconHeight = bounds.Height / 3;
-            int iconWidth = bounds.Width / 3;
-            int centerX = bounds.Left + bounds.Width / 2;
-            int centerY = bounds.Top + bounds.Height / 2;
-            int barWidth = Math.Max(3, bounds.Width / 14);
-            graphics.FillRectangle(
-                brush,
-                centerX - iconWidth,
-                centerY - iconHeight / 2,
-                barWidth,
-                iconHeight);
-            Point[] points =
-            [
-                new(centerX + iconWidth / 2, centerY - iconHeight / 2),
-                new(centerX + iconWidth / 2, centerY + iconHeight / 2),
-                new(centerX - iconWidth / 2, centerY)
-            ];
-            graphics.FillPolygon(brush, points);
+            int s = b.Width / 4;
+            g.FillRectangle(brush,
+                b.Left + b.Width / 2 - s / 2,
+                b.Top + b.Height / 2 - s / 2, s, s);
         }
 
-        private static void DrawStopIcon(Graphics graphics, Rectangle bounds, Brush brush)
+        // |◀  skip to beginning
+        private static void DrawSkipBackIcon(Graphics g, Rectangle b, Brush brush)
         {
-            int iconSize = bounds.Width / 4;
-            var iconBounds = new Rectangle(
-                bounds.Left + bounds.Width / 2 - iconSize / 2,
-                bounds.Top + bounds.Height / 2 - iconSize / 2,
-                iconSize,
-                iconSize);
-            graphics.FillRectangle(brush, iconBounds);
+            int ih = b.Height / 3;
+            int iw = b.Width / 3;
+            int cx = b.Left + b.Width / 2;
+            int cy = b.Top + b.Height / 2;
+            int barW = Math.Max(3, b.Width / 12);
+            g.FillRectangle(brush, cx - iw, cy - ih / 2, barW, ih);
+            g.FillPolygon(brush, new Point[] {
+                new(cx + iw / 2, cy - ih / 2),
+                new(cx + iw / 2, cy + ih / 2),
+                new(cx - iw / 2, cy)
+            });
         }
-    }
+
+        // ◀  step back one event
+        private static void DrawStepBackIcon(Graphics g, Rectangle b, Brush brush)
+        {
+            int ih = b.Height / 3;
+            int iw = b.Width / 4;
+            int cx = b.Left + b.Width / 2;
+            int cy = b.Top + b.Height / 2;
+            g.FillPolygon(brush, new Point[] {
+                new(cx + iw, cy - ih / 2),
+                new(cx + iw, cy + ih / 2),
+                new(cx - iw, cy)
+            });
+        }
+
+        // ▶  step forward one event
+        private static void DrawStepForwardIcon(Graphics g, Rectangle b, Brush brush)
+        {
+            int ih = b.Height / 3;
+            int iw = b.Width / 4;
+            int cx = b.Left + b.Width / 2;
+            int cy = b.Top + b.Height / 2;
+            g.FillPolygon(brush, new Point[] {
+                new(cx - iw, cy - ih / 2),
+                new(cx - iw, cy + ih / 2),
+                new(cx + iw, cy)
+            });
+        }
+
+    } // end IconButton
 
     private enum IconButtonKind
     {
-        Previous,
+        SkipBack,
+        StepBack,
         Play,
         Pause,
-        Stop
+        StepForward,
+        Stop,
+        Previous // legacy alias
     }
 
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)

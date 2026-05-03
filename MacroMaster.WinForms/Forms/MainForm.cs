@@ -876,7 +876,7 @@ public partial class MainForm : Form
         previewHostPanel.Body.Controls.Add(_eventListControl);
 
         var sessionHostPanel = CreateSectionCard("Oturum Ozeti");
-        sessionHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
+        sessionHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, DesignTokens.Scale(6), 0);
         sessionHostPanel.Body.Controls.Add(_sessionSummaryControl);
 
         mainLayoutPanel.Controls.Add(libraryHostPanel, 0, 0);
