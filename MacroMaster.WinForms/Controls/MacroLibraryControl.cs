@@ -14,6 +14,7 @@ internal sealed class MacroLibraryControl : UserControl
 
     public event EventHandler? AddRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? LoadRequested;
+    public event EventHandler<MacroLibraryItemEventArgs>? RenameRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? DeleteRequested;
 
     public MacroLibraryControl()
@@ -58,6 +59,7 @@ internal sealed class MacroLibraryControl : UserControl
                 bool isSelected = IsSamePath(item.FilePath, selectedFilePath);
                 var row = new MacroLibraryRow(item, isSelected);
                 row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 _macroListPanel.Controls.Add(row);
             }
@@ -93,7 +95,7 @@ internal sealed class MacroLibraryControl : UserControl
             ColumnCount = 2,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
+            Margin = new Padding(0, 0, GetScrollbarReserveWidth(), 0),
             Padding = Padding.Empty
         };
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
@@ -261,6 +263,7 @@ internal sealed class MacroLibraryControl : UserControl
         private readonly bool _isSelected;
 
         public event EventHandler? Activated;
+        public event EventHandler? RenameRequested;
         public event EventHandler? DeleteRequested;
 
         public MacroLibraryRow(MacroLibraryEntry item, bool isSelected)
@@ -314,14 +317,13 @@ internal sealed class MacroLibraryControl : UserControl
             var layoutPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
+                ColumnCount = 1,
                 RowCount = 1,
                 BackColor = Color.Transparent,
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(46)));
 
             var textLayoutPanel = new TableLayoutPanel
             {
@@ -362,39 +364,25 @@ internal sealed class MacroLibraryControl : UserControl
                 0,
                 1);
 
-            var countBadge = new RoundedPanel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = _isSelected
-                    ? DesignTokens.AccentDeep
-                    : DesignTokens.Surface3,
-                BorderColor = _isSelected
-                    ? Color.FromArgb(90, DesignTokens.Accent)
-                    : DesignTokens.BorderSoft,
-                Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(13), 0, DesignTokens.Scale(13)),
-                Padding = Padding.Empty
-            };
-            countBadge.Controls.Add(
-                new Label
-                {
-                    Dock = DockStyle.Fill,
-                    Text = _item.EventCount.ToString(CultureInfo.InvariantCulture),
-                    Font = DesignTokens.FontUiSmall,
-                    ForeColor = DesignTokens.TextPrimary,
-                    BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.MiddleCenter
-                });
-
             layoutPanel.Controls.Add(textLayoutPanel, 0, 0);
-            layoutPanel.Controls.Add(countBadge, 1, 0);
             Controls.Add(layoutPanel);
         }
 
         private void BuildContextMenu()
         {
-            var contextMenu = new ContextMenuStrip();
+            var contextMenu = new ContextMenuStrip
+            {
+                BackColor = DesignTokens.Surface2,
+                ForeColor = DesignTokens.TextPrimary,
+                ShowImageMargin = false
+            };
+            var renameItem = new ToolStripMenuItem("Isim Duzenle");
+            renameItem.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
+
             var deleteItem = new ToolStripMenuItem("Sil");
             deleteItem.Click += (_, _) => DeleteRequested?.Invoke(this, EventArgs.Empty);
+            contextMenu.Items.Add(renameItem);
+            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(deleteItem);
             ContextMenuStrip = contextMenu;
         }

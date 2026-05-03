@@ -454,6 +454,12 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(() => LoadLibraryMacroAsync(e.Item), "Makro kutuphanesi yukleme");
     }
 
+    private void macroLibraryControl_RenameRequested(object? sender, MacroLibraryItemEventArgs e)
+    {
+        _ = sender;
+        _ = ExecuteUiActionAsync(() => RenameLibraryMacroAsync(e.Item), "Makro kutuphanesi isim duzenleme");
+    }
+
     private void macroLibraryControl_DeleteRequested(object? sender, MacroLibraryItemEventArgs e)
     {
         _ = sender;
@@ -624,6 +630,37 @@ public partial class MainForm : Form
         MacroSession session = await _macroLibraryService.LoadAsync(item.FilePath);
         AdoptLoadedSession(session, item.FilePath);
         await RefreshMacroLibraryAsync();
+    }
+
+    private async Task RenameLibraryMacroAsync(MacroLibraryEntry item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        EnsureSessionMutationAllowed();
+
+        using var dialog = new MacroNameEditDialog(item.Name);
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        string previousFilePath = item.FilePath;
+        string renamedFilePath = await _macroLibraryService.RenameAsync(
+            previousFilePath,
+            dialog.MacroName);
+
+        if (IsSamePath(_lastSessionPath, previousFilePath))
+        {
+            _lastSessionPath = renamedFilePath;
+
+            if (_activeSession is not null)
+            {
+                _activeSession.Name = Path.GetFileNameWithoutExtension(renamedFilePath);
+            }
+        }
+
+        await RefreshMacroLibraryAsync();
+        RefreshUiState();
     }
 
     private async Task DeleteLibraryMacroAsync(MacroLibraryEntry item)
@@ -909,6 +946,7 @@ public partial class MainForm : Form
         _macroLibraryControl.Dock = DockStyle.Fill;
         _macroLibraryControl.AddRequested += loadJsonButton_Click;
         _macroLibraryControl.LoadRequested += macroLibraryControl_LoadRequested;
+        _macroLibraryControl.RenameRequested += macroLibraryControl_RenameRequested;
         _macroLibraryControl.DeleteRequested += macroLibraryControl_DeleteRequested;
 
         _sessionSummaryControl.Name = "sessionSummaryControl";

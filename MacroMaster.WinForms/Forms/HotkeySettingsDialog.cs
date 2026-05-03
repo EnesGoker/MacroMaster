@@ -1,11 +1,12 @@
 using MacroMaster.Application.Abstractions;
+using MacroMaster.WinForms.Theme;
 
 namespace MacroMaster.WinForms.Forms;
 
 public sealed class HotkeySettingsDialog : Form
 {
     private const int ComboBoxWidth = 170;
-    private static readonly Size MinimumClientSize = new(560, 220);
+    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(620), DesignTokens.Scale(300));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
     private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
@@ -31,14 +32,17 @@ public sealed class HotkeySettingsDialog : Form
         MaximizeBox = false;
         MinimizeBox = false;
         ShowInTaskbar = false;
-        AutoScaleMode = AutoScaleMode.Font;
+        AutoScaleMode = AutoScaleMode.None;
         AutoSize = false;
-        Padding = new Padding(12);
+        BackColor = DesignTokens.Surface;
+        ForeColor = DesignTokens.TextPrimary;
+        Font = DesignTokens.FontUiNormal;
+        Padding = new Padding(DesignTokens.Scale(18));
 
-        Button applyButton = CreateButton("Uygula");
-        Button cancelButton = CreateButton("Vazgec");
+        Button applyButton = CreateButton("Kaydet", isPrimary: true);
+        Button cancelButton = CreateButton("Iptal", isPrimary: false);
+        Button resetDefaultsButton = CreateButton("Varsayilan", isPrimary: false);
         cancelButton.DialogResult = DialogResult.Cancel;
-        Button resetDefaultsButton = CreateButton("Varsayilanlara Don");
 
         applyButton.Click += applyButton_Click;
         resetDefaultsButton.Click += resetDefaultsButton_Click;
@@ -89,15 +93,7 @@ public sealed class HotkeySettingsDialog : Form
 
         ResumeLayout(performLayout: true);
 
-        Size preferredContentSize = GetPreferredContentSize(
-            settingsTableLayoutPanel,
-            buttonFlowLayoutPanel);
-        Size computedClientSize = new(
-            preferredContentSize.Width + Padding.Horizontal,
-            preferredContentSize.Height + Padding.Vertical);
-        ClientSize = new Size(
-            Math.Max(computedClientSize.Width, MinimumClientSize.Width),
-            Math.Max(computedClientSize.Height, MinimumClientSize.Height));
+        ClientSize = MinimumClientSize;
         MinimumSize = SizeFromClientSize(ClientSize);
         PerformLayout();
     }
@@ -167,41 +163,87 @@ public sealed class HotkeySettingsDialog : Form
     {
         TableLayoutPanel rootLayoutPanel = new()
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            AutoSize = false,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 3,
             Dock = DockStyle.Fill,
             Margin = Padding.Empty,
             Padding = Padding.Empty,
+            BackColor = DesignTokens.Surface,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize
         };
 
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        rootLayoutPanel.Controls.Add(settingsTableLayoutPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(buttonFlowLayoutPanel, 0, 1);
+        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
+        rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
+        rootLayoutPanel.Controls.Add(settingsTableLayoutPanel, 0, 1);
+        rootLayoutPanel.Controls.Add(buttonFlowLayoutPanel, 0, 2);
 
         return rootLayoutPanel;
+    }
+
+    private static TableLayoutPanel CreateHeaderPanel()
+    {
+        var headerLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
+
+        headerLayoutPanel.Controls.Add(
+            new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "Kisayol Ayarlari",
+                Font = DesignTokens.FontUiBold,
+                ForeColor = DesignTokens.TextPrimary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            },
+            0,
+            0);
+        headerLayoutPanel.Controls.Add(
+            new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "Global kisayollari secin ve kaydedin.",
+                Font = DesignTokens.FontUiSmall,
+                ForeColor = DesignTokens.TextSecondary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            },
+            0,
+            1);
+
+        return headerLayoutPanel;
     }
 
     private static TableLayoutPanel CreateSettingsTableLayoutPanel()
     {
         TableLayoutPanel settingsTableLayoutPanel = new()
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            AutoSize = false,
             ColumnCount = 3,
             RowCount = 4,
+            Dock = DockStyle.Fill,
             Margin = Padding.Empty,
-            Padding = Padding.Empty,
+            Padding = new Padding(DesignTokens.Scale(14), DesignTokens.Scale(12), DesignTokens.Scale(14), DesignTokens.Scale(12)),
+            BackColor = DesignTokens.SurfaceInset,
             GrowStyle = TableLayoutPanelGrowStyle.FixedSize
         };
 
-        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
+        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
 
         return settingsTableLayoutPanel;
     }
@@ -210,11 +252,11 @@ public sealed class HotkeySettingsDialog : Form
     {
         FlowLayoutPanel buttonFlowLayoutPanel = new()
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.RightToLeft,
-            Margin = new Padding(0, 12, 0, 0),
-            Padding = Padding.Empty,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = new Padding(0, DesignTokens.Scale(12), 0, 0),
             WrapContents = false,
             Anchor = AnchorStyles.Right
         };
@@ -227,33 +269,26 @@ public sealed class HotkeySettingsDialog : Form
         return buttonFlowLayoutPanel;
     }
 
-    private static Size GetPreferredContentSize(
-        TableLayoutPanel settingsTableLayoutPanel,
-        FlowLayoutPanel buttonFlowLayoutPanel)
+    private static Button CreateButton(string text, bool isPrimary)
     {
-        Size settingsSize = settingsTableLayoutPanel.GetPreferredSize(Size.Empty);
-        Size buttonSize = buttonFlowLayoutPanel.GetPreferredSize(Size.Empty);
-
-        int width = Math.Max(
-            settingsSize.Width,
-            buttonSize.Width + buttonFlowLayoutPanel.Margin.Horizontal);
-        int height = settingsSize.Height
-            + buttonSize.Height
-            + buttonFlowLayoutPanel.Margin.Vertical;
-
-        return new Size(width, height);
-    }
-
-    private static Button CreateButton(string text)
-    {
-        return new Button
+        var button = new Button
         {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(6, 0, 0, 0),
+            Width = DesignTokens.Scale(118),
+            Height = DesignTokens.Scale(34),
+            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0),
             Text = text,
-            UseVisualStyleBackColor = true
+            FlatStyle = FlatStyle.Flat,
+            UseVisualStyleBackColor = false,
+            Font = DesignTokens.FontUiBold,
+            BackColor = isPrimary ? DesignTokens.AccentDeep : DesignTokens.Surface2,
+            ForeColor = DesignTokens.TextPrimary
         };
+
+        button.FlatAppearance.BorderColor = isPrimary
+            ? DesignTokens.Accent
+            : DesignTokens.BorderBright;
+        button.FlatAppearance.BorderSize = 1;
+        return button;
     }
 
     private static ComboBox CreateComboBox()
@@ -261,9 +296,14 @@ public sealed class HotkeySettingsDialog : Form
         return new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            DropDownWidth = ComboBoxWidth,
-            Width = ComboBoxWidth,
-            Margin = new Padding(0, 6, 12, 0)
+            DropDownWidth = DesignTokens.Scale(ComboBoxWidth),
+            Dock = DockStyle.Fill,
+            Width = DesignTokens.Scale(ComboBoxWidth),
+            Margin = new Padding(0, DesignTokens.Scale(4), DesignTokens.Scale(10), DesignTokens.Scale(4)),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = DesignTokens.Surface,
+            ForeColor = DesignTokens.TextPrimary,
+            Font = DesignTokens.FontUiNormal
         };
     }
 
@@ -277,7 +317,7 @@ public sealed class HotkeySettingsDialog : Form
 
     private static void AddHeaderRow(TableLayoutPanel tableLayoutPanel)
     {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(30)));
 
         tableLayoutPanel.Controls.Add(CreateHeaderLabel("Islem"), 0, 0);
         tableLayoutPanel.Controls.Add(CreateHeaderLabel("Degistirici"), 1, 0);
@@ -291,19 +331,22 @@ public sealed class HotkeySettingsDialog : Form
         ComboBox modifierComboBox,
         ComboBox keyComboBox)
     {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
 
-        modifierComboBox.Anchor = AnchorStyles.Left;
-        keyComboBox.Anchor = AnchorStyles.Left;
-        keyComboBox.Margin = new Padding(0, 6, 0, 0);
+        modifierComboBox.Dock = DockStyle.Fill;
+        keyComboBox.Dock = DockStyle.Fill;
+        keyComboBox.Margin = new Padding(0, DesignTokens.Scale(4), 0, DesignTokens.Scale(4));
 
         tableLayoutPanel.Controls.Add(
             new Label
             {
-                AutoSize = true,
-                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
                 Text = actionLabel,
-                Margin = new Padding(0, 9, 12, 0)
+                Font = DesignTokens.FontUiBold,
+                ForeColor = DesignTokens.TextPrimary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, DesignTokens.Scale(12), 0)
             },
             0,
             rowIndex);
@@ -315,10 +358,13 @@ public sealed class HotkeySettingsDialog : Form
     {
         return new Label
         {
-            AutoSize = true,
-            Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 162),
-            Margin = new Padding(0, 0, 12, 6),
-            Text = text
+            Dock = DockStyle.Fill,
+            Font = DesignTokens.FontUiSmall,
+            ForeColor = DesignTokens.TextSecondary,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 0, DesignTokens.Scale(12), DesignTokens.Scale(4)),
+            Text = text,
+            TextAlign = ContentAlignment.MiddleLeft
         };
     }
 

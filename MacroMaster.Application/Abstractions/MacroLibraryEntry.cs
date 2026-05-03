@@ -27,6 +27,11 @@ public interface IMacroLibraryService
         MacroSession session,
         CancellationToken cancellationToken = default);
 
+    Task<string> RenameAsync(
+        string filePath,
+        string newName,
+        CancellationToken cancellationToken = default);
+
     Task DeleteAsync(
         string filePath,
         CancellationToken cancellationToken = default);

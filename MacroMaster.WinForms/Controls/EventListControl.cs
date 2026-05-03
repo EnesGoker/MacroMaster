@@ -8,6 +8,7 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class EventListControl : UserControl
 {
     private readonly DataGridView _eventGridView;
+    private readonly ContextMenuStrip _eventContextMenu;
     private readonly Label _emptyStateLabel;
     private readonly Label _summaryLabel;
     private MacroSession? _displayedSession;
@@ -31,6 +32,7 @@ internal sealed class EventListControl : UserControl
         Font = DesignTokens.FontUiNormal;
 
         _eventGridView = new DataGridView();
+        _eventContextMenu = BuildEventContextMenu();
         _emptyStateLabel = new Label();
         _summaryLabel = new Label();
 
@@ -181,7 +183,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
         _eventGridView.ScrollBars = ScrollBars.Both;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        _eventGridView.CellDoubleClick += EventGridView_CellDoubleClick;
+        _eventGridView.CellMouseDown += EventGridView_CellMouseDown;
 
         _eventGridView.Columns.Add(CreateTextColumn("#", "#", 32, 5));
         _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 70, 12));
@@ -192,16 +194,50 @@ internal sealed class EventListControl : UserControl
         _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 80, 31));
     }
 
-    private void EventGridView_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+    private ContextMenuStrip BuildEventContextMenu()
+    {
+        var contextMenu = new ContextMenuStrip
+        {
+            BackColor = DesignTokens.Surface2,
+            ForeColor = DesignTokens.TextPrimary,
+            ShowImageMargin = false
+        };
+
+        var editItem = new ToolStripMenuItem("Duzenle");
+        editItem.Click += (_, _) =>
+        {
+            if (_eventContextMenu.Tag is int rowIndex)
+            {
+                RequestEditForRow(rowIndex);
+            }
+        };
+        contextMenu.Items.Add(editItem);
+
+        return contextMenu;
+    }
+
+    private void EventGridView_CellMouseDown(object? sender, DataGridViewCellMouseEventArgs e)
     {
         _ = sender;
 
-        if (e.RowIndex < 0 || _displayedSession is null)
+        if (e.Button != MouseButtons.Right || e.RowIndex < 0 || _displayedSession is null)
         {
             return;
         }
 
-        if (_eventGridView.Rows[e.RowIndex].Tag is not int eventIndex
+        _eventGridView.ClearSelection();
+        _eventGridView.Rows[e.RowIndex].Selected = true;
+        _eventGridView.CurrentCell = _eventGridView.Rows[e.RowIndex].Cells[Math.Max(0, e.ColumnIndex)];
+        _eventContextMenu.Tag = e.RowIndex;
+        _eventContextMenu.Show(_eventGridView, e.Location);
+    }
+
+    private void RequestEditForRow(int rowIndex)
+    {
+        if (_displayedSession is null
+            || rowIndex < 0
+            || rowIndex >= _eventGridView.Rows.Count
+            || _eventGridView.Rows[rowIndex].Tag is not int eventIndex
             || eventIndex < 0
             || eventIndex >= _displayedSession.Events.Count)
         {
