@@ -80,10 +80,10 @@ partial class PlaybackSettingsControl
         // settingsLayoutPanel
         // 
         settingsLayoutPanel.ColumnCount = 4;
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
+        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
+        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22F));
         settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 1F));
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
+        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
         settingsLayoutPanel.Controls.Add(speedLabel, 0, 0);
         settingsLayoutPanel.Controls.Add(speedComboBox, 1, 0);
         settingsLayoutPanel.Controls.Add(repeatCountLabel, 0, 1);
@@ -109,6 +109,7 @@ partial class PlaybackSettingsControl
         // 
         // speedLabel
         // 
+        speedLabel.AutoEllipsis = true;
         speedLabel.Dock = DockStyle.Fill;
         speedLabel.Location = new Point(3, 0);
         speedLabel.Name = "speedLabel";
@@ -128,6 +129,7 @@ partial class PlaybackSettingsControl
         // 
         // repeatCountLabel
         // 
+        repeatCountLabel.AutoEllipsis = true;
         repeatCountLabel.Dock = DockStyle.Fill;
         repeatCountLabel.Location = new Point(3, 29);
         repeatCountLabel.Name = "repeatCountLabel";
@@ -149,6 +151,7 @@ partial class PlaybackSettingsControl
         // 
         // initialDelayLabel
         // 
+        initialDelayLabel.AutoEllipsis = true;
         initialDelayLabel.Dock = DockStyle.Fill;
         initialDelayLabel.Location = new Point(3, 58);
         initialDelayLabel.Name = "initialDelayLabel";
@@ -227,7 +230,7 @@ partial class PlaybackSettingsControl
         // 
         // PlaybackSettingsControl
         // 
-        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleMode = AutoScaleMode.None;
         Controls.Add(rootLayoutPanel);
         Name = "PlaybackSettingsControl";
         Size = new Size(938, 174);

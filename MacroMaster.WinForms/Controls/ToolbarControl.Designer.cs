@@ -1,3 +1,5 @@
+using MacroMaster.WinForms.Theme;
+
 namespace MacroMaster.WinForms.Controls;
 
 partial class ToolbarControl
@@ -52,7 +54,11 @@ partial class ToolbarControl
         toolbarLayoutPanel.Location = new Point(0, 0);
         toolbarLayoutPanel.Margin = Padding.Empty;
         toolbarLayoutPanel.Name = "toolbarLayoutPanel";
-        toolbarLayoutPanel.Padding = new Padding(12, 10, 12, 10);
+        toolbarLayoutPanel.Padding = new Padding(
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(10),
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(10));
         toolbarLayoutPanel.RowCount = 1;
         toolbarLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         toolbarLayoutPanel.Size = new Size(1200, 62);
@@ -114,7 +120,7 @@ partial class ToolbarControl
         // 
         // ToolbarControl
         // 
-        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleMode = AutoScaleMode.None;
         Controls.Add(toolbarLayoutPanel);
         Name = "ToolbarControl";
         Size = new Size(1200, 62);

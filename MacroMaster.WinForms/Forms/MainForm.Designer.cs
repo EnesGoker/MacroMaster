@@ -493,8 +493,7 @@ partial class MainForm
         // 
         // MainForm
         // 
-        AutoScaleDimensions = new SizeF(7F, 15F);
-        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleMode = AutoScaleMode.None;
         ClientSize = new Size(984, 521);
         Controls.Add(sessionPreviewTextBox);
         Controls.Add(playbackSettingsPanel);

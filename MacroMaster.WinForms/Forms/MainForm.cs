@@ -804,9 +804,9 @@ public partial class MainForm : Form
 
         BackColor = DesignTokens.Background;
         ForeColor = DesignTokens.TextPrimary;
-        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleMode = AutoScaleMode.None;
         ClientSize = new Size(DesignTokens.Scale(1280), DesignTokens.Scale(760));
-        MinimumSize = new Size(DesignTokens.Scale(1080), DesignTokens.Scale(700));
+        MinimumSize = new Size(DesignTokens.Scale(640), DesignTokens.Scale(480));
         Padding = Padding.Empty;
 
         titleLabel.Font = DesignTokens.FontUiLarge;
@@ -830,8 +830,8 @@ public partial class MainForm : Form
         };
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(54)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(18)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.BottomPanelHeight));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 65f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 35f));
 
         var headerLayoutPanel = new TableLayoutPanel
         {
@@ -967,7 +967,7 @@ public partial class MainForm : Form
         card.Title = title;
         card.ContentPadding = new Padding(
             DesignTokens.CardPadding,
-            DesignTokens.Scale(12),
+            DesignTokens.Scale(16),
             DesignTokens.CardPadding,
             DesignTokens.CardPadding);
         return card;

@@ -170,16 +170,16 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ReadOnly = true;
         _eventGridView.RowHeadersVisible = false;
         _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
-        _eventGridView.ScrollBars = ScrollBars.Vertical;
+        _eventGridView.ScrollBars = ScrollBars.Both;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
-        _eventGridView.Columns.Add(CreateTextColumn("#", "#", 58, 6));
-        _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 120, 13));
-        _eventGridView.Columns.Add(CreateTextColumn("Type", "Tur", 92, 10));
-        _eventGridView.Columns.Add(CreateTextColumn("Action", "Aksiyon", 150, 17));
-        _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 170, 19));
-        _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 96, 11));
-        _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 220, 24));
+        _eventGridView.Columns.Add(CreateTextColumn("#", "#", 32, 5));
+        _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 70, 12));
+        _eventGridView.Columns.Add(CreateTextColumn("Type", "Tur", 50, 9));
+        _eventGridView.Columns.Add(CreateTextColumn("Action", "Aksiyon", 60, 15));
+        _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 80, 18));
+        _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 55, 10));
+        _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 80, 31));
     }
 
     private void ApplyTheme()

@@ -251,7 +251,7 @@ internal sealed class MacroLibraryControl : UserControl
         public MacroLibraryRow(MacroLibraryItem item)
         {
             _item = item;
-            Height = DesignTokens.Scale(78);
+            Height = DesignTokens.Scale(64);
             Width = 320;
             Margin = new Padding(0, 0, 0, DesignTokens.Scale(9));
             Padding = new Padding(
@@ -304,7 +304,7 @@ internal sealed class MacroLibraryControl : UserControl
             };
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(28)));
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(50)));
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(54)));
 
             var iconLabel = new Label
             {
@@ -362,7 +362,7 @@ internal sealed class MacroLibraryControl : UserControl
                     ? DesignTokens.AccentDeep
                     : DesignTokens.Surface3,
                 BorderColor = Color.Transparent,
-                Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(14), 0, DesignTokens.Scale(14)),
+                Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(16), DesignTokens.Scale(2), DesignTokens.Scale(16)),
                 Padding = Padding.Empty
             };
             countBadge.Controls.Add(

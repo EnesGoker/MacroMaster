@@ -99,7 +99,7 @@ public partial class ToolbarControl : UserControl
     {
         BackColor = DesignTokens.Surface;
         MinimumSize = new Size(0, DesignTokens.ToolbarHeight);
-        MaximumSize = new Size(int.MaxValue, DesignTokens.ToolbarHeight);
+        MaximumSize = new Size(int.MaxValue, int.MaxValue);
 
         foreach (Control control in toolbarLayoutPanel.Controls)
         {

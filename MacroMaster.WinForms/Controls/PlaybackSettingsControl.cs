@@ -88,7 +88,7 @@ public partial class PlaybackSettingsControl : UserControl
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        MinimumSize = new Size(0, DesignTokens.BottomPanelHeight);
+        MinimumSize = new Size(0, DesignTokens.Scale(160));
         ApplyDensityScale();
 
         rootLayoutPanel.BackColor = DesignTokens.Surface;
@@ -152,26 +152,19 @@ public partial class PlaybackSettingsControl : UserControl
     {
         rootLayoutPanel.Padding = new Padding(
             DesignTokens.Scale(18),
-            DesignTokens.Scale(14),
+            DesignTokens.Scale(12),
             DesignTokens.Scale(18),
             DesignTokens.Scale(14));
-        rootLayoutPanel.RowStyles[0].Height = DesignTokens.Scale(38);
-        settingsLayoutPanel.Margin = new Padding(0, DesignTokens.Scale(8), 0, 0);
+        rootLayoutPanel.RowStyles[0].Height = DesignTokens.Scale(34);
 
         settingsLayoutPanel.ColumnStyles[0].Width = DesignTokens.Scale(150);
-        settingsLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(30);
+        settingsLayoutPanel.ColumnStyles[2].Width = Math.Max(1, DesignTokens.Scale(1));
 
         int inputTopMargin = DesignTokens.Scale(3);
-        int checkLeftMargin = DesignTokens.Scale(20);
+        int checkLeftMargin = DesignTokens.Scale(15);
         speedComboBox.Margin = new Padding(DesignTokens.Scale(3), inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
         repeatCountNumericUpDown.Margin = speedComboBox.Margin;
         initialDelayNumericUpDown.Margin = speedComboBox.Margin;
-        dividerPanel.Dock = DockStyle.Fill;
-        dividerPanel.Margin = new Padding(
-            DesignTokens.Scale(14),
-            DesignTokens.Scale(3),
-            DesignTokens.Scale(14),
-            DesignTokens.Scale(3));
         preserveTimingCheckBox.Margin = new Padding(checkLeftMargin, inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
         loopIndefinitelyCheckBox.Margin = preserveTimingCheckBox.Margin;
         stopOnErrorCheckBox.Margin = preserveTimingCheckBox.Margin;

@@ -32,7 +32,6 @@ internal static class DesignTokens
     public static int TitleBarHeight => AppSpacing.TitleBarHeight;
     public static int ToolbarHeight => AppSpacing.ToolbarHeight;
     public static int LibraryPanelWidth => AppSpacing.LibraryPanelWidth;
-    public static int BottomPanelHeight => AppSpacing.BottomPanelHeight;
     public static int CardPadding => AppSpacing.CardPadding;
     public static int GapSmall => AppSpacing.GapSmall;
     public static int GapMedium => AppSpacing.GapMedium;
