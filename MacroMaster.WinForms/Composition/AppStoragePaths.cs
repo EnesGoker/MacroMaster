@@ -10,12 +10,15 @@ internal sealed class AppStoragePaths
 
     public string HotkeySettingsFilePath { get; }
 
+    public string MacroLibraryDirectoryPath { get; }
+
     private AppStoragePaths(string rootDirectoryPath)
     {
         RootDirectoryPath = rootDirectoryPath;
         LogDirectoryPath = Path.Combine(rootDirectoryPath, "logs");
         PlaybackSettingsFilePath = Path.Combine(rootDirectoryPath, "playback-settings.json");
         HotkeySettingsFilePath = Path.Combine(rootDirectoryPath, "hotkey-settings.json");
+        MacroLibraryDirectoryPath = Path.Combine(rootDirectoryPath, "macros");
     }
 
     public static AppStoragePaths CreateDefault()

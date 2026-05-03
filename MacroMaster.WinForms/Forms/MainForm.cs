@@ -13,6 +13,7 @@ public partial class MainForm : Form
     private readonly IMacroRecorderService _macroRecorderService;
     private readonly IMacroPlaybackService _macroPlaybackService;
     private readonly IMacroStorageService _macroStorageService;
+    private readonly IMacroLibraryService _macroLibraryService;
     private readonly IPlaybackSettingsStore _playbackSettingsStore;
     private readonly IHotkeySettingsStore _hotkeySettingsStore;
     private readonly IMutableHotkeyConfiguration _hotkeyConfiguration;
@@ -39,6 +40,7 @@ public partial class MainForm : Form
         IMacroRecorderService macroRecorderService,
         IMacroPlaybackService macroPlaybackService,
         IMacroStorageService macroStorageService,
+        IMacroLibraryService macroLibraryService,
         IPlaybackSettingsStore playbackSettingsStore,
         IHotkeySettingsStore hotkeySettingsStore,
         IMutableHotkeyConfiguration hotkeyConfiguration,
@@ -49,6 +51,7 @@ public partial class MainForm : Form
         _macroRecorderService = macroRecorderService;
         _macroPlaybackService = macroPlaybackService;
         _macroStorageService = macroStorageService;
+        _macroLibraryService = macroLibraryService;
         _playbackSettingsStore = playbackSettingsStore;
         _hotkeySettingsStore = hotkeySettingsStore;
         _hotkeyConfiguration = hotkeyConfiguration;
@@ -95,6 +98,18 @@ public partial class MainForm : Form
         }
 
         UpdateHotkeySummary();
+        try
+        {
+            await RefreshMacroLibraryAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError(
+                "Makro kutuphanesi yuklenemedi. Uygulama bos kutuphane ile devam edecek.",
+                ex);
+            _macroLibraryControl.SetItems([], null);
+        }
+
         RefreshUiState();
         await InitializeHotkeysAsync();
     }
@@ -391,6 +406,13 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(SaveJsonAsync, "JSON kaydetme");
     }
 
+    private void saveLibraryButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(SaveToLibraryAsync, "Makro kutuphanesine kaydetme");
+    }
+
     private void loadJsonButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
@@ -424,6 +446,24 @@ public partial class MainForm : Form
         _ = sender;
         _ = e;
         _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayol ayarlari");
+    }
+
+    private void macroLibraryControl_LoadRequested(object? sender, MacroLibraryItemEventArgs e)
+    {
+        _ = sender;
+        _ = ExecuteUiActionAsync(() => LoadLibraryMacroAsync(e.Item), "Makro kutuphanesi yukleme");
+    }
+
+    private void macroLibraryControl_DeleteRequested(object? sender, MacroLibraryItemEventArgs e)
+    {
+        _ = sender;
+        _ = ExecuteUiActionAsync(() => DeleteLibraryMacroAsync(e.Item), "Makro kutuphanesi silme");
+    }
+
+    private void eventListControl_EventEditRequested(object? sender, EventEditRequestedEventArgs e)
+    {
+        _ = sender;
+        _ = ExecuteUiActionAsync(() => EditEventAsync(e), "Olay duzenleme");
     }
 
     private void preserveTimingCheckBox_CheckedChanged(object? sender, EventArgs e)
@@ -483,6 +523,18 @@ public partial class MainForm : Form
 
         await _macroStorageService.SaveAsJsonAsync(session, dialog.FileName);
         _lastSessionPath = dialog.FileName;
+        await RefreshMacroLibraryAsync();
+        RefreshUiState();
+    }
+
+    private async Task SaveToLibraryAsync()
+    {
+        MacroSession session = GetRequiredSession();
+        EnsureSessionMutationAllowed();
+
+        string filePath = await _macroLibraryService.SaveAsync(session);
+        _lastSessionPath = filePath;
+        await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
 
@@ -503,6 +555,7 @@ public partial class MainForm : Form
 
         MacroSession session = await _macroStorageService.LoadFromJsonAsync(dialog.FileName);
         AdoptLoadedSession(session, dialog.FileName);
+        await RefreshMacroLibraryAsync();
     }
 
     private async Task SaveXmlAsync()
@@ -526,6 +579,7 @@ public partial class MainForm : Form
 
         await _macroStorageService.SaveAsXmlAsync(session, dialog.FileName);
         _lastSessionPath = dialog.FileName;
+        await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
 
@@ -546,9 +600,10 @@ public partial class MainForm : Form
 
         MacroSession session = await _macroStorageService.LoadFromXmlAsync(dialog.FileName);
         AdoptLoadedSession(session, dialog.FileName);
+        await RefreshMacroLibraryAsync();
     }
 
-    private Task ClearSessionAsync()
+    private async Task ClearSessionAsync()
     {
         EnsureSessionMutationAllowed();
 
@@ -557,9 +612,86 @@ public partial class MainForm : Form
         _lastSessionPath = null;
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        await RefreshMacroLibraryAsync();
         RefreshUiState();
+    }
 
+    private async Task LoadLibraryMacroAsync(MacroLibraryEntry item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        EnsureSessionMutationAllowed();
+
+        MacroSession session = await _macroLibraryService.LoadAsync(item.FilePath);
+        AdoptLoadedSession(session, item.FilePath);
+        await RefreshMacroLibraryAsync();
+    }
+
+    private async Task DeleteLibraryMacroAsync(MacroLibraryEntry item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        EnsureSessionMutationAllowed();
+
+        DialogResult confirmation = MessageBox.Show(
+            this,
+            $"{item.Name} kutuphaneden silinsin mi?",
+            "Makro Sil",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+
+        if (confirmation != DialogResult.Yes)
+        {
+            return;
+        }
+
+        await _macroLibraryService.DeleteAsync(item.FilePath);
+
+        if (IsSamePath(_lastSessionPath, item.FilePath))
+        {
+            _lastSessionPath = null;
+        }
+
+        await RefreshMacroLibraryAsync();
+        RefreshUiState();
+    }
+
+    private Task EditEventAsync(EventEditRequestedEventArgs editRequest)
+    {
+        ArgumentNullException.ThrowIfNull(editRequest);
+        EnsureSessionMutationAllowed();
+
+        MacroSession session = GetRequiredSession();
+
+        if (editRequest.EventIndex < 0 || editRequest.EventIndex >= session.Events.Count)
+        {
+            throw new InvalidOperationException("Duzenlenecek olay aktif oturumda bulunamadi.");
+        }
+
+        MacroEvent macroEvent = session.Events[editRequest.EventIndex];
+
+        using var dialog = new EventEditDialog(editRequest.EventIndex, macroEvent);
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return Task.CompletedTask;
+        }
+
+        macroEvent.DelayMs = dialog.EditResult.DelayMs;
+
+        if (dialog.EditResult.X.HasValue && dialog.EditResult.Y.HasValue)
+        {
+            macroEvent.X = dialog.EditResult.X;
+            macroEvent.Y = dialog.EditResult.Y;
+        }
+
+        RefreshUiState(forceEventListReload: true);
         return Task.CompletedTask;
+    }
+
+    private async Task RefreshMacroLibraryAsync()
+    {
+        IReadOnlyList<MacroLibraryEntry> entries = await _macroLibraryService.ListAsync();
+        _macroLibraryControl.SetItems(entries, _lastSessionPath);
     }
 
     private void AdoptLoadedSession(MacroSession session, string filePath)
@@ -645,7 +777,7 @@ public partial class MainForm : Form
         }
     }
 
-    private void RefreshUiState()
+    private void RefreshUiState(bool forceEventListReload = false)
     {
         MacroSession? displayedSession = GetSessionForPlayback();
         bool hasSession = displayedSession is { Events.Count: > 0 };
@@ -668,7 +800,7 @@ public partial class MainForm : Form
         recordToggleButton.Text = _macroRecorderService.IsRecording
             ? "Kaydi Durdur"
             : "Kayit Baslat";
-        _eventListControl.SetSession(displayedSession);
+        _eventListControl.SetSession(displayedSession, forceEventListReload);
 
         bool isIdle = _applicationStateService.IsState(AppState.Idle);
 
@@ -743,7 +875,7 @@ public partial class MainForm : Form
 
         if (InvokeRequired)
         {
-            BeginInvoke(new Action(RefreshUiState));
+            BeginInvoke(new Action(() => RefreshUiState()));
             return;
         }
 
@@ -761,7 +893,7 @@ public partial class MainForm : Form
         _toolbarControl.RecordToggleClicked += recordToggleButton_Click;
         _toolbarControl.PlaybackToggleClicked += playbackToggleButton_Click;
         _toolbarControl.StopClicked += stopButton_Click;
-        _toolbarControl.SaveClicked += saveJsonButton_Click;
+        _toolbarControl.SaveClicked += saveLibraryButton_Click;
         _toolbarControl.LoadClicked += loadJsonButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;
 
@@ -771,9 +903,13 @@ public partial class MainForm : Form
 
         _eventListControl.Name = "eventListControl";
         _eventListControl.Dock = DockStyle.Fill;
+        _eventListControl.EventEditRequested += eventListControl_EventEditRequested;
 
         _macroLibraryControl.Name = "macroLibraryControl";
         _macroLibraryControl.Dock = DockStyle.Fill;
+        _macroLibraryControl.AddRequested += loadJsonButton_Click;
+        _macroLibraryControl.LoadRequested += macroLibraryControl_LoadRequested;
+        _macroLibraryControl.DeleteRequested += macroLibraryControl_DeleteRequested;
 
         _sessionSummaryControl.Name = "sessionSummaryControl";
         _sessionSummaryControl.Dock = DockStyle.Fill;
@@ -1156,6 +1292,15 @@ public partial class MainForm : Form
         }
 
         return sanitizedName + extension;
+    }
+
+    private static bool IsSamePath(string? left, string right)
+    {
+        return !string.IsNullOrWhiteSpace(left)
+            && string.Equals(
+                Path.GetFullPath(left),
+                Path.GetFullPath(right),
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static decimal ClampDecimal(

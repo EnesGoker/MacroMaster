@@ -10,9 +10,12 @@ internal sealed class EventListControl : UserControl
     private readonly DataGridView _eventGridView;
     private readonly Label _emptyStateLabel;
     private readonly Label _summaryLabel;
+    private MacroSession? _displayedSession;
     private Guid? _displayedSessionId;
     private int _displayedEventCount;
     private int _displayedElapsedMs;
+
+    public event EventHandler<EventEditRequestedEventArgs>? EventEditRequested;
 
     public EventListControl()
     {
@@ -37,7 +40,7 @@ internal sealed class EventListControl : UserControl
         SetSession(null);
     }
 
-    public void SetSession(MacroSession? session)
+    public void SetSession(MacroSession? session, bool forceReload = false)
     {
         if (session is null)
         {
@@ -48,12 +51,16 @@ internal sealed class EventListControl : UserControl
             return;
         }
 
-        bool canAppend = _displayedSessionId == session.Id
+        _displayedSession = session;
+
+        bool canAppend = !forceReload
+            && _displayedSessionId == session.Id
             && session.Events.Count >= _displayedEventCount;
 
         if (!canAppend)
         {
             ClearRows();
+            _displayedSession = session;
             _displayedSessionId = session.Id;
         }
 
@@ -80,6 +87,7 @@ internal sealed class EventListControl : UserControl
     private void ClearRows()
     {
         _eventGridView.Rows.Clear();
+        _displayedSession = null;
         _displayedSessionId = null;
         _displayedEventCount = 0;
         _displayedElapsedMs = 0;
@@ -99,7 +107,7 @@ internal sealed class EventListControl : UserControl
             MacroEvent macroEvent = session.Events[index];
             _displayedElapsedMs += Math.Max(0, macroEvent.DelayMs);
 
-            _eventGridView.Rows.Add(
+            int rowIndex = _eventGridView.Rows.Add(
                 (index + 1).ToString("000", CultureInfo.InvariantCulture),
                 FormatElapsedTime(_displayedElapsedMs),
                 FormatEventType(macroEvent.EventType),
@@ -107,6 +115,7 @@ internal sealed class EventListControl : UserControl
                 FormatPosition(macroEvent),
                 FormattableString.Invariant($"{macroEvent.DelayMs} ms"),
                 FormatDetail(macroEvent));
+            _eventGridView.Rows[rowIndex].Tag = index;
         }
 
         _displayedEventCount = session.Events.Count;
@@ -172,6 +181,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
         _eventGridView.ScrollBars = ScrollBars.Both;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        _eventGridView.CellDoubleClick += EventGridView_CellDoubleClick;
 
         _eventGridView.Columns.Add(CreateTextColumn("#", "#", 32, 5));
         _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 70, 12));
@@ -180,6 +190,27 @@ internal sealed class EventListControl : UserControl
         _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 80, 18));
         _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 55, 10));
         _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 80, 31));
+    }
+
+    private void EventGridView_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        _ = sender;
+
+        if (e.RowIndex < 0 || _displayedSession is null)
+        {
+            return;
+        }
+
+        if (_eventGridView.Rows[e.RowIndex].Tag is not int eventIndex
+            || eventIndex < 0
+            || eventIndex >= _displayedSession.Events.Count)
+        {
+            return;
+        }
+
+        EventEditRequested?.Invoke(
+            this,
+            new EventEditRequestedEventArgs(eventIndex, _displayedSession.Events[eventIndex]));
     }
 
     private void ApplyTheme()
@@ -282,4 +313,17 @@ internal sealed class EventListControl : UserControl
                 : macroEvent.Description
         };
     }
+}
+
+internal sealed class EventEditRequestedEventArgs : EventArgs
+{
+    public EventEditRequestedEventArgs(int eventIndex, MacroEvent macroEvent)
+    {
+        EventIndex = eventIndex;
+        MacroEvent = macroEvent;
+    }
+
+    public int EventIndex { get; }
+
+    public MacroEvent MacroEvent { get; }
 }

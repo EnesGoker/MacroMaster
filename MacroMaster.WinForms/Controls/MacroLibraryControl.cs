@@ -1,3 +1,4 @@
+using MacroMaster.Application.Abstractions;
 using MacroMaster.WinForms.Theme;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -7,19 +8,13 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class MacroLibraryControl : UserControl
 {
     private readonly FlowLayoutPanel _macroListPanel;
+    private readonly Label _emptyStateLabel;
     private readonly Label _totalMacroValueLabel;
     private readonly Label _totalEventValueLabel;
 
-    private static readonly MacroLibraryItem[] DesignPreviewItems =
-    [
-        new("Otomatik_Rapor.macro", "15.05.2024 14:30", 152, true),
-        new("Veri_Girisi.macro", "14.05.2024 09:15", 87, false),
-        new("Haftalik_Takip.macro", "13.05.2024 16:45", 203, false),
-        new("Mail_Gonder.macro", "12.05.2024 11:20", 45, false),
-        new("Excel_Islemleri.macro", "11.05.2024 10:10", 310, false),
-        new("Sistem_Bakim.macro", "10.05.2024 18:05", 126, false),
-        new("Uygulama_Test.macro", "09.05.2024 21:35", 174, false)
-    ];
+    public event EventHandler? AddRequested;
+    public event EventHandler<MacroLibraryItemEventArgs>? LoadRequested;
+    public event EventHandler<MacroLibraryItemEventArgs>? DeleteRequested;
 
     public MacroLibraryControl()
     {
@@ -35,11 +30,44 @@ internal sealed class MacroLibraryControl : UserControl
         Font = DesignTokens.FontUiNormal;
 
         _macroListPanel = new FlowLayoutPanel();
+        _emptyStateLabel = CreateEmptyStateLabel();
         _totalMacroValueLabel = CreateFooterValueLabel();
         _totalEventValueLabel = CreateFooterValueLabel();
 
         BuildLayout();
-        PopulateDesignPreviewItems();
+        SetItems([], null);
+    }
+
+    public void SetItems(
+        IReadOnlyList<MacroLibraryEntry> items,
+        string? selectedFilePath)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        _macroListPanel.SuspendLayout();
+        _macroListPanel.Controls.Clear();
+
+        if (items.Count == 0)
+        {
+            _macroListPanel.Controls.Add(_emptyStateLabel);
+        }
+        else
+        {
+            foreach (MacroLibraryEntry item in items)
+            {
+                bool isSelected = IsSamePath(item.FilePath, selectedFilePath);
+                var row = new MacroLibraryRow(item, isSelected);
+                row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                _macroListPanel.Controls.Add(row);
+            }
+        }
+
+        int totalEventCount = items.Sum(item => Math.Max(0, item.EventCount));
+        _totalMacroValueLabel.Text = items.Count.ToString(CultureInfo.InvariantCulture);
+        _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
+        ResizeLibraryRows();
+        _macroListPanel.ResumeLayout();
     }
 
     private void BuildLayout()
@@ -106,6 +134,7 @@ internal sealed class MacroLibraryControl : UserControl
         };
         addButton.FlatAppearance.BorderColor = DesignTokens.BorderBright;
         addButton.FlatAppearance.BorderSize = 1;
+        addButton.Click += (_, _) => AddRequested?.Invoke(this, EventArgs.Empty);
 
         headerLayoutPanel.Controls.Add(iconLabel, 0, 0);
         headerLayoutPanel.Controls.Add(titleLabel, 1, 0);
@@ -181,24 +210,6 @@ internal sealed class MacroLibraryControl : UserControl
         return footerPanel;
     }
 
-    private void PopulateDesignPreviewItems()
-    {
-        _macroListPanel.SuspendLayout();
-        _macroListPanel.Controls.Clear();
-
-        int totalEventCount = 0;
-        foreach (MacroLibraryItem item in DesignPreviewItems)
-        {
-            totalEventCount += item.EventCount;
-            _macroListPanel.Controls.Add(new MacroLibraryRow(item));
-        }
-
-        _totalMacroValueLabel.Text = DesignPreviewItems.Length.ToString(CultureInfo.InvariantCulture);
-        _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
-        ResizeLibraryRows();
-        _macroListPanel.ResumeLayout();
-    }
-
     private void ResizeLibraryRows()
     {
         int rowWidth = Math.Max(
@@ -238,19 +249,32 @@ internal sealed class MacroLibraryControl : UserControl
         };
     }
 
-    private sealed record MacroLibraryItem(
-        string Name,
-        string CreatedAtText,
-        int EventCount,
-        bool IsSelected);
+    private static Label CreateEmptyStateLabel()
+    {
+        return new Label
+        {
+            Height = DesignTokens.Scale(96),
+            Font = DesignTokens.FontUiNormal,
+            ForeColor = DesignTokens.TextMuted,
+            BackColor = Color.Transparent,
+            Text = "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin.",
+            TextAlign = ContentAlignment.MiddleCenter,
+            AutoEllipsis = true
+        };
+    }
 
     private sealed class MacroLibraryRow : RoundedPanel
     {
-        private readonly MacroLibraryItem _item;
+        private readonly MacroLibraryEntry _item;
+        private readonly bool _isSelected;
 
-        public MacroLibraryRow(MacroLibraryItem item)
+        public event EventHandler? Activated;
+        public event EventHandler? DeleteRequested;
+
+        public MacroLibraryRow(MacroLibraryEntry item, bool isSelected)
         {
             _item = item;
+            _isSelected = isSelected;
             Height = DesignTokens.Scale(64);
             Width = 320;
             Margin = new Padding(0, 0, 0, DesignTokens.Scale(9));
@@ -259,14 +283,16 @@ internal sealed class MacroLibraryControl : UserControl
                 DesignTokens.Scale(9),
                 DesignTokens.Scale(12),
                 DesignTokens.Scale(9));
-            BackColor = item.IsSelected
+            BackColor = isSelected
                 ? DesignTokens.AccentSoft
                 : DesignTokens.SurfaceInset;
-            BorderColor = item.IsSelected
+            BorderColor = isSelected
                 ? DesignTokens.Accent
                 : DesignTokens.BorderSoft;
 
             BuildRow();
+            BuildContextMenu();
+            WireActivation(this);
         }
 
         protected override void OnParentChanged(EventArgs e)
@@ -311,7 +337,7 @@ internal sealed class MacroLibraryControl : UserControl
                 Dock = DockStyle.Fill,
                 Text = "M",
                 Font = DesignTokens.FontUiBold,
-                ForeColor = _item.IsSelected ? DesignTokens.Accent : DesignTokens.TextSecondary,
+                ForeColor = _isSelected ? DesignTokens.Accent : DesignTokens.TextSecondary,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter
             };
@@ -345,7 +371,7 @@ internal sealed class MacroLibraryControl : UserControl
                 new Label
                 {
                     Dock = DockStyle.Fill,
-                    Text = _item.CreatedAtText,
+                    Text = FormatLastModified(_item.LastModifiedUtc),
                     Font = DesignTokens.FontUiNormal,
                     ForeColor = DesignTokens.TextSecondary,
                     BackColor = Color.Transparent,
@@ -358,7 +384,7 @@ internal sealed class MacroLibraryControl : UserControl
             var countBadge = new RoundedPanel
             {
                 Dock = DockStyle.Fill,
-                BackColor = _item.IsSelected
+                BackColor = _isSelected
                     ? DesignTokens.AccentDeep
                     : DesignTokens.Surface3,
                 BorderColor = Color.Transparent,
@@ -380,6 +406,33 @@ internal sealed class MacroLibraryControl : UserControl
             layoutPanel.Controls.Add(textLayoutPanel, 1, 0);
             layoutPanel.Controls.Add(countBadge, 2, 0);
             Controls.Add(layoutPanel);
+        }
+
+        private void BuildContextMenu()
+        {
+            var contextMenu = new ContextMenuStrip();
+            var deleteItem = new ToolStripMenuItem("Sil");
+            deleteItem.Click += (_, _) => DeleteRequested?.Invoke(this, EventArgs.Empty);
+            contextMenu.Items.Add(deleteItem);
+            ContextMenuStrip = contextMenu;
+        }
+
+        private void WireActivation(Control control)
+        {
+            control.Click += (_, _) => Activated?.Invoke(this, EventArgs.Empty);
+            control.ContextMenuStrip = ContextMenuStrip;
+
+            foreach (Control child in control.Controls)
+            {
+                WireActivation(child);
+            }
+        }
+
+        private static string FormatLastModified(DateTime lastModifiedUtc)
+        {
+            return lastModifiedUtc
+                .ToLocalTime()
+                .ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR"));
         }
     }
 
@@ -447,4 +500,23 @@ internal sealed class MacroLibraryControl : UserControl
         path.CloseFigure();
         return path;
     }
+
+    private static bool IsSamePath(string left, string? right)
+    {
+        return !string.IsNullOrWhiteSpace(right)
+            && string.Equals(
+                Path.GetFullPath(left),
+                Path.GetFullPath(right),
+                StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+internal sealed class MacroLibraryItemEventArgs : EventArgs
+{
+    public MacroLibraryItemEventArgs(MacroLibraryEntry item)
+    {
+        Item = item;
+    }
+
+    public MacroLibraryEntry Item { get; }
 }

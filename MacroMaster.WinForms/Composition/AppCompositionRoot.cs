@@ -15,6 +15,7 @@ internal sealed class AppCompositionRoot : IDisposable
     public IMacroRecorderService MacroRecorderService { get; }
     public IMacroPlaybackService MacroPlaybackService { get; }
     public IMacroStorageService MacroStorageService { get; }
+    public IMacroLibraryService MacroLibraryService { get; }
     public IPlaybackSettingsStore PlaybackSettingsStore { get; }
     public IHotkeySettingsStore HotkeySettingsStore { get; }
     public IMutableHotkeyConfiguration HotkeyConfiguration { get; }
@@ -29,6 +30,7 @@ internal sealed class AppCompositionRoot : IDisposable
         IMacroRecorderService macroRecorderService,
         IMacroPlaybackService macroPlaybackService,
         IMacroStorageService macroStorageService,
+        IMacroLibraryService macroLibraryService,
         IPlaybackSettingsStore playbackSettingsStore,
         IHotkeySettingsStore hotkeySettingsStore,
         IMutableHotkeyConfiguration hotkeyConfiguration,
@@ -40,6 +42,7 @@ internal sealed class AppCompositionRoot : IDisposable
         MacroRecorderService = macroRecorderService;
         MacroPlaybackService = macroPlaybackService;
         MacroStorageService = macroStorageService;
+        MacroLibraryService = macroLibraryService;
         PlaybackSettingsStore = playbackSettingsStore;
         HotkeySettingsStore = hotkeySettingsStore;
         HotkeyConfiguration = hotkeyConfiguration;
@@ -71,6 +74,11 @@ internal sealed class AppCompositionRoot : IDisposable
         IXmlMacroStorageService xmlMacroStorageService = new XmlMacroStorageService();
         IMacroStorageService macroStorageService =
             new MacroStorageService(jsonMacroStorageService, xmlMacroStorageService);
+        IMacroLibraryService macroLibraryService =
+            new MacroLibraryService(
+                macroStorageService,
+                resolvedLogger,
+                storagePaths.MacroLibraryDirectoryPath);
         IPlaybackSettingsStore playbackSettingsStore =
             new JsonPlaybackSettingsStore(storagePaths.PlaybackSettingsFilePath);
         IHotkeySettingsStore hotkeySettingsStore =
@@ -118,6 +126,7 @@ internal sealed class AppCompositionRoot : IDisposable
             macroRecorderService,
             macroPlaybackService,
             macroStorageService,
+            macroLibraryService,
             playbackSettingsStore,
             hotkeySettingsStore,
             hotkeyConfiguration,
@@ -133,6 +142,7 @@ internal sealed class AppCompositionRoot : IDisposable
             MacroRecorderService,
             MacroPlaybackService,
             MacroStorageService,
+            MacroLibraryService,
             PlaybackSettingsStore,
             HotkeySettingsStore,
             HotkeyConfiguration,
