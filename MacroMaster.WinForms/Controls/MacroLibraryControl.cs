@@ -82,39 +82,28 @@ internal sealed class MacroLibraryControl : UserControl
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(46)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(46)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(50)));
 
         var headerLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 3,
+            ColumnCount = 2,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(34)));
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(42)));
-
-        var iconLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "M",
-            Font = new Font(DesignTokens.FontUiLarge.FontFamily, DesignTokens.ScaleFont(11f), FontStyle.Bold, GraphicsUnit.Point),
-            ForeColor = DesignTokens.Accent,
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.MiddleCenter
-        };
+        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
 
         var titleLabel = new Label
         {
             Dock = DockStyle.Fill,
             Text = "Makro Kutuphanesi",
-            Font = DesignTokens.FontUiLarge,
+            Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Surface,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -128,24 +117,27 @@ internal sealed class MacroLibraryControl : UserControl
             BackColor = DesignTokens.Surface2,
             ForeColor = DesignTokens.TextPrimary,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font(DesignTokens.FontUiLarge.FontFamily, DesignTokens.ScaleFont(16f), FontStyle.Bold, GraphicsUnit.Point),
-            Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(2), 0, DesignTokens.Scale(6)),
+            Font = DesignTokens.FontUiBold,
+            Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7)),
             UseVisualStyleBackColor = false
         };
-        addButton.FlatAppearance.BorderColor = DesignTokens.BorderBright;
+        addButton.FlatAppearance.BorderColor = DesignTokens.BorderSoft;
         addButton.FlatAppearance.BorderSize = 1;
         addButton.Click += (_, _) => AddRequested?.Invoke(this, EventArgs.Empty);
 
-        headerLayoutPanel.Controls.Add(iconLabel, 0, 0);
-        headerLayoutPanel.Controls.Add(titleLabel, 1, 0);
-        headerLayoutPanel.Controls.Add(addButton, 2, 0);
+        headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
+        headerLayoutPanel.Controls.Add(addButton, 1, 0);
 
         var searchPanel = new RoundedPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
-            BorderColor = DesignTokens.Border,
-            Margin = new Padding(0, DesignTokens.Scale(3), 0, DesignTokens.Scale(8)),
+            BorderColor = DesignTokens.BorderSoft,
+            Margin = new Padding(
+                0,
+                DesignTokens.Scale(3),
+                GetScrollbarReserveWidth(),
+                DesignTokens.Scale(8)),
             Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
         };
         var searchLabel = new Label
@@ -183,8 +175,8 @@ internal sealed class MacroLibraryControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
-            Margin = new Padding(0, DesignTokens.Scale(8), 0, 0),
-            Padding = new Padding(DesignTokens.Scale(12), 0, DesignTokens.Scale(12), 0)
+            Margin = new Padding(0, DesignTokens.Scale(8), GetScrollbarReserveWidth(), 0),
+            Padding = new Padding(DesignTokens.Scale(12), DesignTokens.Scale(5), DesignTokens.Scale(12), DesignTokens.Scale(5))
         };
 
         var footerLayoutPanel = new TableLayoutPanel
@@ -196,10 +188,10 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35f));
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15f));
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35f));
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15f));
+        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
+        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12f));
+        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16f));
 
         footerLayoutPanel.Controls.Add(CreateFooterCaptionLabel("Toplam Makro"), 0, 0);
         footerLayoutPanel.Controls.Add(_totalMacroValueLabel, 1, 0);
@@ -214,7 +206,7 @@ internal sealed class MacroLibraryControl : UserControl
     {
         int rowWidth = Math.Max(
             180,
-            _macroListPanel.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 10);
+            _macroListPanel.ClientSize.Width - GetScrollbarReserveWidth());
 
         foreach (Control control in _macroListPanel.Controls)
         {
@@ -275,19 +267,19 @@ internal sealed class MacroLibraryControl : UserControl
         {
             _item = item;
             _isSelected = isSelected;
-            Height = DesignTokens.Scale(64);
+            Height = DesignTokens.Scale(56);
             Width = 320;
-            Margin = new Padding(0, 0, 0, DesignTokens.Scale(9));
+            Margin = new Padding(0, 0, 0, DesignTokens.Scale(8));
             Padding = new Padding(
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(9),
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(9));
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(8),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(8));
             BackColor = isSelected
-                ? DesignTokens.AccentSoft
+                ? Color.FromArgb(20, 56, 98)
                 : DesignTokens.SurfaceInset;
             BorderColor = isSelected
-                ? DesignTokens.Accent
+                ? Color.FromArgb(125, DesignTokens.Accent)
                 : DesignTokens.BorderSoft;
 
             BuildRow();
@@ -313,7 +305,7 @@ internal sealed class MacroLibraryControl : UserControl
             {
                 Width = Math.Max(
                     180,
-                    Parent.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 10);
+                    Parent.ClientSize.Width - GetScrollbarReserveWidth());
             }
         }
 
@@ -322,25 +314,14 @@ internal sealed class MacroLibraryControl : UserControl
             var layoutPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 3,
+                ColumnCount = 2,
                 RowCount = 1,
                 BackColor = Color.Transparent,
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(28)));
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(54)));
-
-            var iconLabel = new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = "M",
-                Font = DesignTokens.FontUiBold,
-                ForeColor = _isSelected ? DesignTokens.Accent : DesignTokens.TextSecondary,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter
-            };
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(46)));
 
             var textLayoutPanel = new TableLayoutPanel
             {
@@ -387,8 +368,10 @@ internal sealed class MacroLibraryControl : UserControl
                 BackColor = _isSelected
                     ? DesignTokens.AccentDeep
                     : DesignTokens.Surface3,
-                BorderColor = Color.Transparent,
-                Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(16), DesignTokens.Scale(2), DesignTokens.Scale(16)),
+                BorderColor = _isSelected
+                    ? Color.FromArgb(90, DesignTokens.Accent)
+                    : DesignTokens.BorderSoft,
+                Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(13), 0, DesignTokens.Scale(13)),
                 Padding = Padding.Empty
             };
             countBadge.Controls.Add(
@@ -396,15 +379,14 @@ internal sealed class MacroLibraryControl : UserControl
                 {
                     Dock = DockStyle.Fill,
                     Text = _item.EventCount.ToString(CultureInfo.InvariantCulture),
-                    Font = DesignTokens.FontUiBold,
+                    Font = DesignTokens.FontUiSmall,
                     ForeColor = DesignTokens.TextPrimary,
                     BackColor = Color.Transparent,
                     TextAlign = ContentAlignment.MiddleCenter
                 });
 
-            layoutPanel.Controls.Add(iconLabel, 0, 0);
-            layoutPanel.Controls.Add(textLayoutPanel, 1, 0);
-            layoutPanel.Controls.Add(countBadge, 2, 0);
+            layoutPanel.Controls.Add(textLayoutPanel, 0, 0);
+            layoutPanel.Controls.Add(countBadge, 1, 0);
             Controls.Add(layoutPanel);
         }
 
@@ -508,6 +490,11 @@ internal sealed class MacroLibraryControl : UserControl
                 Path.GetFullPath(left),
                 Path.GetFullPath(right),
                 StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int GetScrollbarReserveWidth()
+    {
+        return SystemInformation.VerticalScrollBarWidth + DesignTokens.Scale(10);
     }
 }
 
