@@ -124,7 +124,7 @@ internal sealed class DashboardCard : UserControl
         if (_showHeader)
         {
             int dividerY = bounds.Top + DesignTokens.Scale(38);
-            using var dividerPen = new Pen(DesignTokens.BorderSoft, 1f);
+            using var dividerPen = new Pen(Color.FromArgb(60, 255, 255, 255), 1f);
             e.Graphics.DrawLine(dividerPen,
                 bounds.Left + DesignTokens.Scale(12),
                 dividerY,

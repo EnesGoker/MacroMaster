@@ -899,7 +899,7 @@ public partial class MainForm : Form
         playbackControlCard.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
         playbackControlCard.Body.Controls.Add(_playbackControl);
 
-        var playbackSettingsHostPanel = CreateCard();
+        var playbackSettingsHostPanel = CreateSectionCard("Oynatma Ayarlari");
         playbackSettingsHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
         playbackSettingsHostPanel.ContentPadding = Padding.Empty;
         playbackSettingsHostPanel.Body.Controls.Add(_playbackSettingsControl);
