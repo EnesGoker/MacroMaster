@@ -93,9 +93,10 @@ public partial class PlaybackSettingsControl : UserControl
 
         rootLayoutPanel.BackColor = DesignTokens.Surface;
         settingsLayoutPanel.BackColor = DesignTokens.Surface;
-        titleLabel.ForeColor = DesignTokens.TextPrimary;
-        titleLabel.Font = DesignTokens.FontUiBold;
         dividerPanel.BackColor = DesignTokens.BorderSoft;
+        initialDelayUnitLabel.ForeColor = DesignTokens.TextSecondary;
+        initialDelayUnitLabel.BackColor = Color.Transparent;
+        initialDelayUnitLabel.Font = DesignTokens.FontUiNormal;
 
         foreach (Control control in settingsLayoutPanel.Controls)
         {
@@ -103,15 +104,13 @@ public partial class PlaybackSettingsControl : UserControl
         }
     }
 
-    private void ApplyChildTheme(Control control)
+    private static void ApplyChildTheme(Control control)
     {
         control.ForeColor = DesignTokens.TextSecondary;
         control.BackColor = control is TextBox or ComboBox or NumericUpDown
             ? DesignTokens.SurfaceInset
             : Color.Transparent;
-        control.Font = control is Label label && label == titleLabel
-            ? DesignTokens.FontUiBold
-            : DesignTokens.FontUiNormal;
+        control.Font = DesignTokens.FontUiNormal;
 
         if (control is NumericUpDown numericUpDown)
         {
@@ -152,15 +151,15 @@ public partial class PlaybackSettingsControl : UserControl
     {
         rootLayoutPanel.Padding = new Padding(
             DesignTokens.Scale(18),
-            DesignTokens.Scale(12),
+            DesignTokens.Scale(10),
             DesignTokens.Scale(18),
-            DesignTokens.Scale(14));
-        rootLayoutPanel.RowStyles[0].Height = DesignTokens.Scale(34);
+            DesignTokens.Scale(10));
 
-        settingsLayoutPanel.ColumnStyles[0].Width = DesignTokens.Scale(150);
-        settingsLayoutPanel.ColumnStyles[2].Width = Math.Max(1, DesignTokens.Scale(1));
+        // Col 0: label, Col 1: input, Col 2: unit(32px), Col 3: divider(1px), Col 4: checkboxes
+        settingsLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(32);
+        settingsLayoutPanel.ColumnStyles[3].Width = Math.Max(1, DesignTokens.Scale(1));
 
-        int inputTopMargin = DesignTokens.Scale(3);
+        int inputTopMargin = DesignTokens.Scale(4);
         int checkLeftMargin = DesignTokens.Scale(15);
         speedComboBox.Margin = new Padding(DesignTokens.Scale(3), inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
         repeatCountNumericUpDown.Margin = speedComboBox.Margin;

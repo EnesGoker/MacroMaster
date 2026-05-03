@@ -830,8 +830,8 @@ public partial class MainForm : Form
         };
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(54)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(18)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 65f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 35f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
 
         var headerLayoutPanel = new TableLayoutPanel
         {
