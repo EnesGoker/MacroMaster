@@ -270,14 +270,14 @@ internal sealed class MacroLibraryControl : UserControl
         {
             _item = item;
             _isSelected = isSelected;
-            Height = DesignTokens.Scale(56);
+            Height = DesignTokens.Scale(68);
             Width = 320;
             Margin = new Padding(0, 0, 0, DesignTokens.Scale(8));
             Padding = new Padding(
                 DesignTokens.Scale(14),
-                DesignTokens.Scale(8),
+                DesignTokens.Scale(9),
                 DesignTokens.Scale(10),
-                DesignTokens.Scale(8));
+                DesignTokens.Scale(9));
             BackColor = isSelected
                 ? Color.FromArgb(20, 56, 98)
                 : DesignTokens.SurfaceInset;
@@ -334,8 +334,8 @@ internal sealed class MacroLibraryControl : UserControl
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
-            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
+            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(31)));
+            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
             textLayoutPanel.Controls.Add(
                 new Label
@@ -345,7 +345,7 @@ internal sealed class MacroLibraryControl : UserControl
                     Font = DesignTokens.FontUiBold,
                     ForeColor = DesignTokens.TextPrimary,
                     BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.MiddleLeft,
+                    TextAlign = ContentAlignment.BottomLeft,
                     AutoEllipsis = true
                 },
                 0,
@@ -358,7 +358,7 @@ internal sealed class MacroLibraryControl : UserControl
                     Font = DesignTokens.FontUiNormal,
                     ForeColor = DesignTokens.TextSecondary,
                     BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.MiddleLeft,
+                    TextAlign = ContentAlignment.TopLeft,
                     AutoEllipsis = true
                 },
                 0,

@@ -229,7 +229,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.Rows[e.RowIndex].Selected = true;
         _eventGridView.CurrentCell = _eventGridView.Rows[e.RowIndex].Cells[Math.Max(0, e.ColumnIndex)];
         _eventContextMenu.Tag = e.RowIndex;
-        _eventContextMenu.Show(_eventGridView, e.Location);
+        _eventContextMenu.Show(_eventGridView, _eventGridView.PointToClient(Cursor.Position));
     }
 
     private void RequestEditForRow(int rowIndex)
