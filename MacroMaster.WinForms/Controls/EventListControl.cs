@@ -169,7 +169,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.AllowUserToAddRows = false;
         _eventGridView.AllowUserToDeleteRows = false;
         _eventGridView.AllowUserToResizeRows = false;
-        _eventGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        _eventGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
         _eventGridView.BackgroundColor = DesignTokens.SurfaceInset;
         _eventGridView.BorderStyle = BorderStyle.None;
         _eventGridView.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
@@ -184,6 +184,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
         _eventGridView.ScrollBars = ScrollBars.Both;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        _eventGridView.Resize += (_, _) => ApplyColumnWidths();
         _eventGridView.CellMouseDown += EventGridView_CellMouseDown;
         _eventGridView.CellPainting += EventGridView_CellPainting;
 
@@ -194,6 +195,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 80, 18));
         _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 55, 10));
         _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 80, 31));
+        ApplyColumnWidths();
     }
 
     private ContextMenuStrip BuildEventContextMenu()
@@ -366,14 +368,56 @@ internal sealed class EventListControl : UserControl
         int minimumWidth,
         int fillWeight)
     {
+        int scaledMinimumWidth = DesignTokens.Scale(minimumWidth);
+        int scaledWidth = DesignTokens.Scale(Math.Max(minimumWidth, fillWeight * 10));
+
         return new DataGridViewTextBoxColumn
         {
             Name = name,
             HeaderText = headerText,
-            MinimumWidth = minimumWidth,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            MinimumWidth = scaledMinimumWidth,
+            Width = scaledWidth,
             FillWeight = fillWeight,
             SortMode = DataGridViewColumnSortMode.NotSortable
         };
+    }
+
+    private void ApplyColumnWidths()
+    {
+        if (_eventGridView.Columns.Count == 0)
+        {
+            return;
+        }
+
+        int availableWidth = _eventGridView.ClientSize.Width
+            - DesignTokens.GridScrollbarReserveWidth;
+
+        if (availableWidth <= 0)
+        {
+            return;
+        }
+
+        float totalWeight = 0f;
+
+        foreach (DataGridViewColumn column in _eventGridView.Columns)
+        {
+            totalWeight += Math.Max(1f, column.FillWeight);
+        }
+
+        int assignedWidth = 0;
+
+        for (int index = 0; index < _eventGridView.Columns.Count; index++)
+        {
+            DataGridViewColumn column = _eventGridView.Columns[index];
+            bool isLastColumn = index == _eventGridView.Columns.Count - 1;
+            int targetWidth = isLastColumn
+                ? availableWidth - assignedWidth
+                : (int)Math.Round(availableWidth * Math.Max(1f, column.FillWeight) / totalWeight);
+
+            column.Width = Math.Max(column.MinimumWidth, targetWidth);
+            assignedWidth += column.Width;
+        }
     }
 
     private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)

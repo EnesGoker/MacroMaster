@@ -116,7 +116,7 @@ internal sealed class MacroLibraryControl : UserControl
             ColumnCount = 2,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 0, GetScrollbarReserveWidth(), 0),
+            Margin = new Padding(0, 0, DesignTokens.ScrollbarReserveWidth, 0),
             Padding = Padding.Empty
         };
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
@@ -159,7 +159,7 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(
                 0,
                 DesignTokens.Scale(3),
-                GetScrollbarReserveWidth(),
+                DesignTokens.ScrollbarReserveWidth,
                 DesignTokens.Scale(8)),
             Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
         };
@@ -190,7 +190,7 @@ internal sealed class MacroLibraryControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
-            Margin = new Padding(0, DesignTokens.Scale(8), GetScrollbarReserveWidth(), 0),
+            Margin = new Padding(0, DesignTokens.Scale(8), DesignTokens.ScrollbarReserveWidth, 0),
             Padding = new Padding(DesignTokens.Scale(12), DesignTokens.Scale(5), DesignTokens.Scale(12), DesignTokens.Scale(5))
         };
 
@@ -221,7 +221,7 @@ internal sealed class MacroLibraryControl : UserControl
     {
         int rowWidth = Math.Max(
             180,
-            _macroListPanel.ClientSize.Width - GetScrollbarReserveWidth());
+            _macroListPanel.ClientSize.Width - DesignTokens.ScrollbarReserveWidth);
 
         foreach (Control control in _macroListPanel.Controls)
         {
@@ -338,7 +338,7 @@ internal sealed class MacroLibraryControl : UserControl
             {
                 Width = Math.Max(
                     180,
-                    Parent.ClientSize.Width - GetScrollbarReserveWidth());
+                    Parent.ClientSize.Width - DesignTokens.ScrollbarReserveWidth);
             }
         }
 
@@ -510,10 +510,6 @@ internal sealed class MacroLibraryControl : UserControl
                 StringComparison.OrdinalIgnoreCase);
     }
 
-    private static int GetScrollbarReserveWidth()
-    {
-        return SystemInformation.VerticalScrollBarWidth + DesignTokens.Scale(10);
-    }
 }
 
 internal sealed class MacroLibraryItemEventArgs : EventArgs

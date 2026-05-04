@@ -33,6 +33,8 @@ public partial class MainForm : Form
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
+    private System.Windows.Forms.Timer? _recordingEventRefreshTimer;
+    private bool _recordingEventRefreshPending;
 
     public MainForm(
         IApplicationStateService applicationStateService,
@@ -285,6 +287,9 @@ public partial class MainForm : Form
 
     private async Task ShutdownAsync()
     {
+        _recordingEventRefreshTimer?.Stop();
+        _recordingEventRefreshPending = false;
+
         _hotkeyService.RecordToggleRequested -= OnRecordToggleRequested;
         _hotkeyService.PlaybackToggleRequested -= OnPlaybackToggleRequested;
         _hotkeyService.StopRequested -= OnStopRequested;
@@ -395,12 +400,14 @@ public partial class MainForm : Form
     private void OnEventRecorded(MacroEvent macroEvent)
     {
         _ = macroEvent;
-        RequestUiRefresh();
+        RequestRecordingEventRefresh();
     }
 
     private void OnRecordingStopped(MacroSession session)
     {
         _activeSession = session;
+        _recordingEventRefreshTimer?.Stop();
+        _recordingEventRefreshPending = false;
         RequestUiRefresh();
     }
 
@@ -967,9 +974,59 @@ public partial class MainForm : Form
         RefreshUiState();
     }
 
+    private void RequestRecordingEventRefresh()
+    {
+        if (!IsHandleCreated || IsDisposed || _shutdownInProgress)
+        {
+            return;
+        }
+
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action(RequestRecordingEventRefresh));
+            return;
+        }
+
+        _recordingEventRefreshPending = true;
+
+        if (_recordingEventRefreshTimer is null)
+        {
+            _recordingEventRefreshPending = false;
+            RefreshUiState();
+            return;
+        }
+
+        if (!_recordingEventRefreshTimer.Enabled)
+        {
+            _recordingEventRefreshTimer.Start();
+        }
+    }
+
+    private void RecordingEventRefreshTimer_Tick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _recordingEventRefreshTimer?.Stop();
+
+        if (!_recordingEventRefreshPending || _shutdownInProgress || IsDisposed)
+        {
+            return;
+        }
+
+        _recordingEventRefreshPending = false;
+        RefreshUiState();
+    }
+
     private void InitializeDynamicControls()
     {
         BuildResponsiveHostLayout();
+
+        _recordingEventRefreshTimer = new System.Windows.Forms.Timer(components)
+        {
+            Interval = 50
+        };
+        _recordingEventRefreshTimer.Tick += RecordingEventRefreshTimer_Tick;
 
         _toolbarControl.Name = "toolbarControl";
         _toolbarControl.Dock = DockStyle.Fill;

@@ -36,6 +36,8 @@ internal static class DesignTokens
     public static int GapSmall => AppSpacing.GapSmall;
     public static int GapMedium => AppSpacing.GapMedium;
     public static int Radius => AppSpacing.Radius;
+    public static int ScrollbarReserveWidth => SystemInformation.VerticalScrollBarWidth + Scale(10);
+    public static int GridScrollbarReserveWidth => SystemInformation.VerticalScrollBarWidth + Scale(4);
 
     public static Font FontMono => AppTypography.FontMono;
     public static Font FontUiNormal => AppTypography.FontUiNormal;

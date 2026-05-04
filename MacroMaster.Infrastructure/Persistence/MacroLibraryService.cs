@@ -1,15 +1,32 @@
 using MacroMaster.Application.Abstractions;
 using MacroMaster.Domain.Models;
+using System.Text.Json;
+using System.Xml;
 
 namespace MacroMaster.Infrastructure.Persistence;
 
 public sealed class MacroLibraryService : IMacroLibraryService
 {
     private static readonly string[] SupportedSearchPatterns = ["*.json", "*.xml"];
+    private static readonly JsonDocumentOptions JsonMetadataOptions = new()
+    {
+        AllowTrailingCommas = true,
+        CommentHandling = JsonCommentHandling.Skip
+    };
+    private static readonly XmlReaderSettings XmlMetadataReaderSettings = new()
+    {
+        Async = true,
+        DtdProcessing = DtdProcessing.Prohibit,
+        IgnoreComments = true,
+        IgnoreWhitespace = true,
+        XmlResolver = null
+    };
 
     private readonly IMacroStorageService _macroStorageService;
     private readonly IAppLogger _logger;
     private readonly string _libraryDirectoryPath;
+    private readonly object _metadataCacheLock = new();
+    private readonly Dictionary<string, CachedMacroMetadata> _metadataCache = new(StringComparer.OrdinalIgnoreCase);
 
     public MacroLibraryService(
         IMacroStorageService macroStorageService,
@@ -35,6 +52,7 @@ public sealed class MacroLibraryService : IMacroLibraryService
         EnsureLibraryDirectoryExists();
 
         var entries = new List<MacroLibraryEntry>();
+        var activeFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (string filePath in EnumerateMacroFiles())
         {
@@ -42,18 +60,25 @@ public sealed class MacroLibraryService : IMacroLibraryService
 
             try
             {
-                MacroSession session = await LoadByExtensionAsync(filePath, cancellationToken);
                 FileInfo fileInfo = new(filePath);
+                MacroLibraryFileFormat format = ResolveFormat(fileInfo.FullName);
+                MacroLibraryMetadata metadata = await ReadMetadataAsync(
+                    fileInfo,
+                    format,
+                    cancellationToken);
+                string displayName = string.IsNullOrWhiteSpace(metadata.Name)
+                    ? Path.GetFileNameWithoutExtension(fileInfo.FullName)
+                    : metadata.Name;
+
+                activeFilePaths.Add(fileInfo.FullName);
 
                 entries.Add(
                     new MacroLibraryEntry(
-                        string.IsNullOrWhiteSpace(session.Name)
-                            ? Path.GetFileNameWithoutExtension(filePath)
-                            : session.Name,
+                        displayName,
                         fileInfo.FullName,
                         fileInfo.LastWriteTimeUtc,
-                        session.Events.Count,
-                        ResolveFormat(fileInfo.FullName)));
+                        metadata.EventCount,
+                        format));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -64,6 +89,8 @@ public sealed class MacroLibraryService : IMacroLibraryService
                     ex);
             }
         }
+
+        PruneMetadataCache(activeFilePaths);
 
         return entries
             .OrderByDescending(entry => entry.LastModifiedUtc)
@@ -166,6 +193,174 @@ public sealed class MacroLibraryService : IMacroLibraryService
             MacroLibraryFileFormat.Xml => await _macroStorageService.LoadFromXmlAsync(filePath, cancellationToken),
             _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formati: {filePath}")
         };
+    }
+
+    private async Task<MacroLibraryMetadata> ReadMetadataAsync(
+        FileInfo fileInfo,
+        MacroLibraryFileFormat format,
+        CancellationToken cancellationToken)
+    {
+        var signature = new MacroFileSignature(
+            fileInfo.LastWriteTimeUtc,
+            fileInfo.Length);
+
+        lock (_metadataCacheLock)
+        {
+            if (_metadataCache.TryGetValue(fileInfo.FullName, out CachedMacroMetadata? cachedMetadata)
+                && cachedMetadata.Signature == signature)
+            {
+                return cachedMetadata.Metadata;
+            }
+        }
+
+        MacroLibraryMetadata metadata = format switch
+        {
+            MacroLibraryFileFormat.Json => await ReadJsonMetadataAsync(fileInfo.FullName, cancellationToken),
+            MacroLibraryFileFormat.Xml => await ReadXmlMetadataAsync(fileInfo.FullName, cancellationToken),
+            _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formati: {fileInfo.FullName}")
+        };
+
+        lock (_metadataCacheLock)
+        {
+            _metadataCache[fileInfo.FullName] = new CachedMacroMetadata(signature, metadata);
+        }
+
+        return metadata;
+    }
+
+    private static async Task<MacroLibraryMetadata> ReadJsonMetadataAsync(
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        await using FileStream stream = new(
+            filePath,
+            new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.Read,
+                BufferSize = 4096,
+                Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+            });
+
+        using JsonDocument document = await JsonDocument.ParseAsync(
+            stream,
+            JsonMetadataOptions,
+            cancellationToken);
+
+        JsonElement root = document.RootElement;
+        string? name = null;
+        int eventCount = 0;
+
+        if (TryGetPropertyIgnoreCase(root, nameof(MacroSession.Name), out JsonElement nameElement)
+            && nameElement.ValueKind == JsonValueKind.String)
+        {
+            name = nameElement.GetString();
+        }
+
+        if (TryGetPropertyIgnoreCase(root, nameof(MacroSession.Events), out JsonElement eventsElement)
+            && eventsElement.ValueKind == JsonValueKind.Array)
+        {
+            eventCount = eventsElement.GetArrayLength();
+        }
+
+        return new MacroLibraryMetadata(name, eventCount);
+    }
+
+    private static async Task<MacroLibraryMetadata> ReadXmlMetadataAsync(
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        await using FileStream stream = new(
+            filePath,
+            new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.Read,
+                BufferSize = 4096,
+                Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+            });
+
+        using XmlReader reader = XmlReader.Create(stream, XmlMetadataReaderSettings);
+
+        string? name = null;
+        int eventCount = 0;
+        bool isInsideEvents = false;
+        int eventsDepth = -1;
+
+        while (await reader.ReadAsync())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (reader.NodeType == XmlNodeType.Element)
+            {
+                if (name is null
+                    && string.Equals(reader.LocalName, nameof(MacroSession.Name), StringComparison.Ordinal))
+                {
+                    name = await reader.ReadElementContentAsStringAsync();
+                    continue;
+                }
+
+                if (string.Equals(reader.LocalName, nameof(MacroSession.Events), StringComparison.Ordinal))
+                {
+                    isInsideEvents = !reader.IsEmptyElement;
+                    eventsDepth = reader.Depth;
+                    continue;
+                }
+
+                if (isInsideEvents
+                    && string.Equals(reader.LocalName, nameof(MacroEvent), StringComparison.Ordinal))
+                {
+                    eventCount++;
+                }
+            }
+            else if (reader.NodeType == XmlNodeType.EndElement
+                     && isInsideEvents
+                     && reader.Depth == eventsDepth
+                     && string.Equals(reader.LocalName, nameof(MacroSession.Events), StringComparison.Ordinal))
+            {
+                isInsideEvents = false;
+                eventsDepth = -1;
+            }
+        }
+
+        return new MacroLibraryMetadata(name, eventCount);
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement element,
+        string propertyName,
+        out JsonElement value)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private void PruneMetadataCache(HashSet<string> activeFilePaths)
+    {
+        lock (_metadataCacheLock)
+        {
+            foreach (string cachedFilePath in _metadataCache.Keys.ToArray())
+            {
+                if (!activeFilePaths.Contains(cachedFilePath))
+                {
+                    _metadataCache.Remove(cachedFilePath);
+                }
+            }
+        }
     }
 
     private async Task SaveByFormatAsync(
@@ -283,4 +478,12 @@ public sealed class MacroLibraryService : IMacroLibraryService
             Path.GetFullPath(right),
             StringComparison.OrdinalIgnoreCase);
     }
+
+    private sealed record MacroLibraryMetadata(string? Name, int EventCount);
+
+    private sealed record MacroFileSignature(DateTime LastWriteTimeUtc, long Length);
+
+    private sealed record CachedMacroMetadata(
+        MacroFileSignature Signature,
+        MacroLibraryMetadata Metadata);
 }

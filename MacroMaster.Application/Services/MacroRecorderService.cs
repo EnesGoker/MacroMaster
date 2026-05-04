@@ -357,21 +357,33 @@ public sealed class MacroRecorderService : IMacroRecorderService
         KeyboardActivityInfo keyboardActivity,
         out HotkeyBinding hotkeyBinding)
     {
-        HotkeyBinding[] hotkeys =
-        [
-            _hotkeyConfiguration.RecordToggleHotkey,
-            _hotkeyConfiguration.PlaybackToggleHotkey,
-            _hotkeyConfiguration.StopHotkey,
-            _hotkeyConfiguration.HotkeySettingsHotkey
-        ];
+        HotkeyBinding recordToggleHotkey = _hotkeyConfiguration.RecordToggleHotkey;
+        HotkeyBinding playbackToggleHotkey = _hotkeyConfiguration.PlaybackToggleHotkey;
+        HotkeyBinding stopHotkey = _hotkeyConfiguration.StopHotkey;
+        HotkeyBinding hotkeySettingsHotkey = _hotkeyConfiguration.HotkeySettingsHotkey;
 
-        foreach (HotkeyBinding candidateHotkey in hotkeys)
+        if (MatchesHotkey(recordToggleHotkey, keyboardActivity))
         {
-            if (MatchesHotkey(candidateHotkey, keyboardActivity))
-            {
-                hotkeyBinding = candidateHotkey;
-                return true;
-            }
+            hotkeyBinding = recordToggleHotkey;
+            return true;
+        }
+
+        if (MatchesHotkey(playbackToggleHotkey, keyboardActivity))
+        {
+            hotkeyBinding = playbackToggleHotkey;
+            return true;
+        }
+
+        if (MatchesHotkey(stopHotkey, keyboardActivity))
+        {
+            hotkeyBinding = stopHotkey;
+            return true;
+        }
+
+        if (MatchesHotkey(hotkeySettingsHotkey, keyboardActivity))
+        {
+            hotkeyBinding = hotkeySettingsHotkey;
+            return true;
         }
 
         hotkeyBinding = null!;

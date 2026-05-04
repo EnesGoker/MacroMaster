@@ -30,10 +30,10 @@ public partial class ToolbarControl : UserControl
     private readonly ToolStripMenuItem _saveXmlMenuItem = new("XML Kaydet");
     private readonly ToolStripMenuItem _loadJsonMenuItem = new("JSON Yukle");
     private readonly ToolStripMenuItem _loadXmlMenuItem = new("XML Yukle");
-    private string? _recordHotkey = "F8";
-    private string? _stopHotkey = "F10";
-    private string? _playbackHotkey = "F9";
-    private string? _hotkeysHotkey = "F12";
+    private string? _recordHotkey;
+    private string? _stopHotkey;
+    private string? _playbackHotkey;
+    private string? _hotkeysHotkey;
     private string _recordLabel = "Kaydi Baslat";
     private string _playbackLabel = "Oynat";
 
@@ -53,7 +53,7 @@ public partial class ToolbarControl : UserControl
         ConfigureMenus();
         ApplyTheme();
         WireEvents();
-        SetHotkeyHints("F8", "F10", "F9", "F12");
+        SetHotkeyHints(null, null, null, null);
     }
 
     public void UpdateRecordButton(bool isRecording)
@@ -92,7 +92,7 @@ public partial class ToolbarControl : UserControl
         _loadXmlMenuItem.Enabled = state.CanLoadXml;
     }
 
-    public void SetHotkeyHints(string record, string stop, string playback, string hotkeys)
+    public void SetHotkeyHints(string? record, string? stop, string? playback, string? hotkeys)
     {
         _recordHotkey = record;
         _stopHotkey = stop;

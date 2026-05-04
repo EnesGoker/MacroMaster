@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using MacroMaster.Application.Abstractions;
@@ -95,7 +96,7 @@ public sealed class WindowsMouseHookSource : IMouseHookSource, IDisposable
             "Fare kancasi durduruldu.");
     }
 
-    private IntPtr InstallHook(NativeMethods.HookProc hookProc)
+    private static IntPtr InstallHook(NativeMethods.HookProc hookProc)
     {
         using Process currentProcess = Process.GetCurrentProcess();
         ProcessModule? mainModule = currentProcess.MainModule;
@@ -198,16 +199,14 @@ public sealed class WindowsMouseHookSource : IMouseHookSource, IDisposable
         return highWord;
     }
 
-    private void ThrowWin32Exception(string message)
+    private static void ThrowWin32Exception(string message)
     {
         int errorCode = Marshal.GetLastWin32Error();
+        var nativeException = new Win32Exception(errorCode);
         InvalidOperationException exception = new(
-            FormattableString.Invariant($"{message} Win32 hata kodu: {errorCode}"));
-        _logger.Log(
-            AppLogLevel.Error,
-            nameof(WindowsMouseHookSource),
-            message,
-            exception);
+            FormattableString.Invariant(
+                $"{message} Win32 hata kodu: {errorCode}. {nativeException.Message}"),
+            nativeException);
         throw exception;
     }
 

@@ -8,6 +8,8 @@ internal sealed class DashboardCard : UserControl
     private readonly TableLayoutPanel _rootLayoutPanel;
     private readonly Label _titleLabel;
     private bool _showHeader = true;
+    private Size _lastRegionSize;
+    private int _lastRegionRadius = -1;
 
     public DashboardCard()
     {
@@ -151,15 +153,30 @@ internal sealed class DashboardCard : UserControl
         Rectangle bounds = ClientRectangle;
         if (bounds.Width <= 0 || bounds.Height <= 0)
         {
+            Region? emptyRegion = Region;
+            Region = null;
+            emptyRegion?.Dispose();
+            _lastRegionSize = Size.Empty;
+            _lastRegionRadius = -1;
+            return;
+        }
+
+        int radius = DesignTokens.Radius;
+        if (Region is not null
+            && _lastRegionSize == bounds.Size
+            && _lastRegionRadius == radius)
+        {
             return;
         }
 
         using GraphicsPath path = CreateRoundedRectanglePath(
             Rectangle.Inflate(bounds, -1, -1),
-            DesignTokens.Radius);
+            radius);
         Region? previousRegion = Region;
         Region = new Region(path);
         previousRegion?.Dispose();
+        _lastRegionSize = bounds.Size;
+        _lastRegionRadius = radius;
     }
 
     private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)
