@@ -30,6 +30,12 @@ internal static class DesignTokens
     public static Color TextMuted => AppColors.TextMuted;
 
     public static int TitleBarHeight => AppSpacing.TitleBarHeight;
+    public static int TitleBarButtonWidth => AppSpacing.TitleBarButtonWidth;
+    public static int TitleBarButtonHeight => AppSpacing.TitleBarButtonHeight;
+    public static int TitleBarIconSize => AppSpacing.TitleBarIconSize;
+    public static int TitleBarStatusDotSize => AppSpacing.TitleBarStatusDotSize;
+    public static int WindowResizeBorder => AppSpacing.WindowResizeBorder;
+    public static int WindowMaximizedPadding => AppSpacing.WindowMaximizedPadding;
     public static int ToolbarHeight => AppSpacing.ToolbarHeight;
     public static int LibraryPanelWidth => AppSpacing.LibraryPanelWidth;
     public static int CardPadding => AppSpacing.CardPadding;

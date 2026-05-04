@@ -20,6 +20,7 @@ public partial class MainForm : Form
     private readonly IHotkeyService _hotkeyService;
     private readonly IAppLogger _logger;
     private readonly ToolbarControl _toolbarControl = new();
+    private readonly TitleBarControl _titleBarControl = new();
     private readonly PlaybackSettingsControl _playbackSettingsControl = new();
     private readonly EventListControl _eventListControl = new();
     private readonly PlaybackControl _playbackControl = new();
@@ -956,6 +957,10 @@ public partial class MainForm : Form
                 string.IsNullOrWhiteSpace(_lastSessionPath)
                     ? "Kaydedilmedi"
                     : Path.GetFileName(_lastSessionPath)));
+        _titleBarControl.SetStatus(
+            FormatAppState(_applicationStateService.CurrentState),
+            ResolveTitleBarStatusColor(_applicationStateService.CurrentState));
+        _titleBarControl.SetMaximized(WindowState == FormWindowState.Maximized);
     }
 
     private void RequestUiRefresh()
@@ -1040,6 +1045,13 @@ public partial class MainForm : Form
         _toolbarControl.LoadXmlClicked += loadXmlButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;
 
+        _titleBarControl.Name = "titleBarControl";
+        _titleBarControl.Dock = DockStyle.Fill;
+        _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi", "Kayit, oynatim ve JSON/XML destegi");
+        _titleBarControl.MinimizeRequested += titleBarControl_MinimizeRequested;
+        _titleBarControl.MaximizeRestoreRequested += titleBarControl_MaximizeRestoreRequested;
+        _titleBarControl.CloseRequested += titleBarControl_CloseRequested;
+
         _playbackSettingsControl.Name = "playbackSettingsControl";
         _playbackSettingsControl.Dock = DockStyle.Fill;
         _playbackSettingsControl.SettingsChanged += playbackSettingsControl_SettingsChanged;
@@ -1067,6 +1079,45 @@ public partial class MainForm : Form
         _playbackControl.StopClicked += stopButton_Click;
     }
 
+    private void titleBarControl_MinimizeRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        WindowState = FormWindowState.Minimized;
+    }
+
+    private void titleBarControl_MaximizeRestoreRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        WindowState = WindowState == FormWindowState.Maximized
+            ? FormWindowState.Normal
+            : FormWindowState.Maximized;
+        _titleBarControl.SetMaximized(WindowState == FormWindowState.Maximized);
+    }
+
+    private void titleBarControl_CloseRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        Close();
+    }
+
+    private static Color ResolveTitleBarStatusColor(AppState appState)
+    {
+        return appState switch
+        {
+            AppState.Recording => DesignTokens.AccentRed,
+            AppState.Playing => DesignTokens.Accent,
+            AppState.Paused => DesignTokens.AccentOrange,
+            AppState.Stopping => DesignTokens.TextSecondary,
+            _ => DesignTokens.AccentGreen
+        };
+    }
+
     private void BuildResponsiveHostLayout()
     {
         SuspendLayout();
@@ -1077,11 +1128,6 @@ public partial class MainForm : Form
         ClientSize = new Size(DesignTokens.Scale(1280), DesignTokens.Scale(760));
         MinimumSize = new Size(DesignTokens.Scale(640), DesignTokens.Scale(480));
         Padding = Padding.Empty;
-
-        titleLabel.Font = DesignTokens.FontUiLarge;
-        titleLabel.ForeColor = DesignTokens.TextPrimary;
-        titleLabel.Dock = DockStyle.Fill;
-        titleLabel.TextAlign = ContentAlignment.MiddleLeft;
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -1096,7 +1142,7 @@ public partial class MainForm : Form
                 DesignTokens.Scale(16)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(54)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight + DesignTokens.Scale(12)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(18)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
@@ -1111,7 +1157,7 @@ public partial class MainForm : Form
             Padding = new Padding(DesignTokens.Scale(4), 0, DesignTokens.Scale(4), DesignTokens.Scale(8))
         };
         headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
+        headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
 
         var toolbarHostPanel = CreateCard();
         toolbarHostPanel.ContentPadding = new Padding(

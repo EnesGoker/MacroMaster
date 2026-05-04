@@ -140,17 +140,13 @@ public partial class ToolbarControl : UserControl
 
     private static void ConfigureMenu(ContextMenuStrip menu)
     {
-        menu.BackColor = DesignTokens.Surface2;
-        menu.ForeColor = DesignTokens.TextPrimary;
         menu.ShowImageMargin = false;
-        menu.RenderMode = ToolStripRenderMode.System;
-        menu.Font = DesignTokens.FontUiNormal;
+        AppToolStripRenderer.ApplyTo(menu);
 
         menu.Opening += (_, _) =>
         {
             foreach (ToolStripItem item in menu.Items)
             {
-                item.BackColor = DesignTokens.Surface2;
                 item.ForeColor = item.Enabled
                     ? DesignTokens.TextPrimary
                     : DesignTokens.TextMuted;

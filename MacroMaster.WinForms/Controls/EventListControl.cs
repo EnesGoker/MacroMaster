@@ -202,10 +202,9 @@ internal sealed class EventListControl : UserControl
     {
         var contextMenu = new ContextMenuStrip
         {
-            BackColor = DesignTokens.Surface2,
-            ForeColor = DesignTokens.TextPrimary,
             ShowImageMargin = false
         };
+        AppToolStripRenderer.ApplyTo(contextMenu);
 
         var editItem = new ToolStripMenuItem("Duzenle");
         editItem.Click += (_, _) =>

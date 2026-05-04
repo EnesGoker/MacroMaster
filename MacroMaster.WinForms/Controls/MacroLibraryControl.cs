@@ -402,10 +402,10 @@ internal sealed class MacroLibraryControl : UserControl
         {
             var contextMenu = new ContextMenuStrip
             {
-                BackColor = DesignTokens.Surface2,
-                ForeColor = DesignTokens.TextPrimary,
                 ShowImageMargin = false
             };
+            AppToolStripRenderer.ApplyTo(contextMenu);
+
             var renameItem = new ToolStripMenuItem("Isim Duzenle");
             renameItem.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
 
