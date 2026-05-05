@@ -39,8 +39,19 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
         menu.Renderer = Instance;
 
         ApplyItems(menu.Items, density);
+        menu.ItemAdded += (_, eventArgs) =>
+        {
+            if (eventArgs.Item is not null)
+            {
+                ApplyItem(eventArgs.Item, density);
+            }
+        };
 
-        menu.Opening += (_, _) => ApplyItems(menu.Items, density);
+        menu.Opening += (_, _) =>
+        {
+            ApplyItems(menu.Items, density);
+            menu.PerformLayout();
+        };
     }
 
     protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
@@ -165,30 +176,37 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
     {
         foreach (ToolStripItem item in items)
         {
-            if (item is ToolStripSeparator)
-            {
-                item.Margin = ResolveSeparatorMargin(density);
-                continue;
-            }
+            ApplyItem(item, density);
+        }
+    }
 
-            item.BackColor = ItemBackground;
-            item.ForeColor = item.Enabled
-                ? DesignTokens.TextPrimary
-                : DisabledText;
-            item.Font = DesignTokens.FontUiNormal;
-            item.Margin = ResolveItemMargin(density);
-            item.Padding = ResolveItemPadding(density);
+    private static void ApplyItem(
+        ToolStripItem item,
+        AppToolStripMenuDensity density)
+    {
+        if (item is ToolStripSeparator)
+        {
+            item.Margin = ResolveSeparatorMargin(density);
+            return;
+        }
 
-            if (item is ToolStripDropDownItem dropDownItem)
-            {
-                dropDownItem.DropDown.BackColor = DropDownBackground;
-                dropDownItem.DropDown.ForeColor = DesignTokens.TextPrimary;
-                dropDownItem.DropDown.Font = DesignTokens.FontUiNormal;
-                dropDownItem.DropDown.Padding = ResolveMenuPadding(density);
-                dropDownItem.DropDown.RenderMode = ToolStripRenderMode.Professional;
-                dropDownItem.DropDown.Renderer = Instance;
-                ApplyItems(dropDownItem.DropDownItems, density);
-            }
+        item.BackColor = ItemBackground;
+        item.ForeColor = item.Enabled
+            ? DesignTokens.TextPrimary
+            : DisabledText;
+        item.Font = DesignTokens.FontUiNormal;
+        item.Margin = ResolveItemMargin(density);
+        item.Padding = ResolveItemPadding(density);
+
+        if (item is ToolStripDropDownItem dropDownItem)
+        {
+            dropDownItem.DropDown.BackColor = DropDownBackground;
+            dropDownItem.DropDown.ForeColor = DesignTokens.TextPrimary;
+            dropDownItem.DropDown.Font = DesignTokens.FontUiNormal;
+            dropDownItem.DropDown.Padding = ResolveMenuPadding(density);
+            dropDownItem.DropDown.RenderMode = ToolStripRenderMode.Professional;
+            dropDownItem.DropDown.Renderer = Instance;
+            ApplyItems(dropDownItem.DropDownItems, density);
         }
     }
 
