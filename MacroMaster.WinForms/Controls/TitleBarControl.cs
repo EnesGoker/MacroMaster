@@ -26,7 +26,7 @@ internal sealed class TitleBarControl : UserControl
         BackColor = DesignTokens.Background;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        MinimumSize = new Size(0, DesignTokens.TitleBarHeight);
+        MinimumSize = new Size(0, DesignTokens.TitleBarHeight - DesignTokens.Scale(12));
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -39,7 +39,7 @@ internal sealed class TitleBarControl : UserControl
                 DesignTokens.Scale(14),
                 0,
                 DesignTokens.Scale(10),
-                DesignTokens.Scale(2))
+                0)
         };
 
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(12)));
@@ -61,13 +61,12 @@ internal sealed class TitleBarControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 1,
             BackColor = DesignTokens.Background,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 54f));
-        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 46f));
+        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _appNameLabel = new Label
         {
@@ -76,7 +75,7 @@ internal sealed class TitleBarControl : UserControl
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Background,
-            TextAlign = ContentAlignment.BottomLeft,
+            TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
 
@@ -88,11 +87,11 @@ internal sealed class TitleBarControl : UserControl
             ForeColor = DesignTokens.TextSecondary,
             BackColor = DesignTokens.Background,
             TextAlign = ContentAlignment.TopLeft,
-            AutoEllipsis = true
+            AutoEllipsis = true,
+            Visible = false
         };
 
         textLayoutPanel.Controls.Add(_appNameLabel, 0, 0);
-        textLayoutPanel.Controls.Add(_subtitleLabel, 0, 1);
 
         var statusShellPanel = new RoundedSurfacePanel
         {
@@ -165,7 +164,7 @@ internal sealed class TitleBarControl : UserControl
     public void SetTitle(string title, string subtitle)
     {
         _appNameLabel.Text = title;
-        _subtitleLabel.Text = subtitle;
+        _subtitleLabel.Text = string.Empty;
     }
 
     public void SetStatus(string status, Color color)

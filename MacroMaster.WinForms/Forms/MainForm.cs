@@ -230,6 +230,86 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayol ayarlari");
     }
 
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (TryHandleLocalHotkey(keyData))
+        {
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private bool TryHandleLocalHotkey(Keys keyData)
+    {
+        if (_shutdownInProgress)
+        {
+            return false;
+        }
+
+        if (MatchesHotkey(_hotkeyConfiguration.RecordToggleHotkey, keyData))
+        {
+            OnRecordToggleRequested();
+            return true;
+        }
+
+        if (MatchesHotkey(_hotkeyConfiguration.PlaybackToggleHotkey, keyData))
+        {
+            OnPlaybackToggleRequested();
+            return true;
+        }
+
+        if (MatchesHotkey(_hotkeyConfiguration.StopHotkey, keyData))
+        {
+            OnStopRequested();
+            return true;
+        }
+
+        if (MatchesHotkey(_hotkeyConfiguration.HotkeySettingsHotkey, keyData))
+        {
+            OnHotkeySettingsRequested();
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool MatchesHotkey(HotkeyBinding binding, Keys keyData)
+    {
+        if (binding.VirtualKeyCode <= 0 || binding.Modifiers.HasFlag(HotkeyModifiers.Windows))
+        {
+            return false;
+        }
+
+        Keys pressedKey = keyData & Keys.KeyCode;
+        Keys pressedModifiers = keyData & Keys.Modifiers;
+
+        return pressedKey == (Keys)binding.VirtualKeyCode
+            && pressedModifiers == ConvertToKeysModifiers(binding.Modifiers);
+    }
+
+    private static Keys ConvertToKeysModifiers(HotkeyModifiers modifiers)
+    {
+        Keys keys = Keys.None;
+
+        if (modifiers.HasFlag(HotkeyModifiers.Control))
+        {
+            keys |= Keys.Control;
+        }
+
+        if (modifiers.HasFlag(HotkeyModifiers.Shift))
+        {
+            keys |= Keys.Shift;
+        }
+
+        if (modifiers.HasFlag(HotkeyModifiers.Alt))
+        {
+            keys |= Keys.Alt;
+        }
+
+        return keys;
+    }
+
     private async Task HandleStopAsync()
     {
         if (_macroRecorderService.IsRecording)
@@ -751,15 +831,12 @@ public partial class MainForm : Form
         ArgumentNullException.ThrowIfNull(item);
         EnsureSessionMutationAllowed();
 
-        DialogResult confirmation = MessageBox.Show(
+        bool confirmed = AppConfirmDialog.ShowDanger(
             this,
-            $"{item.Name} kutuphaneden silinsin mi?",
             "Makro Sil",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Warning,
-            MessageBoxDefaultButton.Button2);
+            $"{item.Name} kutuphaneden silinsin mi?");
 
-        if (confirmation != DialogResult.Yes)
+        if (!confirmed)
         {
             return;
         }
@@ -1048,7 +1125,7 @@ public partial class MainForm : Form
 
         _titleBarControl.Name = "titleBarControl";
         _titleBarControl.Dock = DockStyle.Fill;
-        _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi", "Kayit, oynatim ve JSON/XML destegi");
+        _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi", string.Empty);
         _titleBarControl.DragRequested += titleBarControl_DragRequested;
         _titleBarControl.MinimizeRequested += titleBarControl_MinimizeRequested;
         _titleBarControl.MaximizeRestoreRequested += titleBarControl_MaximizeRestoreRequested;
@@ -1158,8 +1235,8 @@ public partial class MainForm : Form
                 DesignTokens.Scale(16)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(4)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(24)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(12)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(30)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
 
@@ -1176,7 +1253,7 @@ public partial class MainForm : Form
         headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
 
         var toolbarHostPanel = CreateCard();
-        toolbarHostPanel.Margin = new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(4));
+        toolbarHostPanel.Margin = new Padding(0, DesignTokens.Scale(12), 0, DesignTokens.Scale(6));
         toolbarHostPanel.ContentPadding = new Padding(
             DesignTokens.Scale(18),
             DesignTokens.Scale(7),

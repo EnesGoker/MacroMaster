@@ -12,6 +12,8 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
     private static readonly Color ItemHoverBackground = DesignTokens.SurfaceHover;
     private static readonly Color ItemPressedBackground = DesignTokens.Surface3;
     private static readonly Color DisabledText = DesignTokens.TextMuted;
+    private static int MinimumItemWidth => DesignTokens.Scale(178);
+    private static int MenuItemHeight => DesignTokens.Scale(38);
 
     private AppToolStripRenderer()
         : base(new AppToolStripColorTable())
@@ -27,6 +29,10 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
         menu.ForeColor = DesignTokens.TextPrimary;
         menu.Font = DesignTokens.FontUiNormal;
         menu.Padding = new Padding(DesignTokens.Scale(4));
+        menu.ShowCheckMargin = false;
+        menu.ShowImageMargin = false;
+        menu.GripMargin = Padding.Empty;
+        menu.MinimumSize = new Size(MinimumItemWidth, 0);
         menu.RenderMode = ToolStripRenderMode.Professional;
         menu.Renderer = Instance;
 
@@ -145,16 +151,26 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
         {
             if (item is ToolStripSeparator)
             {
-                item.Margin = new Padding(DesignTokens.Scale(4), DesignTokens.Scale(3), DesignTokens.Scale(4), DesignTokens.Scale(3));
+                item.AutoSize = false;
+                item.Size = new Size(MinimumItemWidth, DesignTokens.Scale(10));
+                item.Margin = new Padding(
+                    DesignTokens.Scale(4),
+                    DesignTokens.Scale(2),
+                    DesignTokens.Scale(4),
+                    DesignTokens.Scale(2));
                 continue;
             }
 
+            int measuredWidth = TextRenderer.MeasureText(item.Text, item.Font).Width + DesignTokens.Scale(44);
+            item.AutoSize = false;
+            item.Size = new Size(Math.Max(MinimumItemWidth, measuredWidth), MenuItemHeight);
             item.BackColor = ItemBackground;
             item.ForeColor = item.Enabled
                 ? DesignTokens.TextPrimary
                 : DisabledText;
             item.Font = DesignTokens.FontUiNormal;
-            item.Padding = new Padding(DesignTokens.Scale(10), DesignTokens.Scale(5), DesignTokens.Scale(10), DesignTokens.Scale(5));
+            item.Padding = new Padding(DesignTokens.Scale(12), 0, DesignTokens.Scale(12), 0);
+            item.Margin = new Padding(DesignTokens.Scale(1), DesignTokens.Scale(1), DesignTokens.Scale(1), DesignTokens.Scale(1));
 
             if (item is ToolStripDropDownItem dropDownItem)
             {

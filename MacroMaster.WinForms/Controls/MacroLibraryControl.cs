@@ -170,7 +170,9 @@ internal sealed class MacroLibraryControl : UserControl
             Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
         };
         searchPanel.Click += (_, _) => _searchTextBox.Focus();
+        searchPanel.Resize += (_, _) => LayoutSearchTextBox(searchPanel);
         searchPanel.Controls.Add(_searchTextBox);
+        LayoutSearchTextBox(searchPanel);
 
         var listHostPanel = new TableLayoutPanel
         {
@@ -368,7 +370,7 @@ internal sealed class MacroLibraryControl : UserControl
         var textBox = new TextBox
         {
             BorderStyle = BorderStyle.None,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.None,
             PlaceholderText = "Makro ara...",
             BackColor = DesignTokens.SurfaceInset,
             ForeColor = DesignTokens.TextPrimary,
@@ -378,6 +380,25 @@ internal sealed class MacroLibraryControl : UserControl
 
         textBox.TextChanged += (_, _) => ApplyFilter();
         return textBox;
+    }
+
+    private void LayoutSearchTextBox(Control host)
+    {
+        if (host.ClientSize.Width <= 0 || host.ClientSize.Height <= 0)
+        {
+            return;
+        }
+
+        int left = DesignTokens.Scale(14);
+        int right = DesignTokens.Scale(12);
+        int height = Math.Min(_searchTextBox.PreferredHeight, host.ClientSize.Height - DesignTokens.Scale(8));
+        int top = Math.Max(0, (host.ClientSize.Height - height) / 2 + DesignTokens.Scale(1));
+
+        _searchTextBox.SetBounds(
+            left,
+            top,
+            Math.Max(0, host.ClientSize.Width - left - right),
+            height);
     }
 
     private sealed class MacroLibraryRow : RoundedPanel
