@@ -164,6 +164,7 @@ public partial class ToolbarControl : UserControl
     private void ApplyTheme()
     {
         BackColor = DesignTokens.Surface;
+        toolbarLayoutPanel.BackColor = DesignTokens.Surface;
         MinimumSize = new Size(0, DesignTokens.ToolbarHeight);
         MaximumSize = new Size(int.MaxValue, int.MaxValue);
 
@@ -190,6 +191,7 @@ public partial class ToolbarControl : UserControl
         button.DisabledFillColor = Color.FromArgb(21, 25, 38);
         button.DisabledBorderColor = DesignTokens.BorderSoft;
         button.DisabledTextColor = DesignTokens.TextMuted;
+        button.BackColor = DesignTokens.Surface;
         button.Font = DesignTokens.FontUiBold;
         button.TextAlign = ContentAlignment.MiddleCenter;
         button.Margin = new Padding(
@@ -284,6 +286,7 @@ public partial class ToolbarControl : UserControl
 
         protected override void OnPaint(PaintEventArgs pevent)
         {
+            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
             pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
             if (bounds.Width <= 0 || bounds.Height <= 0)
@@ -327,6 +330,11 @@ public partial class ToolbarControl : UserControl
             }
 
             return isHovered ? HoverFillColor : FillColor;
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
         }
     }
 

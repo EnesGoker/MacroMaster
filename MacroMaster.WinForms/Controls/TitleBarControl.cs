@@ -35,13 +35,13 @@ internal sealed class TitleBarControl : UserControl
             BackColor = DesignTokens.Background,
             Margin = Padding.Empty,
             Padding = new Padding(
-                DesignTokens.Scale(14),
+                0,
                 0,
                 DesignTokens.Scale(10),
                 DesignTokens.Scale(2))
         };
 
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(12)));
+        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(8)));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
@@ -390,7 +390,11 @@ internal sealed class TitleBarControl : UserControl
 
             Dock = DockStyle.Fill;
             FlatStyle = FlatStyle.Flat;
-            Margin = new Padding(DesignTokens.Scale(2), 0, 0, 0);
+            Margin = new Padding(
+                DesignTokens.Scale(2),
+                DesignTokens.Scale(2),
+                0,
+                DesignTokens.Scale(5));
             MinimumSize = new Size(DesignTokens.TitleBarButtonWidth, DesignTokens.TitleBarButtonHeight);
             TabStop = false;
             Cursor = Cursors.Hand;
@@ -444,7 +448,14 @@ internal sealed class TitleBarControl : UserControl
                 ? DesignTokens.TextPrimary
                 : DesignTokens.TextMuted;
 
-            Rectangle buttonBounds = Rectangle.Inflate(ClientRectangle, -DesignTokens.Scale(2), -DesignTokens.Scale(4));
+            int horizontalInset = DesignTokens.Scale(2);
+            int topInset = DesignTokens.Scale(1);
+            int bottomInset = DesignTokens.Scale(2);
+            Rectangle buttonBounds = new(
+                horizontalInset,
+                topInset,
+                Math.Max(0, Width - (horizontalInset * 2)),
+                Math.Max(0, Height - topInset - bottomInset));
             using var path = CreateRoundedRectanglePath(buttonBounds, DesignTokens.Scale(7));
             using var fillBrush = new SolidBrush(fill);
             pevent.Graphics.FillPath(fillBrush, path);

@@ -1236,7 +1236,7 @@ public partial class MainForm : Form
             RowCount = 1,
             BackColor = Color.Transparent,
             Margin = Padding.Empty,
-            Padding = new Padding(DesignTokens.Scale(4), 0, DesignTokens.Scale(4), 0)
+            Padding = new Padding(0, 0, DesignTokens.Scale(4), 0)
         };
         headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
