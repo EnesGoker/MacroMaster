@@ -8,11 +8,11 @@ partial class PlaybackSettingsControl
     private TableLayoutPanel formLayoutPanel = null!;
     private TableLayoutPanel optionsLayoutPanel = null!;
     private Label speedLabel = null!;
-    private ComboBox speedComboBox = null!;
+    private ModernSelect speedComboBox = null!;
     private Label repeatCountLabel = null!;
-    private NumericUpDown repeatCountNumericUpDown = null!;
+    private ModernNumericInput repeatCountNumericUpDown = null!;
     private Label initialDelayLabel = null!;
-    private NumericUpDown initialDelayNumericUpDown = null!;
+    private ModernNumericInput initialDelayNumericUpDown = null!;
     private Label initialDelayUnitLabel = null!;
     private Panel dividerPanel = null!;
     private CheckBox preserveTimingCheckBox = null!;
@@ -33,11 +33,11 @@ partial class PlaybackSettingsControl
         formLayoutPanel = new TableLayoutPanel();
         optionsLayoutPanel = new TableLayoutPanel();
         speedLabel = new Label();
-        speedComboBox = new ComboBox();
+        speedComboBox = new ModernSelect();
         repeatCountLabel = new Label();
-        repeatCountNumericUpDown = new NumericUpDown();
+        repeatCountNumericUpDown = new ModernNumericInput();
         initialDelayLabel = new Label();
-        initialDelayNumericUpDown = new NumericUpDown();
+        initialDelayNumericUpDown = new ModernNumericInput();
         initialDelayUnitLabel = new Label();
         dividerPanel = new Panel();
         preserveTimingCheckBox = new ModernCheckBox();
@@ -49,8 +49,6 @@ partial class PlaybackSettingsControl
         settingsLayoutPanel.SuspendLayout();
         formLayoutPanel.SuspendLayout();
         optionsLayoutPanel.SuspendLayout();
-        ((System.ComponentModel.ISupportInitialize)repeatCountNumericUpDown).BeginInit();
-        ((System.ComponentModel.ISupportInitialize)initialDelayNumericUpDown).BeginInit();
         SuspendLayout();
 
         // rootLayoutPanel
@@ -123,7 +121,6 @@ partial class PlaybackSettingsControl
         speedLabel.TabIndex = 0;
 
         speedComboBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-        speedComboBox.FormattingEnabled = true;
         speedComboBox.Name = "speedComboBox";
         speedComboBox.TabIndex = 1;
 
@@ -197,8 +194,6 @@ partial class PlaybackSettingsControl
         formLayoutPanel.ResumeLayout(false);
         optionsLayoutPanel.ResumeLayout(false);
         settingsLayoutPanel.PerformLayout();
-        ((System.ComponentModel.ISupportInitialize)repeatCountNumericUpDown).EndInit();
-        ((System.ComponentModel.ISupportInitialize)initialDelayNumericUpDown).EndInit();
         ResumeLayout(false);
     }
 }

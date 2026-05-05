@@ -37,7 +37,7 @@ internal sealed class TitleBarControl : UserControl
             Margin = Padding.Empty,
             Padding = new Padding(
                 DesignTokens.Scale(14),
-                DesignTokens.Scale(2),
+                0,
                 DesignTokens.Scale(10),
                 DesignTokens.Scale(2))
         };

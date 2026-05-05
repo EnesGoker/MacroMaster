@@ -22,7 +22,6 @@ public partial class PlaybackSettingsControl : UserControl
         DoubleBuffered = true;
         ApplyTheme();
         PopulateSpeedOptions();
-        speedComboBox.DrawItem += speedComboBox_DrawItem;
         WireEvents();
         ApplySettings(new PlaybackSettings());
     }
@@ -108,29 +107,24 @@ public partial class PlaybackSettingsControl : UserControl
     private static void ApplyChildTheme(Control control)
     {
         control.ForeColor = DesignTokens.TextSecondary;
-        control.BackColor = control is TextBox or ComboBox or NumericUpDown
+        control.BackColor = control is TextBox or ModernSelect or ModernNumericInput
             ? DesignTokens.SurfaceInset
             : DesignTokens.Surface;
         control.Font = DesignTokens.FontUiNormal;
 
-        if (control is NumericUpDown numericUpDown)
+        if (control is ModernNumericInput numericInput)
         {
-            numericUpDown.BackColor = DesignTokens.SurfaceInset;
-            numericUpDown.ForeColor = DesignTokens.TextPrimary;
-            numericUpDown.BorderStyle = BorderStyle.FixedSingle;
-            numericUpDown.TextAlign = HorizontalAlignment.Left;
-            numericUpDown.MinimumSize = new Size(0, DesignTokens.Scale(32));
+            numericInput.BackColor = DesignTokens.SurfaceInset;
+            numericInput.ForeColor = DesignTokens.TextPrimary;
+            numericInput.TextAlign = HorizontalAlignment.Left;
+            numericInput.MinimumSize = new Size(0, DesignTokens.Scale(32));
             return;
         }
-        else if (control is ComboBox comboBox)
+        else if (control is ModernSelect select)
         {
-            comboBox.BackColor = DesignTokens.SurfaceInset;
-            comboBox.ForeColor = DesignTokens.TextPrimary;
-            comboBox.FlatStyle = FlatStyle.Flat;
-            comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-            comboBox.DrawMode = DrawMode.OwnerDrawFixed;
-            comboBox.ItemHeight = DesignTokens.Scale(26);
-            comboBox.MinimumSize = new Size(0, DesignTokens.Scale(32));
+            select.BackColor = DesignTokens.SurfaceInset;
+            select.ForeColor = DesignTokens.TextPrimary;
+            select.MinimumSize = new Size(0, DesignTokens.Scale(32));
             return;
         }
         else if (control is CheckBox checkBox)
@@ -158,8 +152,12 @@ public partial class PlaybackSettingsControl : UserControl
             0);
 
         // Main columns: form fields, divider gutter, behavior toggles.
-        settingsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(42);
-        formLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(38);
+        settingsLayoutPanel.ColumnStyles[0].Width = 53F;
+        settingsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(46);
+        settingsLayoutPanel.ColumnStyles[2].Width = 47F;
+        formLayoutPanel.ColumnStyles[0].Width = 36F;
+        formLayoutPanel.ColumnStyles[1].Width = 64F;
+        formLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(34);
 
         int inputTopMargin = DesignTokens.Scale(4);
         speedLabel.Margin = new Padding(0, 0, DesignTokens.Scale(10), 0);
@@ -175,9 +173,9 @@ public partial class PlaybackSettingsControl : UserControl
             DesignTokens.Scale(20),
             DesignTokens.Scale(4));
 
-        int optionLeftMargin = DesignTokens.Scale(22);
-        int optionWidth = DesignTokens.Scale(190);
-        int optionHeight = DesignTokens.Scale(30);
+        int optionLeftMargin = DesignTokens.Scale(24);
+        int optionWidth = DesignTokens.Scale(172);
+        int optionHeight = DesignTokens.Scale(28);
         foreach (CheckBox optionCheckBox in new[]
         {
             preserveTimingCheckBox,
@@ -193,38 +191,8 @@ public partial class PlaybackSettingsControl : UserControl
 
     private void PopulateSpeedOptions()
     {
-        speedComboBox.Items.Clear();
-        speedComboBox.Items.AddRange(["0.25x", "0.50x", "1.00x", "2.00x", "4.00x"]);
+        speedComboBox.SetItems(["0.25x", "0.50x", "1.00x", "2.00x", "4.00x"]);
         speedComboBox.SelectedIndex = 2;
-    }
-
-    private void speedComboBox_DrawItem(object? sender, DrawItemEventArgs e)
-    {
-        _ = sender;
-
-        if (e.Index < 0)
-        {
-            return;
-        }
-
-        bool isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
-        Color backColor = isSelected ? DesignTokens.AccentSoft : DesignTokens.SurfaceInset;
-        Color textColor = isSelected ? DesignTokens.TextPrimary : DesignTokens.TextSecondary;
-
-        using var backgroundBrush = new SolidBrush(backColor);
-        e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
-
-        string text = speedComboBox.Items[e.Index]?.ToString() ?? string.Empty;
-        var textBounds = new Rectangle(e.Bounds.Left + 8, e.Bounds.Top, e.Bounds.Width - 12, e.Bounds.Height);
-        TextRenderer.DrawText(
-            e.Graphics,
-            text,
-            DesignTokens.FontUiNormal,
-            textBounds,
-            textColor,
-            TextFormatFlags.VerticalCenter |
-            TextFormatFlags.Left |
-            TextFormatFlags.EndEllipsis);
     }
 
     private void WireEvents()

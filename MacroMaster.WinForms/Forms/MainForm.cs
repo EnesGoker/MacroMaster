@@ -1153,13 +1153,13 @@ public partial class MainForm : Form
             BackColor = DesignTokens.Background,
             Padding = new Padding(
                 DesignTokens.Scale(18),
-                DesignTokens.Scale(2),
+                0,
                 DesignTokens.Scale(18),
                 DesignTokens.Scale(16)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(18)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(4)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(24)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
 
@@ -1176,6 +1176,7 @@ public partial class MainForm : Form
         headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
 
         var toolbarHostPanel = CreateCard();
+        toolbarHostPanel.Margin = new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(4));
         toolbarHostPanel.ContentPadding = new Padding(
             DesignTokens.Scale(18),
             DesignTokens.Scale(7),
