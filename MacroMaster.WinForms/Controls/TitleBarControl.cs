@@ -180,6 +180,12 @@ internal sealed class TitleBarControl : UserControl
             : CaptionButtonKind.Maximize;
     }
 
+    public bool IsInteractiveClientPoint(Point clientPoint)
+    {
+        Control? hitControl = FindDeepestChildAtPoint(this, clientPoint);
+        return hitControl is Button;
+    }
+
     protected override void OnPaintBackground(PaintEventArgs e)
     {
         e.Graphics.Clear(DesignTokens.Background);
@@ -199,6 +205,23 @@ internal sealed class TitleBarControl : UserControl
         Maximize,
         Restore,
         Close
+    }
+
+    private static Control? FindDeepestChildAtPoint(Control parent, Point point)
+    {
+        for (int index = parent.Controls.Count - 1; index >= 0; index--)
+        {
+            Control child = parent.Controls[index];
+            if (!child.Visible || !child.Enabled || !child.Bounds.Contains(point))
+            {
+                continue;
+            }
+
+            var childPoint = new Point(point.X - child.Left, point.Y - child.Top);
+            return FindDeepestChildAtPoint(child, childPoint) ?? child;
+        }
+
+        return null;
     }
 
     private sealed class RoundedSurfacePanel : Panel

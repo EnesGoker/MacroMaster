@@ -5,7 +5,25 @@ namespace MacroMaster.WinForms.Forms;
 
 public partial class MainForm
 {
-    private static bool IsCustomChromeEnabled => false;
+    private static bool IsCustomChromeEnabled => true;
+
+    private static bool IsDwmPolishEnabled => false;
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams createParams = base.CreateParams;
+            if (IsCustomChromeEnabled)
+            {
+                createParams.Style |= WindowChromeNative.WsMinimizeBox
+                    | WindowChromeNative.WsMaximizeBox
+                    | WindowChromeNative.WsThickFrame;
+            }
+
+            return createParams;
+        }
+    }
 
     protected override void OnResize(EventArgs e)
     {
@@ -23,7 +41,7 @@ public partial class MainForm
     {
         base.OnHandleCreated(e);
 
-        if (IsCustomChromeEnabled)
+        if (IsCustomChromeEnabled && IsDwmPolishEnabled)
         {
             ApplyCustomChromeDwmPolish();
         }
@@ -44,6 +62,27 @@ public partial class MainForm
         }
 
         base.WndProc(ref m);
+    }
+
+    private void ApplyWindowChromeConfiguration()
+    {
+        FormBorderStyle = IsCustomChromeEnabled
+            ? FormBorderStyle.None
+            : FormBorderStyle.Sizable;
+
+        if (IsCustomChromeEnabled)
+        {
+            ApplyCustomChromePadding();
+        }
+        else
+        {
+            Padding = Padding.Empty;
+        }
+
+        if (IsHandleCreated && IsCustomChromeEnabled && IsDwmPolishEnabled)
+        {
+            ApplyCustomChromeDwmPolish();
+        }
     }
 
     private void ApplyCustomChromeDwmPolish()
@@ -94,7 +133,10 @@ public partial class MainForm
         Point clientPoint = PointToClient(screenPoint);
         if (_titleBarControl.Bounds.Contains(clientPoint))
         {
-            return WindowHitTest.Caption;
+            Point titleBarPoint = _titleBarControl.PointToClient(screenPoint);
+            return _titleBarControl.IsInteractiveClientPoint(titleBarPoint)
+                ? WindowHitTest.Client
+                : WindowHitTest.Caption;
         }
 
         return WindowHitTest.Client;

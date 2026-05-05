@@ -49,6 +49,9 @@ internal static class WindowChromeNative
     public const int ScMaximize = 0xF030;
     public const int ScClose = 0xF060;
     public const int ScRestore = 0xF120;
+    public const int WsMinimizeBox = 0x00020000;
+    public const int WsMaximizeBox = 0x00010000;
+    public const int WsThickFrame = 0x00040000;
 
     private const int Succeeded = 0;
 
@@ -87,7 +90,7 @@ internal static class WindowChromeNative
 
     public static Point GetPointFromLParam(IntPtr lParam)
     {
-        int value = lParam.ToInt32();
+        int value = unchecked((int)lParam.ToInt64());
         return new Point((short)(value & 0xFFFF), (short)((value >> 16) & 0xFFFF));
     }
 

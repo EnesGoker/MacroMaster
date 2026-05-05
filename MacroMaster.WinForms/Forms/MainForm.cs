@@ -1128,6 +1128,7 @@ public partial class MainForm : Form
         ClientSize = new Size(DesignTokens.Scale(1280), DesignTokens.Scale(760));
         MinimumSize = new Size(DesignTokens.Scale(640), DesignTokens.Scale(480));
         Padding = Padding.Empty;
+        ApplyWindowChromeConfiguration();
 
         var rootLayoutPanel = new TableLayoutPanel
         {
