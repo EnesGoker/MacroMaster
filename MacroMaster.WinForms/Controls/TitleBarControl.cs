@@ -94,7 +94,7 @@ internal sealed class TitleBarControl : UserControl
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
-            BackColor = DesignTokens.SurfaceInset,
+            BackColor = Color.Transparent,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
@@ -104,7 +104,7 @@ internal sealed class TitleBarControl : UserControl
         _statusDot = new StatusDotControl
         {
             Dock = DockStyle.Fill,
-            BackColor = DesignTokens.SurfaceInset,
+            BackColor = Color.Transparent,
             DotColor = DesignTokens.AccentGreen,
             Margin = Padding.Empty
         };
@@ -115,7 +115,7 @@ internal sealed class TitleBarControl : UserControl
             Text = "Hazir",
             Font = DesignTokens.FontUiNormal,
             ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.SurfaceInset,
+            BackColor = Color.Transparent,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
@@ -240,6 +240,9 @@ internal sealed class TitleBarControl : UserControl
 
     private sealed class RoundedSurfacePanel : Panel
     {
+        private Size _lastRegionSize;
+        private int _lastRegionRadius = -1;
+
         public Color FillColor { get; set; } = DesignTokens.SurfaceInset;
 
         public Color BorderColor { get; set; } = DesignTokens.BorderSoft;
@@ -252,6 +255,13 @@ internal sealed class TitleBarControl : UserControl
                 ControlStyles.ResizeRedraw |
                 ControlStyles.UserPaint,
                 true);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateRegion();
+            Invalidate();
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)
@@ -279,6 +289,38 @@ internal sealed class TitleBarControl : UserControl
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
             e.Graphics.SmoothingMode = SmoothingMode.None;
+        }
+
+        private void UpdateRegion()
+        {
+            Rectangle bounds = ClientRectangle;
+            int radius = DesignTokens.Scale(8);
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                Region? emptyRegion = Region;
+                Region = null;
+                emptyRegion?.Dispose();
+                _lastRegionSize = Size.Empty;
+                _lastRegionRadius = -1;
+                return;
+            }
+
+            if (Region is not null
+                && _lastRegionSize == bounds.Size
+                && _lastRegionRadius == radius)
+            {
+                return;
+            }
+
+            using var path = CreateRoundedRectanglePath(
+                Rectangle.Inflate(bounds, -1, -1),
+                radius);
+            Region? previousRegion = Region;
+            Region = new Region(path);
+            previousRegion?.Dispose();
+            _lastRegionSize = bounds.Size;
+            _lastRegionRadius = radius;
         }
     }
 
@@ -392,9 +434,9 @@ internal sealed class TitleBarControl : UserControl
             FlatStyle = FlatStyle.Flat;
             Margin = new Padding(
                 DesignTokens.Scale(2),
-                DesignTokens.Scale(2),
+                DesignTokens.Scale(1),
                 0,
-                DesignTokens.Scale(5));
+                DesignTokens.Scale(7));
             MinimumSize = new Size(DesignTokens.TitleBarButtonWidth, DesignTokens.TitleBarButtonHeight);
             TabStop = false;
             Cursor = Cursors.Hand;
@@ -442,21 +484,22 @@ internal sealed class TitleBarControl : UserControl
         {
             pevent.Graphics.Clear(DesignTokens.Background);
             pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            pevent.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
             Color fill = ResolveFillColor();
             Color icon = Enabled
                 ? DesignTokens.TextPrimary
                 : DesignTokens.TextMuted;
 
-            int horizontalInset = DesignTokens.Scale(2);
+            int horizontalInset = DesignTokens.Scale(3);
             int topInset = DesignTokens.Scale(1);
-            int bottomInset = DesignTokens.Scale(2);
+            int bottomInset = DesignTokens.Scale(5);
             Rectangle buttonBounds = new(
                 horizontalInset,
                 topInset,
                 Math.Max(0, Width - (horizontalInset * 2)),
                 Math.Max(0, Height - topInset - bottomInset));
-            using var path = CreateRoundedRectanglePath(buttonBounds, DesignTokens.Scale(7));
+            using var path = CreateRoundedRectanglePath(buttonBounds, DesignTokens.Scale(8));
             using var fillBrush = new SolidBrush(fill);
             pevent.Graphics.FillPath(fillBrush, path);
 
