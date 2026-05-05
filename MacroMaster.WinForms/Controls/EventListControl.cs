@@ -10,10 +10,9 @@ internal sealed class EventListControl : UserControl
 {
     private readonly DataGridView _eventGridView;
     private readonly ModernScrollBar _eventScrollBar;
-    private readonly Panel _gridHostPanel;
+    private readonly RoundedGridHostPanel _gridHostPanel;
     private readonly ContextMenuStrip _eventContextMenu;
     private readonly Label _emptyStateLabel;
-    private readonly Label _summaryLabel;
     private MacroSession? _displayedSession;
     private Guid? _displayedSessionId;
     private int _displayedEventCount;
@@ -36,10 +35,9 @@ internal sealed class EventListControl : UserControl
 
         _eventGridView = new DataGridView();
         _eventScrollBar = new ModernScrollBar();
-        _gridHostPanel = new Panel();
+        _gridHostPanel = new RoundedGridHostPanel();
         _eventContextMenu = BuildEventContextMenu();
         _emptyStateLabel = new Label();
-        _summaryLabel = new Label();
 
         BuildLayout();
         ConfigureGrid();
@@ -55,7 +53,6 @@ internal sealed class EventListControl : UserControl
             _emptyStateLabel.Visible = true;
             _eventGridView.Visible = false;
             _eventScrollBar.Visible = false;
-            _summaryLabel.Text = "Secili oturum yok";
             UpdateEventScrollBar();
             return;
         }
@@ -78,8 +75,6 @@ internal sealed class EventListControl : UserControl
         bool hasEvents = session.Events.Count > 0;
         _eventGridView.Visible = hasEvents;
         _emptyStateLabel.Visible = !hasEvents;
-        _summaryLabel.Text = FormattableString.Invariant(
-            $"Toplam olay: {session.Events.Count}  |  Toplam sure: {session.TotalDurationMs} ms");
 
         if (hasEvents)
         {
@@ -139,14 +134,13 @@ internal sealed class EventListControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(34)));
 
         _gridHostPanel.Dock = DockStyle.Fill;
         _gridHostPanel.BackColor = DesignTokens.SurfaceInset;
@@ -159,9 +153,6 @@ internal sealed class EventListControl : UserControl
         _emptyStateLabel.Text = "Secili bir oturum yok. Yeni bir makro kaydedin veya diskten yukleyin.";
         _emptyStateLabel.TextAlign = ContentAlignment.MiddleCenter;
 
-        _summaryLabel.Dock = DockStyle.Fill;
-        _summaryLabel.TextAlign = ContentAlignment.MiddleLeft;
-
         _eventScrollBar.Dock = DockStyle.None;
         _eventScrollBar.BackColor = DesignTokens.SurfaceInset;
         _eventScrollBar.ValueChanged += (_, _) => ScrollGridTo(_eventScrollBar.Value);
@@ -170,23 +161,24 @@ internal sealed class EventListControl : UserControl
         _gridHostPanel.Controls.Add(_eventScrollBar);
         _gridHostPanel.Controls.Add(_emptyStateLabel);
         rootLayoutPanel.Controls.Add(_gridHostPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(_summaryLabel, 0, 1);
 
         Controls.Add(rootLayoutPanel);
     }
 
     private void LayoutGridViewport()
     {
+        int inset = DesignTokens.Scale(1);
         int scrollWidth = _eventScrollBar.Visible ? DesignTokens.Scale(14) : 0;
         int scrollGap = _eventScrollBar.Visible ? DesignTokens.Scale(6) : 0;
-        int gridWidth = Math.Max(0, _gridHostPanel.ClientSize.Width - scrollWidth - scrollGap);
-        int gridHeight = Math.Max(0, _gridHostPanel.ClientSize.Height);
+        int contentWidth = Math.Max(0, _gridHostPanel.ClientSize.Width - (inset * 2));
+        int gridWidth = Math.Max(0, contentWidth - scrollWidth - scrollGap);
+        int gridHeight = Math.Max(0, _gridHostPanel.ClientSize.Height - (inset * 2));
 
-        _eventGridView.Bounds = new Rectangle(0, 0, gridWidth, gridHeight);
-        _emptyStateLabel.Bounds = new Rectangle(0, 0, _gridHostPanel.ClientSize.Width, gridHeight);
+        _eventGridView.Bounds = new Rectangle(inset, inset, gridWidth, gridHeight);
+        _emptyStateLabel.Bounds = new Rectangle(inset, inset, contentWidth, gridHeight);
         _eventScrollBar.Bounds = new Rectangle(
-            gridWidth + scrollGap,
-            0,
+            inset + gridWidth + scrollGap,
+            inset,
             scrollWidth,
             gridHeight);
         ApplyColumnWidths();
@@ -375,11 +367,6 @@ internal sealed class EventListControl : UserControl
         _emptyStateLabel.ForeColor = DesignTokens.TextSecondary;
         _emptyStateLabel.Font = DesignTokens.FontUiNormal;
 
-        _summaryLabel.BackColor = DesignTokens.Surface;
-        _summaryLabel.ForeColor = DesignTokens.TextSecondary;
-        _summaryLabel.Font = DesignTokens.FontUiNormal;
-        _summaryLabel.Padding = new Padding(DesignTokens.Scale(10), DesignTokens.Scale(7), 0, 0);
-
         _eventGridView.DefaultCellStyle.BackColor = DesignTokens.SurfaceInset;
         _eventGridView.DefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
         _eventGridView.DefaultCellStyle.Font = DesignTokens.FontUiNormal;
@@ -522,6 +509,87 @@ internal sealed class EventListControl : UserControl
         catch (InvalidOperationException)
         {
             return 0;
+        }
+    }
+
+    private sealed class RoundedGridHostPanel : Panel
+    {
+        private Size _lastRegionSize;
+        private int _lastRegionRadius = -1;
+
+        public RoundedGridHostPanel()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateRegion();
+            Invalidate();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            using GraphicsPath path = CreateRoundedRectanglePath(bounds, DesignTokens.Scale(8));
+            using var fillBrush = new SolidBrush(DesignTokens.SurfaceInset);
+            using var borderPen = new Pen(DesignTokens.BorderSoft);
+
+            e.Graphics.FillPath(fillBrush, path);
+            e.Graphics.DrawPath(borderPen, path);
+            e.Graphics.SmoothingMode = SmoothingMode.None;
+        }
+
+        private void UpdateRegion()
+        {
+            Rectangle bounds = ClientRectangle;
+            int radius = DesignTokens.Scale(8);
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                Region? emptyRegion = Region;
+                Region = null;
+                emptyRegion?.Dispose();
+                _lastRegionSize = Size.Empty;
+                _lastRegionRadius = -1;
+                return;
+            }
+
+            if (Region is not null
+                && _lastRegionSize == bounds.Size
+                && _lastRegionRadius == radius)
+            {
+                return;
+            }
+
+            using GraphicsPath path = CreateRoundedRectanglePath(
+                Rectangle.Inflate(bounds, -1, -1),
+                radius);
+            Region? previousRegion = Region;
+            Region = new Region(path);
+            previousRegion?.Dispose();
+            _lastRegionSize = bounds.Size;
+            _lastRegionRadius = radius;
         }
     }
 
