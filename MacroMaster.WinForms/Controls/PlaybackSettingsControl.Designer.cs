@@ -12,6 +12,7 @@ partial class PlaybackSettingsControl
     private Label repeatCountLabel = null!;
     private ModernNumericInput repeatCountNumericUpDown = null!;
     private Label initialDelayLabel = null!;
+    private TableLayoutPanel initialDelayValueLayoutPanel = null!;
     private ModernNumericInput initialDelayNumericUpDown = null!;
     private Label initialDelayUnitLabel = null!;
     private Panel dividerPanel = null!;
@@ -37,6 +38,7 @@ partial class PlaybackSettingsControl
         repeatCountLabel = new Label();
         repeatCountNumericUpDown = new ModernNumericInput();
         initialDelayLabel = new Label();
+        initialDelayValueLayoutPanel = new TableLayoutPanel();
         initialDelayNumericUpDown = new ModernNumericInput();
         initialDelayUnitLabel = new Label();
         dividerPanel = new Panel();
@@ -48,6 +50,7 @@ partial class PlaybackSettingsControl
         rootLayoutPanel.SuspendLayout();
         settingsLayoutPanel.SuspendLayout();
         formLayoutPanel.SuspendLayout();
+        initialDelayValueLayoutPanel.SuspendLayout();
         optionsLayoutPanel.SuspendLayout();
         SuspendLayout();
 
@@ -86,8 +89,7 @@ partial class PlaybackSettingsControl
         formLayoutPanel.Controls.Add(repeatCountLabel, 0, 1);
         formLayoutPanel.Controls.Add(repeatCountNumericUpDown, 1, 1);
         formLayoutPanel.Controls.Add(initialDelayLabel, 0, 2);
-        formLayoutPanel.Controls.Add(initialDelayNumericUpDown, 1, 2);
-        formLayoutPanel.Controls.Add(initialDelayUnitLabel, 2, 2);
+        formLayoutPanel.Controls.Add(initialDelayValueLayoutPanel, 1, 2);
         formLayoutPanel.Dock = DockStyle.Fill;
         formLayoutPanel.Margin = Padding.Empty;
         formLayoutPanel.Name = "formLayoutPanel";
@@ -112,6 +114,18 @@ partial class PlaybackSettingsControl
         optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
         optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
         optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+
+        // initialDelayValueLayoutPanel
+        initialDelayValueLayoutPanel.ColumnCount = 2;
+        initialDelayValueLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        initialDelayValueLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34F));
+        initialDelayValueLayoutPanel.Controls.Add(initialDelayNumericUpDown, 0, 0);
+        initialDelayValueLayoutPanel.Controls.Add(initialDelayUnitLabel, 1, 0);
+        initialDelayValueLayoutPanel.Dock = DockStyle.Fill;
+        initialDelayValueLayoutPanel.Margin = Padding.Empty;
+        initialDelayValueLayoutPanel.Name = "initialDelayValueLayoutPanel";
+        initialDelayValueLayoutPanel.RowCount = 1;
+        initialDelayValueLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
         speedLabel.Dock = DockStyle.Fill;
         speedLabel.Text = "Hız";
@@ -188,6 +202,7 @@ partial class PlaybackSettingsControl
         rootLayoutPanel.ResumeLayout(false);
         settingsLayoutPanel.ResumeLayout(false);
         formLayoutPanel.ResumeLayout(false);
+        initialDelayValueLayoutPanel.ResumeLayout(false);
         optionsLayoutPanel.ResumeLayout(false);
         settingsLayoutPanel.PerformLayout();
         ResumeLayout(false);

@@ -163,8 +163,11 @@ public partial class PlaybackSettingsControl : UserControl
         initialDelayLabel.Margin = speedLabel.Margin;
         speedComboBox.Margin = new Padding(0, inputTopMargin, DesignTokens.Scale(6), inputTopMargin);
         repeatCountNumericUpDown.Margin = speedComboBox.Margin;
-        initialDelayNumericUpDown.Margin = speedComboBox.Margin;
-        initialDelayUnitLabel.Margin = new Padding(0, 0, DesignTokens.Scale(4), 0);
+        initialDelayValueLayoutPanel.Margin = speedComboBox.Margin;
+        initialDelayValueLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(30);
+        initialDelayNumericUpDown.Margin = new Padding(0, 0, DesignTokens.Scale(6), 0);
+        initialDelayUnitLabel.Margin = Padding.Empty;
+        initialDelayUnitLabel.Padding = Padding.Empty;
         dividerPanel.Margin = new Padding(
             DesignTokens.Scale(20),
             DesignTokens.Scale(4),
