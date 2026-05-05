@@ -154,8 +154,10 @@ internal sealed class TitleBarControl : UserControl
         rootLayoutPanel.Controls.Add(_closeButton, 5, 0);
 
         Controls.Add(rootLayoutPanel);
+        AttachDragForwarding(this);
     }
 
+    public event EventHandler? DragRequested;
     public event EventHandler? MinimizeRequested;
     public event EventHandler? MaximizeRestoreRequested;
     public event EventHandler? CloseRequested;
@@ -222,6 +224,33 @@ internal sealed class TitleBarControl : UserControl
         }
 
         return null;
+    }
+
+    private void AttachDragForwarding(Control control)
+    {
+        control.MouseDown += titleBarControl_MouseDown;
+
+        foreach (Control child in control.Controls)
+        {
+            AttachDragForwarding(child);
+        }
+    }
+
+    private void titleBarControl_MouseDown(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left)
+        {
+            return;
+        }
+
+        Point screenPoint = ((Control)sender!).PointToScreen(e.Location);
+        Point titleBarPoint = PointToClient(screenPoint);
+        if (IsInteractiveClientPoint(titleBarPoint))
+        {
+            return;
+        }
+
+        DragRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private sealed class RoundedSurfacePanel : Panel

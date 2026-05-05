@@ -2,6 +2,7 @@ using MacroMaster.Application.Abstractions;
 using MacroMaster.Domain.Enums;
 using MacroMaster.Domain.Models;
 using MacroMaster.WinForms.Controls;
+using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
 using System.Globalization;
 
@@ -1048,6 +1049,7 @@ public partial class MainForm : Form
         _titleBarControl.Name = "titleBarControl";
         _titleBarControl.Dock = DockStyle.Fill;
         _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi", "Kayit, oynatim ve JSON/XML destegi");
+        _titleBarControl.DragRequested += titleBarControl_DragRequested;
         _titleBarControl.MinimizeRequested += titleBarControl_MinimizeRequested;
         _titleBarControl.MaximizeRestoreRequested += titleBarControl_MaximizeRestoreRequested;
         _titleBarControl.CloseRequested += titleBarControl_CloseRequested;
@@ -1085,6 +1087,19 @@ public partial class MainForm : Form
         _ = e;
 
         WindowState = FormWindowState.Minimized;
+    }
+
+    private void titleBarControl_DragRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (WindowState == FormWindowState.Maximized)
+        {
+            WindowState = FormWindowState.Normal;
+        }
+
+        WindowChromeNative.BeginWindowDrag(Handle);
     }
 
     private void titleBarControl_MaximizeRestoreRequested(object? sender, EventArgs e)

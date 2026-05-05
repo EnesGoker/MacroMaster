@@ -120,10 +120,31 @@ internal static class WindowChromeNative
         };
     }
 
+    public static void BeginWindowDrag(IntPtr handle)
+    {
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        ReleaseCapture();
+        SendMessage(handle, WmNcLButtonDown, (IntPtr)WindowHitTest.Caption, IntPtr.Zero);
+    }
+
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd,
         DwmWindowAttribute dwAttribute,
         ref int pvAttribute,
         int cbAttribute);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr SendMessage(
+        IntPtr hWnd,
+        int msg,
+        IntPtr wParam,
+        IntPtr lParam);
 }
