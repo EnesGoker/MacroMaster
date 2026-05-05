@@ -20,7 +20,7 @@ internal sealed class ModernCheckBox : CheckBox
         Cursor = Cursors.Hand;
         FlatStyle = FlatStyle.Flat;
         UseVisualStyleBackColor = false;
-        BackColor = Color.Transparent;
+        BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
     }
 

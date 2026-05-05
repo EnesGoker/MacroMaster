@@ -5,6 +5,8 @@ partial class PlaybackSettingsControl
     private System.ComponentModel.IContainer components = null;
     private TableLayoutPanel rootLayoutPanel = null!;
     private TableLayoutPanel settingsLayoutPanel = null!;
+    private TableLayoutPanel formLayoutPanel = null!;
+    private TableLayoutPanel optionsLayoutPanel = null!;
     private Label speedLabel = null!;
     private ComboBox speedComboBox = null!;
     private Label repeatCountLabel = null!;
@@ -28,6 +30,8 @@ partial class PlaybackSettingsControl
     {
         rootLayoutPanel = new TableLayoutPanel();
         settingsLayoutPanel = new TableLayoutPanel();
+        formLayoutPanel = new TableLayoutPanel();
+        optionsLayoutPanel = new TableLayoutPanel();
         speedLabel = new Label();
         speedComboBox = new ComboBox();
         repeatCountLabel = new Label();
@@ -43,6 +47,8 @@ partial class PlaybackSettingsControl
 
         rootLayoutPanel.SuspendLayout();
         settingsLayoutPanel.SuspendLayout();
+        formLayoutPanel.SuspendLayout();
+        optionsLayoutPanel.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)repeatCountNumericUpDown).BeginInit();
         ((System.ComponentModel.ISupportInitialize)initialDelayNumericUpDown).BeginInit();
         SuspendLayout();
@@ -54,42 +60,60 @@ partial class PlaybackSettingsControl
         rootLayoutPanel.Dock = DockStyle.Fill;
         rootLayoutPanel.Margin = Padding.Empty;
         rootLayoutPanel.Name = "rootLayoutPanel";
-        rootLayoutPanel.Padding = new Padding(18, 10, 18, 10);
+        rootLayoutPanel.Padding = Padding.Empty;
         rootLayoutPanel.RowCount = 1;
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-        // settingsLayoutPanel: [label | input | unit | divider | checkboxes]
-        settingsLayoutPanel.ColumnCount = 5;
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 32F));
-        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 1F));
+        // settingsLayoutPanel: [form fields | divider | behavior toggles]
+        settingsLayoutPanel.ColumnCount = 3;
         settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
-        settingsLayoutPanel.RowCount = 4;
-        settingsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        settingsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        settingsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        settingsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 32F));
+        settingsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
+        settingsLayoutPanel.Controls.Add(formLayoutPanel, 0, 0);
+        settingsLayoutPanel.Controls.Add(dividerPanel, 1, 0);
+        settingsLayoutPanel.Controls.Add(optionsLayoutPanel, 2, 0);
         settingsLayoutPanel.Dock = DockStyle.Fill;
         settingsLayoutPanel.Margin = Padding.Empty;
         settingsLayoutPanel.Name = "settingsLayoutPanel";
+        settingsLayoutPanel.RowCount = 1;
+        settingsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-        // Row 0 — Hız
-        settingsLayoutPanel.Controls.Add(speedLabel, 0, 0);
-        settingsLayoutPanel.Controls.Add(speedComboBox, 1, 0);
-        settingsLayoutPanel.Controls.Add(dividerPanel, 3, 0);
-        settingsLayoutPanel.Controls.Add(preserveTimingCheckBox, 4, 0);
-        // Row 1 — Tekrar
-        settingsLayoutPanel.Controls.Add(repeatCountLabel, 0, 1);
-        settingsLayoutPanel.Controls.Add(repeatCountNumericUpDown, 1, 1);
-        settingsLayoutPanel.Controls.Add(loopIndefinitelyCheckBox, 4, 1);
-        // Row 2 — Başlangıç Gecikmesi
-        settingsLayoutPanel.Controls.Add(initialDelayLabel, 0, 2);
-        settingsLayoutPanel.Controls.Add(initialDelayNumericUpDown, 1, 2);
-        settingsLayoutPanel.Controls.Add(initialDelayUnitLabel, 2, 2);
-        settingsLayoutPanel.Controls.Add(stopOnErrorCheckBox, 4, 2);
-        // Row 3
-        settingsLayoutPanel.Controls.Add(relativeCoordinatesCheckBox, 4, 3);
+        // formLayoutPanel
+        formLayoutPanel.ColumnCount = 3;
+        formLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34F));
+        formLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 66F));
+        formLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 38F));
+        formLayoutPanel.Controls.Add(speedLabel, 0, 0);
+        formLayoutPanel.Controls.Add(speedComboBox, 1, 0);
+        formLayoutPanel.Controls.Add(repeatCountLabel, 0, 1);
+        formLayoutPanel.Controls.Add(repeatCountNumericUpDown, 1, 1);
+        formLayoutPanel.Controls.Add(initialDelayLabel, 0, 2);
+        formLayoutPanel.Controls.Add(initialDelayNumericUpDown, 1, 2);
+        formLayoutPanel.Controls.Add(initialDelayUnitLabel, 2, 2);
+        formLayoutPanel.Dock = DockStyle.Fill;
+        formLayoutPanel.Margin = Padding.Empty;
+        formLayoutPanel.Name = "formLayoutPanel";
+        formLayoutPanel.RowCount = 4;
+        formLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        formLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        formLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        formLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+
+        // optionsLayoutPanel
+        optionsLayoutPanel.ColumnCount = 1;
+        optionsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        optionsLayoutPanel.Controls.Add(preserveTimingCheckBox, 0, 0);
+        optionsLayoutPanel.Controls.Add(loopIndefinitelyCheckBox, 0, 1);
+        optionsLayoutPanel.Controls.Add(stopOnErrorCheckBox, 0, 2);
+        optionsLayoutPanel.Controls.Add(relativeCoordinatesCheckBox, 0, 3);
+        optionsLayoutPanel.Dock = DockStyle.Fill;
+        optionsLayoutPanel.Margin = Padding.Empty;
+        optionsLayoutPanel.Name = "optionsLayoutPanel";
+        optionsLayoutPanel.RowCount = 4;
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
 
         speedLabel.Dock = DockStyle.Fill;
         speedLabel.Text = "Hız";
@@ -139,7 +163,6 @@ partial class PlaybackSettingsControl
         dividerPanel.Dock = DockStyle.Fill;
         dividerPanel.Margin = Padding.Empty;
         dividerPanel.Name = "dividerPanel";
-        settingsLayoutPanel.SetRowSpan(dividerPanel, 4);
 
         preserveTimingCheckBox.Dock = DockStyle.Fill;
         preserveTimingCheckBox.Text = "Gerçek zamanlı";
@@ -171,6 +194,8 @@ partial class PlaybackSettingsControl
 
         rootLayoutPanel.ResumeLayout(false);
         settingsLayoutPanel.ResumeLayout(false);
+        formLayoutPanel.ResumeLayout(false);
+        optionsLayoutPanel.ResumeLayout(false);
         settingsLayoutPanel.PerformLayout();
         ((System.ComponentModel.ISupportInitialize)repeatCountNumericUpDown).EndInit();
         ((System.ComponentModel.ISupportInitialize)initialDelayNumericUpDown).EndInit();

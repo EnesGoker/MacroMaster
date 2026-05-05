@@ -164,7 +164,7 @@ internal sealed class EventListControl : UserControl
             Padding = Padding.Empty
         };
         gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(18)));
+        gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(16)));
 
         _eventGridView.Dock = DockStyle.Fill;
         _emptyStateLabel.Dock = DockStyle.Fill;
@@ -175,7 +175,8 @@ internal sealed class EventListControl : UserControl
         _summaryLabel.TextAlign = ContentAlignment.MiddleLeft;
 
         _eventScrollBar.Dock = DockStyle.Fill;
-        _eventScrollBar.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
+        _eventScrollBar.BackColor = DesignTokens.SurfaceInset;
+        _eventScrollBar.Margin = new Padding(DesignTokens.Scale(2), 0, 0, 0);
         _eventScrollBar.ValueChanged += (_, _) => ScrollGridTo(_eventScrollBar.Value);
 
         gridLayoutPanel.Controls.Add(_eventGridView, 0, 0);
@@ -215,13 +216,13 @@ internal sealed class EventListControl : UserControl
         _eventGridView.CellMouseDown += EventGridView_CellMouseDown;
         _eventGridView.CellPainting += EventGridView_CellPainting;
 
-        _eventGridView.Columns.Add(CreateTextColumn("#", "#", 32, 5));
-        _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 70, 12));
-        _eventGridView.Columns.Add(CreateTextColumn("Type", "Tur", 50, 9));
-        _eventGridView.Columns.Add(CreateTextColumn("Action", "Aksiyon", 60, 15));
-        _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 80, 18));
-        _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 55, 10));
-        _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 80, 31));
+        _eventGridView.Columns.Add(CreateTextColumn("#", "#", 48, 6));
+        _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 112, 15));
+        _eventGridView.Columns.Add(CreateTextColumn("Type", "Tur", 78, 10));
+        _eventGridView.Columns.Add(CreateTextColumn("Action", "Aksiyon", 92, 15));
+        _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 138, 22));
+        _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 86, 11));
+        _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 132, 21));
         ApplyColumnWidths();
     }
 
@@ -379,7 +380,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView.DefaultCellStyle.Font = DesignTokens.FontUiNormal;
         _eventGridView.DefaultCellStyle.SelectionBackColor = Color.FromArgb(24, 93, 188);
         _eventGridView.DefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
-        _eventGridView.DefaultCellStyle.Padding = new Padding(DesignTokens.Scale(10), 0, DesignTokens.Scale(10), 0);
+        _eventGridView.DefaultCellStyle.Padding = new Padding(DesignTokens.Scale(6), 0, DesignTokens.Scale(6), 0);
 
         _eventGridView.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(12, 17, 27);
         _eventGridView.AlternatingRowsDefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
@@ -390,9 +391,9 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ColumnHeadersDefaultCellStyle.SelectionBackColor = DesignTokens.Surface2;
         _eventGridView.ColumnHeadersDefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
         _eventGridView.ColumnHeadersDefaultCellStyle.Padding = new Padding(
-            DesignTokens.Scale(10),
+            DesignTokens.Scale(8),
             0,
-            DesignTokens.Scale(10),
+            DesignTokens.Scale(8),
             0);
     }
 
@@ -424,8 +425,7 @@ internal sealed class EventListControl : UserControl
             return;
         }
 
-        int availableWidth = _eventGridView.ClientSize.Width
-            - DesignTokens.GridScrollbarReserveWidth;
+        int availableWidth = _eventGridView.ClientSize.Width;
 
         if (availableWidth <= 0)
         {
@@ -469,6 +469,10 @@ internal sealed class EventListControl : UserControl
 
         _eventScrollBar.SetRange(maximum, visibleRows, Math.Min(currentIndex, maximum));
         _eventScrollBar.Visible = maximum > 0;
+        if (_eventScrollBar.Visible)
+        {
+            _eventScrollBar.BringToFront();
+        }
     }
 
     private void SyncEventScrollBarFromGrid()

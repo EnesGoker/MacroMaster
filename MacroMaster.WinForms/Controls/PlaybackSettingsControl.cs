@@ -93,15 +93,16 @@ public partial class PlaybackSettingsControl : UserControl
 
         rootLayoutPanel.BackColor = DesignTokens.Surface;
         settingsLayoutPanel.BackColor = DesignTokens.Surface;
-        dividerPanel.BackColor = DesignTokens.BorderSoft;
         initialDelayUnitLabel.ForeColor = DesignTokens.TextSecondary;
-        initialDelayUnitLabel.BackColor = Color.Transparent;
+        initialDelayUnitLabel.BackColor = DesignTokens.Surface;
         initialDelayUnitLabel.Font = DesignTokens.FontUiNormal;
 
         foreach (Control control in settingsLayoutPanel.Controls)
         {
             ApplyChildTheme(control);
         }
+
+        dividerPanel.BackColor = DesignTokens.BorderSoft;
     }
 
     private static void ApplyChildTheme(Control control)
@@ -109,7 +110,7 @@ public partial class PlaybackSettingsControl : UserControl
         control.ForeColor = DesignTokens.TextSecondary;
         control.BackColor = control is TextBox or ComboBox or NumericUpDown
             ? DesignTokens.SurfaceInset
-            : Color.Transparent;
+            : DesignTokens.Surface;
         control.Font = DesignTokens.FontUiNormal;
 
         if (control is NumericUpDown numericUpDown)
@@ -134,6 +135,7 @@ public partial class PlaybackSettingsControl : UserControl
         }
         else if (control is CheckBox checkBox)
         {
+            checkBox.BackColor = DesignTokens.Surface;
             checkBox.ForeColor = DesignTokens.TextPrimary;
             checkBox.FlatStyle = FlatStyle.Flat;
             checkBox.FlatAppearance.BorderColor = DesignTokens.BorderBright;
@@ -150,21 +152,29 @@ public partial class PlaybackSettingsControl : UserControl
     private void ApplyDensityScale()
     {
         rootLayoutPanel.Padding = new Padding(
-            DesignTokens.Scale(18),
-            DesignTokens.Scale(10),
-            DesignTokens.Scale(18),
-            DesignTokens.Scale(10));
+            0,
+            DesignTokens.Scale(8),
+            0,
+            0);
 
-        // Col 0: label, Col 1: input, Col 2: unit(32px), Col 3: divider(1px), Col 4: checkboxes
-        settingsLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(32);
-        settingsLayoutPanel.ColumnStyles[3].Width = Math.Max(1, DesignTokens.Scale(1));
+        // Main columns: form fields, divider gutter, behavior toggles.
+        settingsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(34);
+        formLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(38);
 
         int inputTopMargin = DesignTokens.Scale(4);
-        int checkLeftMargin = DesignTokens.Scale(15);
-        speedComboBox.Margin = new Padding(DesignTokens.Scale(3), inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
+        speedLabel.Margin = new Padding(0, 0, DesignTokens.Scale(10), 0);
+        repeatCountLabel.Margin = speedLabel.Margin;
+        initialDelayLabel.Margin = speedLabel.Margin;
+        speedComboBox.Margin = new Padding(0, inputTopMargin, DesignTokens.Scale(6), inputTopMargin);
         repeatCountNumericUpDown.Margin = speedComboBox.Margin;
         initialDelayNumericUpDown.Margin = speedComboBox.Margin;
-        preserveTimingCheckBox.Margin = new Padding(checkLeftMargin, inputTopMargin, DesignTokens.Scale(3), inputTopMargin);
+        initialDelayUnitLabel.Margin = new Padding(0, 0, DesignTokens.Scale(4), 0);
+        dividerPanel.Margin = new Padding(
+            DesignTokens.Scale(16),
+            DesignTokens.Scale(4),
+            DesignTokens.Scale(16),
+            DesignTokens.Scale(4));
+        preserveTimingCheckBox.Margin = new Padding(0, inputTopMargin, 0, inputTopMargin);
         loopIndefinitelyCheckBox.Margin = preserveTimingCheckBox.Margin;
         stopOnErrorCheckBox.Margin = preserveTimingCheckBox.Margin;
         relativeCoordinatesCheckBox.Margin = preserveTimingCheckBox.Margin;

@@ -25,7 +25,7 @@ internal sealed class ModernScrollBar : Control
         Width = DesignTokens.Scale(12);
         MinimumSize = new Size(DesignTokens.Scale(10), 0);
         Cursor = Cursors.Hand;
-        BackColor = Color.Transparent;
+        BackColor = DesignTokens.Surface;
     }
 
     public event EventHandler? ValueChanged;
