@@ -6,10 +6,10 @@ namespace MacroMaster.WinForms.Theme;
 /// </summary>
 internal static class AppSpacing
 {
-    public static readonly int TitleBarHeight = AppScale.Scale(42);
-    public static readonly int TitleBarButtonWidth = AppScale.Scale(46);
-    public static readonly int TitleBarButtonHeight = AppScale.Scale(34);
-    public static readonly int TitleBarIconSize = AppScale.Scale(28);
+    public static readonly int TitleBarHeight = AppScale.Scale(54);
+    public static readonly int TitleBarButtonWidth = AppScale.Scale(48);
+    public static readonly int TitleBarButtonHeight = AppScale.Scale(40);
+    public static readonly int TitleBarIconSize = AppScale.Scale(32);
     public static readonly int TitleBarStatusDotSize = AppScale.Scale(8);
     public static readonly int WindowResizeBorder = AppScale.Scale(8);
     public static readonly int WindowMaximizedPadding = AppScale.Scale(8);

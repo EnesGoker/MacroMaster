@@ -33,18 +33,18 @@ internal sealed class TitleBarControl : UserControl
             Dock = DockStyle.Fill,
             ColumnCount = 7,
             RowCount = 1,
-            BackColor = Color.Transparent,
+            BackColor = DesignTokens.Background,
             Margin = Padding.Empty,
             Padding = new Padding(
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(4),
-                DesignTokens.Scale(8),
-                DesignTokens.Scale(4))
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(7),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(7))
         };
 
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(10)));
+        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(12)));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(112)));
+        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
@@ -53,6 +53,7 @@ internal sealed class TitleBarControl : UserControl
         var logoPanel = new LogoPanel
         {
             Dock = DockStyle.Fill,
+            BackColor = DesignTokens.Background,
             Margin = new Padding(0, 0, DesignTokens.Scale(8), 0)
         };
 
@@ -61,12 +62,12 @@ internal sealed class TitleBarControl : UserControl
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
-            BackColor = Color.Transparent,
+            BackColor = DesignTokens.Background,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 58f));
-        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 42f));
+        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 54f));
+        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 46f));
 
         _appNameLabel = new Label
         {
@@ -74,7 +75,7 @@ internal sealed class TitleBarControl : UserControl
             Text = "MacroMaster Kontrol Merkezi",
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
-            BackColor = Color.Transparent,
+            BackColor = DesignTokens.Background,
             TextAlign = ContentAlignment.BottomLeft,
             AutoEllipsis = true
         };
@@ -85,7 +86,7 @@ internal sealed class TitleBarControl : UserControl
             Text = "Kayit, oynatim ve JSON/XML destegi",
             Font = DesignTokens.FontUiSmall,
             ForeColor = DesignTokens.TextSecondary,
-            BackColor = Color.Transparent,
+            BackColor = DesignTokens.Background,
             TextAlign = ContentAlignment.TopLeft,
             AutoEllipsis = true
         };
@@ -93,13 +94,22 @@ internal sealed class TitleBarControl : UserControl
         textLayoutPanel.Controls.Add(_appNameLabel, 0, 0);
         textLayoutPanel.Controls.Add(_subtitleLabel, 0, 1);
 
+        var statusShellPanel = new RoundedSurfacePanel
+        {
+            Dock = DockStyle.Fill,
+            FillColor = DesignTokens.SurfaceInset,
+            BorderColor = DesignTokens.BorderSoft,
+            Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(2), DesignTokens.Scale(8), DesignTokens.Scale(2)),
+            Padding = new Padding(DesignTokens.Scale(10), 0, DesignTokens.Scale(8), 0)
+        };
+
         var statusLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
-            BackColor = Color.Transparent,
-            Margin = new Padding(DesignTokens.Scale(6), 0, DesignTokens.Scale(8), 0),
+            BackColor = DesignTokens.SurfaceInset,
+            Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         statusLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarStatusDotSize + DesignTokens.Scale(8)));
@@ -108,6 +118,7 @@ internal sealed class TitleBarControl : UserControl
         _statusDot = new StatusDotControl
         {
             Dock = DockStyle.Fill,
+            BackColor = DesignTokens.SurfaceInset,
             DotColor = DesignTokens.AccentGreen,
             Margin = Padding.Empty
         };
@@ -118,13 +129,14 @@ internal sealed class TitleBarControl : UserControl
             Text = "Hazir",
             Font = DesignTokens.FontUiNormal,
             ForeColor = DesignTokens.TextSecondary,
-            BackColor = Color.Transparent,
+            BackColor = DesignTokens.SurfaceInset,
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
 
         statusLayoutPanel.Controls.Add(_statusDot, 0, 0);
         statusLayoutPanel.Controls.Add(_statusLabel, 1, 0);
+        statusShellPanel.Controls.Add(statusLayoutPanel);
 
         _minimizeButton = new CaptionButton(CaptionButtonKind.Minimize);
         _maximizeButton = new CaptionButton(CaptionButtonKind.Maximize);
@@ -136,7 +148,7 @@ internal sealed class TitleBarControl : UserControl
 
         rootLayoutPanel.Controls.Add(logoPanel, 0, 0);
         rootLayoutPanel.Controls.Add(textLayoutPanel, 1, 0);
-        rootLayoutPanel.Controls.Add(statusLayoutPanel, 2, 0);
+        rootLayoutPanel.Controls.Add(statusShellPanel, 2, 0);
         rootLayoutPanel.Controls.Add(_minimizeButton, 3, 0);
         rootLayoutPanel.Controls.Add(_maximizeButton, 4, 0);
         rootLayoutPanel.Controls.Add(_closeButton, 5, 0);
@@ -170,12 +182,7 @@ internal sealed class TitleBarControl : UserControl
 
     protected override void OnPaintBackground(PaintEventArgs e)
     {
-        using var brush = new LinearGradientBrush(
-            ClientRectangle,
-            Color.FromArgb(15, 20, 32),
-            DesignTokens.Background,
-            LinearGradientMode.Horizontal);
-        e.Graphics.FillRectangle(brush, ClientRectangle);
+        e.Graphics.Clear(DesignTokens.Background);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -194,6 +201,50 @@ internal sealed class TitleBarControl : UserControl
         Close
     }
 
+    private sealed class RoundedSurfacePanel : Panel
+    {
+        public Color FillColor { get; set; } = DesignTokens.SurfaceInset;
+
+        public Color BorderColor { get; set; } = DesignTokens.BorderSoft;
+
+        public RoundedSurfacePanel()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Parent?.BackColor == Color.Transparent
+                ? DesignTokens.Background
+                : Parent?.BackColor ?? DesignTokens.Background);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var path = CreateRoundedRectanglePath(bounds, DesignTokens.Scale(8));
+            using var fillBrush = new SolidBrush(FillColor);
+            using var borderPen = new Pen(BorderColor);
+
+            e.Graphics.FillPath(fillBrush, path);
+            e.Graphics.DrawPath(borderPen, path);
+            e.Graphics.SmoothingMode = SmoothingMode.None;
+        }
+    }
+
     private sealed class LogoPanel : Control
     {
         public LogoPanel()
@@ -204,6 +255,11 @@ internal sealed class TitleBarControl : UserControl
                 ControlStyles.ResizeRedraw |
                 ControlStyles.UserPaint,
                 true);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            pevent.Graphics.Clear(DesignTokens.Background);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -254,6 +310,13 @@ internal sealed class TitleBarControl : UserControl
                 true);
         }
 
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            pevent.Graphics.Clear(BackColor == Color.Transparent
+                ? DesignTokens.SurfaceInset
+                : BackColor);
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -295,7 +358,7 @@ internal sealed class TitleBarControl : UserControl
             TabStop = false;
             Cursor = Cursors.Hand;
             FlatAppearance.BorderSize = 0;
-            BackColor = Color.Transparent;
+            BackColor = DesignTokens.Background;
         }
 
         public CaptionButtonKind Kind
@@ -336,7 +399,7 @@ internal sealed class TitleBarControl : UserControl
 
         protected override void OnPaint(PaintEventArgs pevent)
         {
-            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Background);
+            pevent.Graphics.Clear(DesignTokens.Background);
             pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
             Color fill = ResolveFillColor();
