@@ -243,7 +243,9 @@ internal sealed class EventListControl : UserControl
         {
             ShowImageMargin = false
         };
-        AppToolStripRenderer.ApplyTo(contextMenu);
+        AppToolStripRenderer.ApplyTo(
+            contextMenu,
+            AppToolStripMenuDensity.Comfortable);
 
         var editItem = new ToolStripMenuItem("Duzenle");
         editItem.Click += (_, _) =>

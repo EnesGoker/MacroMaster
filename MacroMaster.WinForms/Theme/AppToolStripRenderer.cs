@@ -2,6 +2,12 @@ using System.Drawing.Drawing2D;
 
 namespace MacroMaster.WinForms.Theme;
 
+internal enum AppToolStripMenuDensity
+{
+    Standard,
+    Comfortable
+}
+
 internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
 {
     public static readonly AppToolStripRenderer Instance = new();
@@ -19,20 +25,22 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
         RoundedEdges = false;
     }
 
-    public static void ApplyTo(ContextMenuStrip menu)
+    public static void ApplyTo(
+        ContextMenuStrip menu,
+        AppToolStripMenuDensity density = AppToolStripMenuDensity.Standard)
     {
         ArgumentNullException.ThrowIfNull(menu);
 
         menu.BackColor = DropDownBackground;
         menu.ForeColor = DesignTokens.TextPrimary;
         menu.Font = DesignTokens.FontUiNormal;
-        menu.Padding = new Padding(DesignTokens.Scale(4));
+        menu.Padding = ResolveMenuPadding(density);
         menu.RenderMode = ToolStripRenderMode.Professional;
         menu.Renderer = Instance;
 
-        ApplyItems(menu.Items);
+        ApplyItems(menu.Items, density);
 
-        menu.Opening += (_, _) => ApplyItems(menu.Items);
+        menu.Opening += (_, _) => ApplyItems(menu.Items, density);
     }
 
     protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
@@ -100,11 +108,23 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        e.TextColor = e.Item.Enabled
+        Color textColor = e.Item.Enabled
             ? DesignTokens.TextPrimary
             : DisabledText;
 
-        base.OnRenderItemText(e);
+        Rectangle textBounds = ResolveTextBounds(e.Item, e.TextRectangle);
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            e.Text,
+            e.TextFont,
+            textBounds,
+            textColor,
+            TextFormatFlags.Left |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis |
+            TextFormatFlags.SingleLine |
+            TextFormatFlags.NoPrefix);
     }
 
     protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
@@ -139,13 +159,15 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
         e.Graphics.SmoothingMode = SmoothingMode.None;
     }
 
-    private static void ApplyItems(ToolStripItemCollection items)
+    private static void ApplyItems(
+        ToolStripItemCollection items,
+        AppToolStripMenuDensity density)
     {
         foreach (ToolStripItem item in items)
         {
             if (item is ToolStripSeparator)
             {
-                item.Margin = new Padding(DesignTokens.Scale(4), DesignTokens.Scale(3), DesignTokens.Scale(4), DesignTokens.Scale(3));
+                item.Margin = ResolveSeparatorMargin(density);
                 continue;
             }
 
@@ -154,18 +176,66 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
                 ? DesignTokens.TextPrimary
                 : DisabledText;
             item.Font = DesignTokens.FontUiNormal;
-            item.Padding = new Padding(DesignTokens.Scale(10), DesignTokens.Scale(5), DesignTokens.Scale(10), DesignTokens.Scale(5));
+            item.Margin = ResolveItemMargin(density);
+            item.Padding = ResolveItemPadding(density);
 
             if (item is ToolStripDropDownItem dropDownItem)
             {
                 dropDownItem.DropDown.BackColor = DropDownBackground;
                 dropDownItem.DropDown.ForeColor = DesignTokens.TextPrimary;
                 dropDownItem.DropDown.Font = DesignTokens.FontUiNormal;
+                dropDownItem.DropDown.Padding = ResolveMenuPadding(density);
                 dropDownItem.DropDown.RenderMode = ToolStripRenderMode.Professional;
                 dropDownItem.DropDown.Renderer = Instance;
-                ApplyItems(dropDownItem.DropDownItems);
+                ApplyItems(dropDownItem.DropDownItems, density);
             }
         }
+    }
+
+    private static Padding ResolveMenuPadding(AppToolStripMenuDensity density)
+    {
+        return density == AppToolStripMenuDensity.Comfortable
+            ? new Padding(DesignTokens.Scale(6))
+            : new Padding(DesignTokens.Scale(4));
+    }
+
+    private static Padding ResolveItemMargin(AppToolStripMenuDensity density)
+    {
+        return density == AppToolStripMenuDensity.Comfortable
+            ? new Padding(DesignTokens.Scale(2), DesignTokens.Scale(1), DesignTokens.Scale(2), DesignTokens.Scale(1))
+            : Padding.Empty;
+    }
+
+    private static Padding ResolveItemPadding(AppToolStripMenuDensity density)
+    {
+        return density == AppToolStripMenuDensity.Comfortable
+            ? new Padding(DesignTokens.Scale(12), DesignTokens.Scale(8), DesignTokens.Scale(16), DesignTokens.Scale(8))
+            : new Padding(DesignTokens.Scale(10), DesignTokens.Scale(5), DesignTokens.Scale(10), DesignTokens.Scale(5));
+    }
+
+    private static Padding ResolveSeparatorMargin(AppToolStripMenuDensity density)
+    {
+        return density == AppToolStripMenuDensity.Comfortable
+            ? new Padding(DesignTokens.Scale(8), DesignTokens.Scale(5), DesignTokens.Scale(8), DesignTokens.Scale(5))
+            : new Padding(DesignTokens.Scale(4), DesignTokens.Scale(3), DesignTokens.Scale(4), DesignTokens.Scale(3));
+    }
+
+    private static Rectangle ResolveTextBounds(
+        ToolStripItem item,
+        Rectangle defaultTextRectangle)
+    {
+        int left = Math.Max(
+            defaultTextRectangle.Left,
+            item.Padding.Left + DesignTokens.Scale(2));
+        int rightPadding = Math.Max(
+            item.Padding.Right,
+            DesignTokens.Scale(8));
+
+        return new Rectangle(
+            left,
+            0,
+            Math.Max(0, item.Width - left - rightPadding),
+            item.Height);
     }
 
     private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)

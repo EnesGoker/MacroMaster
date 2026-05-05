@@ -497,7 +497,9 @@ internal sealed class MacroLibraryControl : UserControl
             {
                 ShowImageMargin = false
             };
-            AppToolStripRenderer.ApplyTo(contextMenu);
+            AppToolStripRenderer.ApplyTo(
+                contextMenu,
+                AppToolStripMenuDensity.Comfortable);
 
             var renameItem = new ToolStripMenuItem("Isim Duzenle");
             renameItem.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);

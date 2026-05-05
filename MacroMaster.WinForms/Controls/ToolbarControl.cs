@@ -141,7 +141,9 @@ public partial class ToolbarControl : UserControl
     private static void ConfigureMenu(ContextMenuStrip menu)
     {
         menu.ShowImageMargin = false;
-        AppToolStripRenderer.ApplyTo(menu);
+        AppToolStripRenderer.ApplyTo(
+            menu,
+            AppToolStripMenuDensity.Comfortable);
 
         menu.Opening += (_, _) =>
         {
