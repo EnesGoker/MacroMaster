@@ -154,8 +154,8 @@ public partial class PlaybackSettingsControl : UserControl
         settingsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(46);
         settingsLayoutPanel.ColumnStyles[2].Width = 47F;
         formLayoutPanel.ColumnStyles[0].Width = 36F;
-        formLayoutPanel.ColumnStyles[1].Width = 61F;
-        formLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(42);
+        formLayoutPanel.ColumnStyles[1].Width = 64F;
+        formLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(34);
 
         int inputTopMargin = DesignTokens.Scale(4);
         speedLabel.Margin = new Padding(0, 0, DesignTokens.Scale(10), 0);
@@ -163,8 +163,8 @@ public partial class PlaybackSettingsControl : UserControl
         initialDelayLabel.Margin = speedLabel.Margin;
         speedComboBox.Margin = new Padding(0, inputTopMargin, DesignTokens.Scale(6), inputTopMargin);
         repeatCountNumericUpDown.Margin = speedComboBox.Margin;
-        initialDelayNumericUpDown.Margin = new Padding(0, inputTopMargin, DesignTokens.Scale(14), inputTopMargin);
-        initialDelayUnitLabel.Margin = new Padding(0, 0, 0, 0);
+        initialDelayNumericUpDown.Margin = speedComboBox.Margin;
+        initialDelayUnitLabel.Margin = new Padding(0, 0, DesignTokens.Scale(4), 0);
         dividerPanel.Margin = new Padding(
             DesignTokens.Scale(20),
             DesignTokens.Scale(4),

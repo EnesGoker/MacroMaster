@@ -6,7 +6,7 @@ namespace MacroMaster.WinForms.Forms;
 public sealed class HotkeySettingsDialog : Form
 {
     private const int ComboBoxWidth = 190;
-    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(780), DesignTokens.Scale(452));
+    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(720), DesignTokens.Scale(392));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
     private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
@@ -89,8 +89,8 @@ public sealed class HotkeySettingsDialog : Form
             _hotkeySettingsKeyComboBox);
 
         FlowLayoutPanel buttonFlowLayoutPanel = CreateButtonFlowLayoutPanel(
-            applyButton,
             cancelButton,
+            applyButton,
             resetDefaultsButton);
 
         TableLayoutPanel rootLayoutPanel = CreateRootLayoutPanel(
@@ -189,9 +189,9 @@ public sealed class HotkeySettingsDialog : Form
         };
 
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(72)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(64)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(66)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(56)));
         rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(settingsTableLayoutPanel, 0, 1);
         rootLayoutPanel.Controls.Add(buttonFlowLayoutPanel, 0, 2);
@@ -271,7 +271,7 @@ public sealed class HotkeySettingsDialog : Form
             FlowDirection = FlowDirection.RightToLeft,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
-            Padding = new Padding(0, DesignTokens.Scale(14), 0, 0),
+            Padding = new Padding(0, DesignTokens.Scale(12), 0, 0),
             WrapContents = false,
             Anchor = AnchorStyles.Right
         };
@@ -288,8 +288,8 @@ public sealed class HotkeySettingsDialog : Form
     {
         var button = new Button
         {
-            Width = DesignTokens.Scale(132),
-            Height = DesignTokens.Scale(38),
+            Width = DesignTokens.Scale(118),
+            Height = DesignTokens.Scale(34),
             Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0),
             Text = text,
             FlatStyle = FlatStyle.Flat,
@@ -346,7 +346,7 @@ public sealed class HotkeySettingsDialog : Form
         ComboBox modifierComboBox,
         ComboBox keyComboBox)
     {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(54)));
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
 
         modifierComboBox.Dock = DockStyle.Fill;
         keyComboBox.Dock = DockStyle.Fill;
