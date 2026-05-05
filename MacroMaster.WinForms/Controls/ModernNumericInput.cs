@@ -122,6 +122,12 @@ internal sealed class ModernNumericInput : UserControl
     protected override void OnFontChanged(EventArgs e)
     {
         base.OnFontChanged(e);
+
+        if (_textBox is null)
+        {
+            return;
+        }
+
         _textBox.Font = Font;
         PerformLayout();
     }
@@ -129,6 +135,12 @@ internal sealed class ModernNumericInput : UserControl
     protected override void OnForeColorChanged(EventArgs e)
     {
         base.OnForeColorChanged(e);
+
+        if (_textBox is null)
+        {
+            return;
+        }
+
         _textBox.ForeColor = Enabled ? ForeColor : DesignTokens.TextMuted;
         Invalidate();
     }
@@ -136,6 +148,12 @@ internal sealed class ModernNumericInput : UserControl
     protected override void OnBackColorChanged(EventArgs e)
     {
         base.OnBackColorChanged(e);
+
+        if (_textBox is null)
+        {
+            return;
+        }
+
         _textBox.BackColor = BackColor;
         Invalidate();
     }
@@ -143,6 +161,12 @@ internal sealed class ModernNumericInput : UserControl
     protected override void OnEnabledChanged(EventArgs e)
     {
         base.OnEnabledChanged(e);
+
+        if (_textBox is null || _incrementButton is null || _decrementButton is null)
+        {
+            return;
+        }
+
         _textBox.Enabled = Enabled;
         _textBox.ForeColor = Enabled ? ForeColor : DesignTokens.TextMuted;
         _incrementButton.Enabled = Enabled;
@@ -197,6 +221,11 @@ internal sealed class ModernNumericInput : UserControl
 
     private void LayoutChildren()
     {
+        if (_textBox is null || _incrementButton is null || _decrementButton is null)
+        {
+            return;
+        }
+
         int borderPadding = DesignTokens.Scale(10);
         int spinWidth = Math.Min(DesignTokens.Scale(24), Math.Max(18, Width / 5));
         int buttonHeight = Math.Max(1, (Height - DesignTokens.Scale(4)) / 2);

@@ -10,6 +10,7 @@ internal sealed class ModernSelect : Control
     private bool _isPressed;
     private bool _isDropDownOpen;
     private int _selectedIndex = -1;
+    private ContextMenuStrip? _dropDownMenu;
 
     public ModernSelect()
     {
@@ -154,9 +155,26 @@ internal sealed class ModernSelect : Control
 
     protected override void OnEnabledChanged(EventArgs e)
     {
+        if (!Enabled)
+        {
+            CloseDropDown();
+        }
+
         Cursor = Enabled ? Cursors.Hand : Cursors.Default;
         Invalidate();
         base.OnEnabledChanged(e);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            ContextMenuStrip? menu = _dropDownMenu;
+            _dropDownMenu = null;
+            menu?.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -199,12 +217,15 @@ internal sealed class ModernSelect : Control
             return;
         }
 
+        CloseDropDown();
+
         var menu = new ContextMenuStrip
         {
             ShowCheckMargin = false,
             ShowImageMargin = false,
             MinimumSize = new Size(Width, 0)
         };
+        _dropDownMenu = menu;
         AppToolStripRenderer.ApplyTo(menu);
 
         for (int index = 0; index < _items.Count; index++)
@@ -230,11 +251,67 @@ internal sealed class ModernSelect : Control
         {
             _isDropDownOpen = false;
             _isPressed = false;
-            Invalidate();
-            menu.Dispose();
+            if (!IsDisposed)
+            {
+                Invalidate();
+            }
+
+            if (ReferenceEquals(_dropDownMenu, menu))
+            {
+                _dropDownMenu = null;
+            }
+
+            DisposeMenuAfterCurrentMessage(menu);
         };
 
         menu.Show(this, new Point(0, Height + DesignTokens.Scale(4)));
+    }
+
+    private void CloseDropDown()
+    {
+        ContextMenuStrip? menu = _dropDownMenu;
+        if (menu is null || menu.IsDisposed)
+        {
+            return;
+        }
+
+        menu.Close();
+    }
+
+    private void DisposeMenuAfterCurrentMessage(ContextMenuStrip menu)
+    {
+        if (menu.IsDisposed)
+        {
+            return;
+        }
+
+        if (IsDisposed || Disposing || !IsHandleCreated)
+        {
+            menu.Dispose();
+            return;
+        }
+
+        try
+        {
+            BeginInvoke((MethodInvoker)(() =>
+            {
+                if (!menu.IsDisposed)
+                {
+                    menu.Dispose();
+                }
+            }));
+        }
+        catch (ObjectDisposedException)
+        {
+            // The owner can be torn down while the drop-down is closing.
+        }
+        catch (InvalidOperationException)
+        {
+            if (!menu.IsDisposed)
+            {
+                menu.Dispose();
+            }
+        }
     }
 
     private void SetSelectedIndex(int value, bool raiseEvent = true)
