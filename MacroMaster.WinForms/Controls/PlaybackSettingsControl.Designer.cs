@@ -15,10 +15,10 @@ partial class PlaybackSettingsControl
     private ModernNumericInput initialDelayNumericUpDown = null!;
     private Label initialDelayUnitLabel = null!;
     private Panel dividerPanel = null!;
-    private CheckBox preserveTimingCheckBox = null!;
-    private CheckBox loopIndefinitelyCheckBox = null!;
-    private CheckBox stopOnErrorCheckBox = null!;
-    private CheckBox relativeCoordinatesCheckBox = null!;
+    private ModernCheckBox preserveTimingCheckBox = null!;
+    private ModernCheckBox loopIndefinitelyCheckBox = null!;
+    private ModernCheckBox stopOnErrorCheckBox = null!;
+    private ModernCheckBox relativeCoordinatesCheckBox = null!;
 
     protected override void Dispose(bool disposing)
     {
@@ -161,27 +161,23 @@ partial class PlaybackSettingsControl
         dividerPanel.Margin = Padding.Empty;
         dividerPanel.Name = "dividerPanel";
 
-        preserveTimingCheckBox.Anchor = AnchorStyles.Left;
+        preserveTimingCheckBox.Dock = DockStyle.Fill;
         preserveTimingCheckBox.Text = "Gerçek zamanlı";
-        preserveTimingCheckBox.UseVisualStyleBackColor = false;
         preserveTimingCheckBox.Name = "preserveTimingCheckBox";
         preserveTimingCheckBox.TabIndex = 7;
 
-        loopIndefinitelyCheckBox.Anchor = AnchorStyles.Left;
-        loopIndefinitelyCheckBox.Text = "Sonsuza döngü";
-        loopIndefinitelyCheckBox.UseVisualStyleBackColor = false;
+        loopIndefinitelyCheckBox.Dock = DockStyle.Fill;
+        loopIndefinitelyCheckBox.Text = "Sonsuz döngü";
         loopIndefinitelyCheckBox.Name = "loopIndefinitelyCheckBox";
         loopIndefinitelyCheckBox.TabIndex = 8;
 
-        stopOnErrorCheckBox.Anchor = AnchorStyles.Left;
+        stopOnErrorCheckBox.Dock = DockStyle.Fill;
         stopOnErrorCheckBox.Text = "Hata'da durdur";
-        stopOnErrorCheckBox.UseVisualStyleBackColor = false;
         stopOnErrorCheckBox.Name = "stopOnErrorCheckBox";
         stopOnErrorCheckBox.TabIndex = 9;
 
-        relativeCoordinatesCheckBox.Anchor = AnchorStyles.Left;
+        relativeCoordinatesCheckBox.Dock = DockStyle.Fill;
         relativeCoordinatesCheckBox.Text = "Göreceli koordinat";
-        relativeCoordinatesCheckBox.UseVisualStyleBackColor = false;
         relativeCoordinatesCheckBox.Name = "relativeCoordinatesCheckBox";
         relativeCoordinatesCheckBox.TabIndex = 10;
 

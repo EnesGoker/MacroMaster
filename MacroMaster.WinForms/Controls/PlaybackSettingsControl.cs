@@ -127,14 +127,12 @@ public partial class PlaybackSettingsControl : UserControl
             select.MinimumSize = new Size(0, DesignTokens.Scale(32));
             return;
         }
-        else if (control is CheckBox checkBox)
+        else if (control is ModernCheckBox checkBox)
         {
             checkBox.BackColor = DesignTokens.Surface;
             checkBox.ForeColor = DesignTokens.TextPrimary;
-            checkBox.FlatStyle = FlatStyle.Flat;
-            checkBox.FlatAppearance.BorderColor = DesignTokens.BorderBright;
-            checkBox.FlatAppearance.CheckedBackColor = DesignTokens.AccentDeep;
-            checkBox.FlatAppearance.MouseOverBackColor = DesignTokens.SurfaceHover;
+            checkBox.MinimumSize = new Size(0, DesignTokens.Scale(30));
+            return;
         }
 
         foreach (Control child in control.Controls)
@@ -173,10 +171,9 @@ public partial class PlaybackSettingsControl : UserControl
             DesignTokens.Scale(20),
             DesignTokens.Scale(4));
 
-        int optionLeftMargin = DesignTokens.Scale(24);
-        int optionWidth = DesignTokens.Scale(172);
-        int optionHeight = DesignTokens.Scale(28);
-        foreach (CheckBox optionCheckBox in new[]
+        int optionLeftMargin = DesignTokens.Scale(22);
+        int optionRightMargin = DesignTokens.Scale(30);
+        foreach (ModernCheckBox optionCheckBox in new[]
         {
             preserveTimingCheckBox,
             loopIndefinitelyCheckBox,
@@ -184,8 +181,8 @@ public partial class PlaybackSettingsControl : UserControl
             relativeCoordinatesCheckBox
         })
         {
-            optionCheckBox.Margin = new Padding(optionLeftMargin, inputTopMargin, 0, inputTopMargin);
-            optionCheckBox.Size = new Size(optionWidth, optionHeight);
+            optionCheckBox.Margin = new Padding(optionLeftMargin, inputTopMargin, optionRightMargin, inputTopMargin);
+            optionCheckBox.MinimumSize = new Size(0, DesignTokens.Scale(30));
         }
     }
 

@@ -3,10 +3,11 @@ using System.Drawing.Drawing2D;
 
 namespace MacroMaster.WinForms.Controls;
 
-internal sealed class ModernCheckBox : CheckBox
+internal sealed class ModernCheckBox : Control
 {
     private bool _isHovered;
     private bool _isPressed;
+    private bool _checked;
 
     public ModernCheckBox()
     {
@@ -17,11 +18,30 @@ internal sealed class ModernCheckBox : CheckBox
             ControlStyles.UserPaint,
             true);
 
+        AccessibleRole = AccessibleRole.CheckButton;
         Cursor = Cursors.Hand;
-        FlatStyle = FlatStyle.Flat;
-        UseVisualStyleBackColor = false;
+        TabStop = true;
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
+        MinimumSize = new Size(DesignTokens.Scale(120), DesignTokens.Scale(30));
+    }
+
+    public event EventHandler? CheckedChanged;
+
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value)
+            {
+                return;
+            }
+
+            _checked = value;
+            Invalidate();
+            CheckedChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     protected override void OnMouseEnter(EventArgs eventargs)
@@ -41,9 +61,10 @@ internal sealed class ModernCheckBox : CheckBox
 
     protected override void OnMouseDown(MouseEventArgs mevent)
     {
-        if (mevent.Button == MouseButtons.Left)
+        if (Enabled && mevent.Button == MouseButtons.Left)
         {
             _isPressed = true;
+            Focus();
             Invalidate();
         }
 
@@ -52,15 +73,33 @@ internal sealed class ModernCheckBox : CheckBox
 
     protected override void OnMouseUp(MouseEventArgs mevent)
     {
+        bool shouldToggle = Enabled &&
+            _isPressed &&
+            mevent.Button == MouseButtons.Left &&
+            ClientRectangle.Contains(mevent.Location);
+
         _isPressed = false;
         Invalidate();
+
+        if (shouldToggle)
+        {
+            Checked = !Checked;
+        }
+
         base.OnMouseUp(mevent);
     }
 
-    protected override void OnCheckedChanged(EventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
-        Invalidate();
-        base.OnCheckedChanged(e);
+        if (Enabled && (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter))
+        {
+            Checked = !Checked;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
     }
 
     protected override void OnEnabledChanged(EventArgs e)
@@ -79,9 +118,16 @@ internal sealed class ModernCheckBox : CheckBox
         Graphics graphics = pevent.Graphics;
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        int boxSize = DesignTokens.Scale(15);
+        Rectangle rowBounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+        using GraphicsPath rowPath = CreateRoundPath(rowBounds, DesignTokens.Scale(8));
+        using var rowBrush = new SolidBrush(ResolveRowFillColor());
+        using var rowBorderPen = new Pen(ResolveRowBorderColor(), Math.Max(1f, DesignTokens.DensityScale));
+        graphics.FillPath(rowBrush, rowPath);
+        graphics.DrawPath(rowBorderPen, rowPath);
+
+        int boxSize = DesignTokens.Scale(16);
         var boxBounds = new Rectangle(
-            0,
+            DesignTokens.Scale(12),
             Math.Max(0, (Height - boxSize) / 2),
             boxSize,
             boxSize);
@@ -98,9 +144,9 @@ internal sealed class ModernCheckBox : CheckBox
         }
 
         var textBounds = new Rectangle(
-            boxBounds.Right + DesignTokens.Scale(10),
+            boxBounds.Right + DesignTokens.Scale(12),
             0,
-            Math.Max(0, Width - boxBounds.Right - DesignTokens.Scale(10)),
+            Math.Max(0, Width - boxBounds.Right - DesignTokens.Scale(20)),
             Height);
         TextRenderer.DrawText(
             graphics,
@@ -112,6 +158,43 @@ internal sealed class ModernCheckBox : CheckBox
             TextFormatFlags.VerticalCenter |
             TextFormatFlags.EndEllipsis |
             TextFormatFlags.NoPrefix);
+    }
+
+    private Color ResolveRowFillColor()
+    {
+        if (!Enabled)
+        {
+            return Color.FromArgb(90, DesignTokens.SurfaceInset);
+        }
+
+        if (_isPressed)
+        {
+            return DesignTokens.Surface3;
+        }
+
+        if (_isHovered || Focused)
+        {
+            return DesignTokens.SurfaceHover;
+        }
+
+        return DesignTokens.SurfaceInset;
+    }
+
+    private Color ResolveRowBorderColor()
+    {
+        if (!Enabled)
+        {
+            return Color.FromArgb(70, DesignTokens.BorderSoft);
+        }
+
+        if (Focused)
+        {
+            return DesignTokens.BorderBright;
+        }
+
+        return _isHovered
+            ? DesignTokens.Border
+            : DesignTokens.BorderSoft;
     }
 
     private Color ResolveBoxFillColor()
