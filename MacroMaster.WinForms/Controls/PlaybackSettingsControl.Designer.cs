@@ -164,25 +164,25 @@ partial class PlaybackSettingsControl
         dividerPanel.Margin = Padding.Empty;
         dividerPanel.Name = "dividerPanel";
 
-        preserveTimingCheckBox.Dock = DockStyle.Fill;
+        preserveTimingCheckBox.Anchor = AnchorStyles.Left;
         preserveTimingCheckBox.Text = "Gerçek zamanlı";
         preserveTimingCheckBox.UseVisualStyleBackColor = false;
         preserveTimingCheckBox.Name = "preserveTimingCheckBox";
         preserveTimingCheckBox.TabIndex = 7;
 
-        loopIndefinitelyCheckBox.Dock = DockStyle.Fill;
+        loopIndefinitelyCheckBox.Anchor = AnchorStyles.Left;
         loopIndefinitelyCheckBox.Text = "Sonsuza döngü";
         loopIndefinitelyCheckBox.UseVisualStyleBackColor = false;
         loopIndefinitelyCheckBox.Name = "loopIndefinitelyCheckBox";
         loopIndefinitelyCheckBox.TabIndex = 8;
 
-        stopOnErrorCheckBox.Dock = DockStyle.Fill;
+        stopOnErrorCheckBox.Anchor = AnchorStyles.Left;
         stopOnErrorCheckBox.Text = "Hata'da durdur";
         stopOnErrorCheckBox.UseVisualStyleBackColor = false;
         stopOnErrorCheckBox.Name = "stopOnErrorCheckBox";
         stopOnErrorCheckBox.TabIndex = 9;
 
-        relativeCoordinatesCheckBox.Dock = DockStyle.Fill;
+        relativeCoordinatesCheckBox.Anchor = AnchorStyles.Left;
         relativeCoordinatesCheckBox.Text = "Göreceli koordinat";
         relativeCoordinatesCheckBox.UseVisualStyleBackColor = false;
         relativeCoordinatesCheckBox.Name = "relativeCoordinatesCheckBox";

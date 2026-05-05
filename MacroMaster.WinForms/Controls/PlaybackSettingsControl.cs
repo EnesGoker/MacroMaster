@@ -158,7 +158,7 @@ public partial class PlaybackSettingsControl : UserControl
             0);
 
         // Main columns: form fields, divider gutter, behavior toggles.
-        settingsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(34);
+        settingsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(42);
         formLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(38);
 
         int inputTopMargin = DesignTokens.Scale(4);
@@ -170,14 +170,25 @@ public partial class PlaybackSettingsControl : UserControl
         initialDelayNumericUpDown.Margin = speedComboBox.Margin;
         initialDelayUnitLabel.Margin = new Padding(0, 0, DesignTokens.Scale(4), 0);
         dividerPanel.Margin = new Padding(
-            DesignTokens.Scale(16),
+            DesignTokens.Scale(20),
             DesignTokens.Scale(4),
-            DesignTokens.Scale(16),
+            DesignTokens.Scale(20),
             DesignTokens.Scale(4));
-        preserveTimingCheckBox.Margin = new Padding(0, inputTopMargin, 0, inputTopMargin);
-        loopIndefinitelyCheckBox.Margin = preserveTimingCheckBox.Margin;
-        stopOnErrorCheckBox.Margin = preserveTimingCheckBox.Margin;
-        relativeCoordinatesCheckBox.Margin = preserveTimingCheckBox.Margin;
+
+        int optionLeftMargin = DesignTokens.Scale(22);
+        int optionWidth = DesignTokens.Scale(190);
+        int optionHeight = DesignTokens.Scale(30);
+        foreach (CheckBox optionCheckBox in new[]
+        {
+            preserveTimingCheckBox,
+            loopIndefinitelyCheckBox,
+            stopOnErrorCheckBox,
+            relativeCoordinatesCheckBox
+        })
+        {
+            optionCheckBox.Margin = new Padding(optionLeftMargin, inputTopMargin, 0, inputTopMargin);
+            optionCheckBox.Size = new Size(optionWidth, optionHeight);
+        }
     }
 
     private void PopulateSpeedOptions()

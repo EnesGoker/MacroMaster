@@ -10,6 +10,7 @@ internal sealed class EventListControl : UserControl
 {
     private readonly DataGridView _eventGridView;
     private readonly ModernScrollBar _eventScrollBar;
+    private readonly Panel _gridHostPanel;
     private readonly ContextMenuStrip _eventContextMenu;
     private readonly Label _emptyStateLabel;
     private readonly Label _summaryLabel;
@@ -35,6 +36,7 @@ internal sealed class EventListControl : UserControl
 
         _eventGridView = new DataGridView();
         _eventScrollBar = new ModernScrollBar();
+        _gridHostPanel = new Panel();
         _eventContextMenu = BuildEventContextMenu();
         _emptyStateLabel = new Label();
         _summaryLabel = new Label();
@@ -146,47 +148,48 @@ internal sealed class EventListControl : UserControl
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(34)));
 
-        var gridHostPanel = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = DesignTokens.SurfaceInset,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
+        _gridHostPanel.Dock = DockStyle.Fill;
+        _gridHostPanel.BackColor = DesignTokens.SurfaceInset;
+        _gridHostPanel.Margin = Padding.Empty;
+        _gridHostPanel.Padding = Padding.Empty;
+        _gridHostPanel.Resize += (_, _) => LayoutGridViewport();
 
-        var gridLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = DesignTokens.SurfaceInset,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(16)));
-
-        _eventGridView.Dock = DockStyle.Fill;
-        _emptyStateLabel.Dock = DockStyle.Fill;
+        _eventGridView.Dock = DockStyle.None;
+        _emptyStateLabel.Dock = DockStyle.None;
         _emptyStateLabel.Text = "Secili bir oturum yok. Yeni bir makro kaydedin veya diskten yukleyin.";
         _emptyStateLabel.TextAlign = ContentAlignment.MiddleCenter;
 
         _summaryLabel.Dock = DockStyle.Fill;
         _summaryLabel.TextAlign = ContentAlignment.MiddleLeft;
 
-        _eventScrollBar.Dock = DockStyle.Fill;
+        _eventScrollBar.Dock = DockStyle.None;
         _eventScrollBar.BackColor = DesignTokens.SurfaceInset;
-        _eventScrollBar.Margin = new Padding(DesignTokens.Scale(2), 0, 0, 0);
         _eventScrollBar.ValueChanged += (_, _) => ScrollGridTo(_eventScrollBar.Value);
 
-        gridLayoutPanel.Controls.Add(_eventGridView, 0, 0);
-        gridLayoutPanel.Controls.Add(_eventScrollBar, 1, 0);
-        gridHostPanel.Controls.Add(gridLayoutPanel);
-        gridHostPanel.Controls.Add(_emptyStateLabel);
-        rootLayoutPanel.Controls.Add(gridHostPanel, 0, 0);
+        _gridHostPanel.Controls.Add(_eventGridView);
+        _gridHostPanel.Controls.Add(_eventScrollBar);
+        _gridHostPanel.Controls.Add(_emptyStateLabel);
+        rootLayoutPanel.Controls.Add(_gridHostPanel, 0, 0);
         rootLayoutPanel.Controls.Add(_summaryLabel, 0, 1);
 
         Controls.Add(rootLayoutPanel);
+    }
+
+    private void LayoutGridViewport()
+    {
+        int scrollWidth = _eventScrollBar.Visible ? DesignTokens.Scale(14) : 0;
+        int scrollGap = _eventScrollBar.Visible ? DesignTokens.Scale(6) : 0;
+        int gridWidth = Math.Max(0, _gridHostPanel.ClientSize.Width - scrollWidth - scrollGap);
+        int gridHeight = Math.Max(0, _gridHostPanel.ClientSize.Height);
+
+        _eventGridView.Bounds = new Rectangle(0, 0, gridWidth, gridHeight);
+        _emptyStateLabel.Bounds = new Rectangle(0, 0, _gridHostPanel.ClientSize.Width, gridHeight);
+        _eventScrollBar.Bounds = new Rectangle(
+            gridWidth + scrollGap,
+            0,
+            scrollWidth,
+            gridHeight);
+        ApplyColumnWidths();
     }
 
     private void ConfigureGrid()
@@ -216,8 +219,8 @@ internal sealed class EventListControl : UserControl
         _eventGridView.CellMouseDown += EventGridView_CellMouseDown;
         _eventGridView.CellPainting += EventGridView_CellPainting;
 
-        _eventGridView.Columns.Add(CreateTextColumn("#", "#", 48, 6));
-        _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 112, 15));
+        _eventGridView.Columns.Add(CreateTextColumn("#", "#", 58, 6));
+        _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 126, 15));
         _eventGridView.Columns.Add(CreateTextColumn("Type", "Tur", 78, 10));
         _eventGridView.Columns.Add(CreateTextColumn("Action", "Aksiyon", 92, 15));
         _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 138, 22));
@@ -460,6 +463,7 @@ internal sealed class EventListControl : UserControl
         {
             _eventScrollBar.SetRange(0, 1, 0);
             _eventScrollBar.Visible = false;
+            LayoutGridViewport();
             return;
         }
 
@@ -469,6 +473,7 @@ internal sealed class EventListControl : UserControl
 
         _eventScrollBar.SetRange(maximum, visibleRows, Math.Min(currentIndex, maximum));
         _eventScrollBar.Visible = maximum > 0;
+        LayoutGridViewport();
         if (_eventScrollBar.Visible)
         {
             _eventScrollBar.BringToFront();

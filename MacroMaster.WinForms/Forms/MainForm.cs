@@ -1153,12 +1153,12 @@ public partial class MainForm : Form
             BackColor = DesignTokens.Background,
             Padding = new Padding(
                 DesignTokens.Scale(18),
-                DesignTokens.Scale(8),
+                DesignTokens.Scale(2),
                 DesignTokens.Scale(18),
                 DesignTokens.Scale(16)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight + DesignTokens.Scale(4)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(18)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
@@ -1170,7 +1170,7 @@ public partial class MainForm : Form
             RowCount = 1,
             BackColor = Color.Transparent,
             Margin = Padding.Empty,
-            Padding = new Padding(DesignTokens.Scale(4), 0, DesignTokens.Scale(4), DesignTokens.Scale(2))
+            Padding = new Padding(DesignTokens.Scale(4), 0, DesignTokens.Scale(4), 0)
         };
         headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);

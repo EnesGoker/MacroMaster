@@ -37,9 +37,9 @@ internal sealed class TitleBarControl : UserControl
             Margin = Padding.Empty,
             Padding = new Padding(
                 DesignTokens.Scale(14),
-                DesignTokens.Scale(4),
+                DesignTokens.Scale(2),
                 DesignTokens.Scale(10),
-                DesignTokens.Scale(4))
+                DesignTokens.Scale(2))
         };
 
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(12)));
