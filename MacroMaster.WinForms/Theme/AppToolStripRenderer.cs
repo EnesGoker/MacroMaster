@@ -91,27 +91,24 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        Color fill = e.Item.Pressed
-            ? ItemPressedBackground
-            : e.Item.Selected
-                ? ItemHoverBackground
-                : ItemBackground;
-
         Rectangle bounds = new(Point.Empty, e.Item.Size);
-        Rectangle itemBounds = Rectangle.Inflate(bounds, -DesignTokens.Scale(3), -DesignTokens.Scale(2));
+        using var backgroundBrush = new SolidBrush(DropDownBackground);
+        e.Graphics.FillRectangle(backgroundBrush, bounds);
+
+        if (!e.Item.Selected && !e.Item.Pressed)
+        {
+            return;
+        }
+
+        Rectangle itemBounds = ResolveItemBackgroundBounds(e.Item);
 
         using var path = CreateRoundedRectanglePath(itemBounds, DesignTokens.Scale(7));
-        using var brush = new SolidBrush(fill);
+        using var brush = new SolidBrush(e.Item.Pressed ? ItemPressedBackground : ItemHoverBackground);
 
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         e.Graphics.FillPath(brush, path);
-
-        if (e.Item.Selected || e.Item.Pressed)
-        {
-            using var borderPen = new Pen(Color.FromArgb(110, DesignTokens.Accent));
-            e.Graphics.DrawPath(borderPen, path);
-        }
-
+        using var borderPen = new Pen(Color.FromArgb(110, DesignTokens.Accent));
+        e.Graphics.DrawPath(borderPen, path);
         e.Graphics.SmoothingMode = SmoothingMode.None;
     }
 
@@ -190,7 +187,7 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
             return;
         }
 
-        item.BackColor = ItemBackground;
+        item.BackColor = DropDownBackground;
         item.ForeColor = item.Enabled
             ? DesignTokens.TextPrimary
             : DisabledText;
@@ -254,6 +251,41 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
             0,
             Math.Max(0, item.Width - left - rightPadding),
             item.Height);
+    }
+
+    private static Rectangle ResolveItemBackgroundBounds(ToolStripItem item)
+    {
+        bool isComfortableItem = item.Padding.Top >= DesignTokens.Scale(8);
+        int horizontalInset = isComfortableItem
+            ? DesignTokens.Scale(10)
+            : DesignTokens.Scale(4);
+        int verticalInset = isComfortableItem
+            ? DesignTokens.Scale(5)
+            : DesignTokens.Scale(2);
+        int visibleWidth = item.Width;
+
+        if (item.Owner is not null)
+        {
+            // ToolStripItem.Width can be wider than the visible drop-down client when
+            // margins/padding are involved. Clamp to the owner viewport, but keep the
+            // rectangle in item-local coordinates so the hover surface still spans the row.
+            visibleWidth = Math.Min(
+                visibleWidth,
+                item.Owner.ClientSize.Width - DesignTokens.Scale(4));
+        }
+
+        Rectangle itemBounds = new(
+            horizontalInset,
+            verticalInset,
+            Math.Max(0, visibleWidth - horizontalInset - DesignTokens.Scale(4)),
+            Math.Max(0, item.Height - (verticalInset * 2)));
+
+        if (itemBounds.Width <= 0 || itemBounds.Height <= 0)
+        {
+            return Rectangle.Empty;
+        }
+
+        return itemBounds;
     }
 
     private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)

@@ -230,6 +230,16 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayol ayarlari");
     }
 
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (TryHandleLocalHotkeyFallback(keyData))
+        {
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
     private async Task HandleStopAsync()
     {
         if (_macroRecorderService.IsRecording)
@@ -241,6 +251,70 @@ public partial class MainForm : Form
         {
             await _macroPlaybackService.StopAsync();
         }
+    }
+
+    private bool TryHandleLocalHotkeyFallback(Keys keyData)
+    {
+        bool useFocusedWindowFallback = !_hotkeyService.IsRegistered;
+
+        if (useFocusedWindowFallback && MatchesHotkey(keyData, _hotkeyConfiguration.RecordToggleHotkey))
+        {
+            OnRecordToggleRequested();
+            return true;
+        }
+
+        if (useFocusedWindowFallback && MatchesHotkey(keyData, _hotkeyConfiguration.PlaybackToggleHotkey))
+        {
+            OnPlaybackToggleRequested();
+            return true;
+        }
+
+        if (useFocusedWindowFallback && MatchesHotkey(keyData, _hotkeyConfiguration.StopHotkey))
+        {
+            OnStopRequested();
+            return true;
+        }
+
+        bool isReservedSettingsFallback =
+            _hotkeyConfiguration.HotkeySettingsHotkey.VirtualKeyCode == (int)Keys.F12
+            && (keyData & Keys.KeyCode) == Keys.F12;
+
+        if ((useFocusedWindowFallback || isReservedSettingsFallback)
+            && MatchesHotkey(keyData, _hotkeyConfiguration.HotkeySettingsHotkey))
+        {
+            OnHotkeySettingsRequested();
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool MatchesHotkey(Keys keyData, HotkeyBinding hotkeyBinding)
+    {
+        return (int)(keyData & Keys.KeyCode) == hotkeyBinding.VirtualKeyCode
+            && ResolveKeyDataModifiers(keyData) == hotkeyBinding.Modifiers;
+    }
+
+    private static HotkeyModifiers ResolveKeyDataModifiers(Keys keyData)
+    {
+        HotkeyModifiers modifiers = HotkeyModifiers.None;
+
+        if ((keyData & Keys.Control) == Keys.Control)
+        {
+            modifiers |= HotkeyModifiers.Control;
+        }
+
+        if ((keyData & Keys.Shift) == Keys.Shift)
+        {
+            modifiers |= HotkeyModifiers.Shift;
+        }
+
+        if ((keyData & Keys.Alt) == Keys.Alt)
+        {
+            modifiers |= HotkeyModifiers.Alt;
+        }
+
+        return modifiers;
     }
 
     private Task ResetPlaybackCursorAsync()
@@ -751,15 +825,7 @@ public partial class MainForm : Form
         ArgumentNullException.ThrowIfNull(item);
         EnsureSessionMutationAllowed();
 
-        DialogResult confirmation = MessageBox.Show(
-            this,
-            $"{item.Name} kutuphaneden silinsin mi?",
-            "Makro Sil",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Warning,
-            MessageBoxDefaultButton.Button2);
-
-        if (confirmation != DialogResult.Yes)
+        if (!ThemedConfirmationDialog.ConfirmMacroDelete(this, item.Name))
         {
             return;
         }
@@ -1048,7 +1114,7 @@ public partial class MainForm : Form
 
         _titleBarControl.Name = "titleBarControl";
         _titleBarControl.Dock = DockStyle.Fill;
-        _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi", "Kayit, oynatim ve JSON/XML destegi");
+        _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi");
         _titleBarControl.DragRequested += titleBarControl_DragRequested;
         _titleBarControl.MinimizeRequested += titleBarControl_MinimizeRequested;
         _titleBarControl.MaximizeRestoreRequested += titleBarControl_MaximizeRestoreRequested;
@@ -1158,7 +1224,7 @@ public partial class MainForm : Form
                 DesignTokens.Scale(16)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(4)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(8)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(24)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
@@ -1176,7 +1242,7 @@ public partial class MainForm : Form
         headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
 
         var toolbarHostPanel = CreateCard();
-        toolbarHostPanel.Margin = new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(4));
+        toolbarHostPanel.Margin = new Padding(0, DesignTokens.Scale(16), 0, DesignTokens.Scale(4));
         toolbarHostPanel.ContentPadding = new Padding(
             DesignTokens.Scale(18),
             DesignTokens.Scale(7),

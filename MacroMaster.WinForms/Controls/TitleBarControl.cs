@@ -6,7 +6,6 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class TitleBarControl : UserControl
 {
     private readonly Label _appNameLabel;
-    private readonly Label _subtitleLabel;
     private readonly Label _statusLabel;
     private readonly StatusDotControl _statusDot;
     private readonly CaptionButton _minimizeButton;
@@ -61,13 +60,12 @@ internal sealed class TitleBarControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 1,
             BackColor = DesignTokens.Background,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 54f));
-        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 46f));
+        textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _appNameLabel = new Label
         {
@@ -76,23 +74,11 @@ internal sealed class TitleBarControl : UserControl
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Background,
-            TextAlign = ContentAlignment.BottomLeft,
-            AutoEllipsis = true
-        };
-
-        _subtitleLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "Kayit, oynatim ve JSON/XML destegi",
-            Font = DesignTokens.FontUiSmall,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.Background,
-            TextAlign = ContentAlignment.TopLeft,
+            TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
 
         textLayoutPanel.Controls.Add(_appNameLabel, 0, 0);
-        textLayoutPanel.Controls.Add(_subtitleLabel, 0, 1);
 
         var statusShellPanel = new RoundedSurfacePanel
         {
@@ -162,10 +148,9 @@ internal sealed class TitleBarControl : UserControl
     public event EventHandler? MaximizeRestoreRequested;
     public event EventHandler? CloseRequested;
 
-    public void SetTitle(string title, string subtitle)
+    public void SetTitle(string title)
     {
         _appNameLabel.Text = title;
-        _subtitleLabel.Text = subtitle;
     }
 
     public void SetStatus(string status, Color color)

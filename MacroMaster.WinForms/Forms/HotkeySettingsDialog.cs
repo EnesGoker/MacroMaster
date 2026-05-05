@@ -1,4 +1,5 @@
 using MacroMaster.Application.Abstractions;
+using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
 
 namespace MacroMaster.WinForms.Forms;
@@ -88,14 +89,14 @@ public sealed class HotkeySettingsDialog : Form
             _hotkeySettingsModifierComboBox,
             _hotkeySettingsKeyComboBox);
 
-        FlowLayoutPanel buttonFlowLayoutPanel = CreateButtonFlowLayoutPanel(
+        TableLayoutPanel buttonFooterPanel = CreateButtonFooterPanel(
+            resetDefaultsButton,
             cancelButton,
-            applyButton,
-            resetDefaultsButton);
+            applyButton);
 
         TableLayoutPanel rootLayoutPanel = CreateRootLayoutPanel(
             settingsTableLayoutPanel,
-            buttonFlowLayoutPanel);
+            buttonFooterPanel);
 
         Controls.Add(rootLayoutPanel);
 
@@ -109,6 +110,31 @@ public sealed class HotkeySettingsDialog : Form
     }
 
     public HotkeySettings SelectedHotkeySettings { get; private set; }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+
+        WindowChromeNative.TryApplyDwmBoolAttribute(
+            Handle,
+            DwmWindowAttribute.UseImmersiveDarkMode,
+            enabled: true);
+        WindowChromeNative.TryApplyDwmCornerPreference(
+            Handle,
+            DwmWindowCornerPreference.RoundSmall);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.BorderColor,
+            DesignTokens.Border);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.CaptionColor,
+            DesignTokens.Surface);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.TextColor,
+            DesignTokens.TextPrimary);
+    }
 
     private void applyButton_Click(object? sender, EventArgs e)
     {
@@ -174,7 +200,7 @@ public sealed class HotkeySettingsDialog : Form
 
     private static TableLayoutPanel CreateRootLayoutPanel(
         TableLayoutPanel settingsTableLayoutPanel,
-        FlowLayoutPanel buttonFlowLayoutPanel)
+        TableLayoutPanel buttonFooterPanel)
     {
         TableLayoutPanel rootLayoutPanel = new()
         {
@@ -194,7 +220,7 @@ public sealed class HotkeySettingsDialog : Form
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(56)));
         rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(settingsTableLayoutPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(buttonFlowLayoutPanel, 0, 2);
+        rootLayoutPanel.Controls.Add(buttonFooterPanel, 0, 2);
 
         return rootLayoutPanel;
     }
@@ -263,25 +289,39 @@ public sealed class HotkeySettingsDialog : Form
         return settingsTableLayoutPanel;
     }
 
-    private static FlowLayoutPanel CreateButtonFlowLayoutPanel(params Button[] buttons)
+    private static TableLayoutPanel CreateButtonFooterPanel(
+        Button resetDefaultsButton,
+        Button cancelButton,
+        Button applyButton)
     {
-        FlowLayoutPanel buttonFlowLayoutPanel = new()
+        var buttonFooterPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            ColumnCount = 4,
+            RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = new Padding(0, DesignTokens.Scale(12), 0, 0),
-            WrapContents = false,
-            Anchor = AnchorStyles.Right
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
         };
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(126)));
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(126)));
+        buttonFooterPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        foreach (Button button in buttons)
-        {
-            buttonFlowLayoutPanel.Controls.Add(button);
-        }
+        resetDefaultsButton.Dock = DockStyle.Left;
+        resetDefaultsButton.Margin = Padding.Empty;
+        cancelButton.Dock = DockStyle.Fill;
+        cancelButton.Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0);
+        applyButton.Dock = DockStyle.Fill;
+        applyButton.Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0);
 
-        return buttonFlowLayoutPanel;
+        buttonFooterPanel.Controls.Add(resetDefaultsButton, 0, 0);
+        buttonFooterPanel.Controls.Add(cancelButton, 2, 0);
+        buttonFooterPanel.Controls.Add(applyButton, 3, 0);
+
+        return buttonFooterPanel;
     }
 
     private static Button CreateButton(string text, bool isPrimary)
@@ -303,6 +343,12 @@ public sealed class HotkeySettingsDialog : Form
             ? DesignTokens.Accent
             : DesignTokens.BorderBright;
         button.FlatAppearance.BorderSize = 1;
+        button.FlatAppearance.MouseOverBackColor = isPrimary
+            ? Color.FromArgb(210, DesignTokens.AccentDeep)
+            : DesignTokens.SurfaceHover;
+        button.FlatAppearance.MouseDownBackColor = isPrimary
+            ? Color.FromArgb(180, DesignTokens.AccentDeep)
+            : DesignTokens.Surface3;
         return button;
     }
 

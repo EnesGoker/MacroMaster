@@ -167,7 +167,11 @@ internal sealed class MacroLibraryControl : UserControl
                 DesignTokens.Scale(3),
                 DesignTokens.Scale(12),
                 DesignTokens.Scale(8)),
-            Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
+            Padding = new Padding(
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(5),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(4))
         };
         searchPanel.Click += (_, _) => _searchTextBox.Focus();
         searchPanel.Controls.Add(_searchTextBox);

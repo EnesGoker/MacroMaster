@@ -66,29 +66,31 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
         try
         {
-            RegisterSingleHotkey(
+            RegisterRequiredHotkey(
                 RecordToggleHotkeyId,
                 MapModifiers(_hotkeyConfiguration.RecordToggleHotkey.Modifiers),
                 unchecked((uint)_hotkeyConfiguration.RecordToggleHotkey.VirtualKeyCode));
             registeredHotkeyIds.Add(RecordToggleHotkeyId);
 
-            RegisterSingleHotkey(
+            RegisterRequiredHotkey(
                 PlaybackToggleHotkeyId,
                 MapModifiers(_hotkeyConfiguration.PlaybackToggleHotkey.Modifiers),
                 unchecked((uint)_hotkeyConfiguration.PlaybackToggleHotkey.VirtualKeyCode));
             registeredHotkeyIds.Add(PlaybackToggleHotkeyId);
 
-            RegisterSingleHotkey(
+            RegisterRequiredHotkey(
                 StopHotkeyId,
                 MapModifiers(_hotkeyConfiguration.StopHotkey.Modifiers),
                 unchecked((uint)_hotkeyConfiguration.StopHotkey.VirtualKeyCode));
             registeredHotkeyIds.Add(StopHotkeyId);
 
-            RegisterSingleHotkey(
+            if (TryRegisterOptionalHotkey(
                 HotkeySettingsHotkeyId,
                 MapModifiers(_hotkeyConfiguration.HotkeySettingsHotkey.Modifiers),
-                unchecked((uint)_hotkeyConfiguration.HotkeySettingsHotkey.VirtualKeyCode));
-            registeredHotkeyIds.Add(HotkeySettingsHotkeyId);
+                unchecked((uint)_hotkeyConfiguration.HotkeySettingsHotkey.VirtualKeyCode)))
+            {
+                registeredHotkeyIds.Add(HotkeySettingsHotkeyId);
+            }
         }
         catch
         {
@@ -157,7 +159,42 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         }
     }
 
-    private void RegisterSingleHotkey(int id, uint modifiers, uint virtualKey)
+    private void RegisterRequiredHotkey(int id, uint modifiers, uint virtualKey)
+    {
+        if (!TryRegisterHotkey(id, modifiers, virtualKey, out InvalidOperationException? exception))
+        {
+            InvalidOperationException registrationException = exception
+                ?? new InvalidOperationException($"Kisayol kaydedilemedi. Kimlik: {id}.");
+
+            _logger.Log(
+                AppLogLevel.Error,
+                nameof(WindowsHotkeyService),
+                registrationException.Message,
+                registrationException);
+            throw registrationException;
+        }
+    }
+
+    private bool TryRegisterOptionalHotkey(int id, uint modifiers, uint virtualKey)
+    {
+        if (TryRegisterHotkey(id, modifiers, virtualKey, out InvalidOperationException? exception))
+        {
+            return true;
+        }
+
+        _logger.Log(
+            AppLogLevel.Warning,
+            nameof(WindowsHotkeyService),
+            "Yardimci global kisayol kaydedilemedi. Ana kisayollar aktif kalacak.",
+            exception);
+        return false;
+    }
+
+    private bool TryRegisterHotkey(
+        int id,
+        uint modifiers,
+        uint virtualKey,
+        out InvalidOperationException? exception)
     {
         bool result = HotkeyNativeMethods.RegisterHotKey(
             _messageWindow.Handle,
@@ -165,10 +202,16 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
             modifiers,
             virtualKey);
 
-        if (!result)
+        if (result)
         {
-            ThrowWin32Exception($"Kisayol kaydedilemedi. Kimlik: {id}.");
+            exception = null;
+            return true;
         }
+
+        int errorCode = Marshal.GetLastWin32Error();
+        exception = new InvalidOperationException(
+            FormattableString.Invariant($"Kisayol kaydedilemedi. Kimlik: {id}. Win32 hata kodu: {errorCode}"));
+        return false;
     }
 
     private void UnregisterSingleHotkey(int id)
@@ -201,19 +244,6 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         }
 
         return nativeModifiers;
-    }
-
-    private void ThrowWin32Exception(string message)
-    {
-        int errorCode = Marshal.GetLastWin32Error();
-        InvalidOperationException exception = new(
-            FormattableString.Invariant($"{message} Win32 hata kodu: {errorCode}"));
-        _logger.Log(
-            AppLogLevel.Error,
-            nameof(WindowsHotkeyService),
-            message,
-            exception);
-        throw exception;
     }
 
     private void ThrowIfDisposed()
