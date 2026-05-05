@@ -36,10 +36,10 @@ partial class PlaybackSettingsControl
         initialDelayNumericUpDown = new NumericUpDown();
         initialDelayUnitLabel = new Label();
         dividerPanel = new Panel();
-        preserveTimingCheckBox = new CheckBox();
-        loopIndefinitelyCheckBox = new CheckBox();
-        stopOnErrorCheckBox = new CheckBox();
-        relativeCoordinatesCheckBox = new CheckBox();
+        preserveTimingCheckBox = new ModernCheckBox();
+        loopIndefinitelyCheckBox = new ModernCheckBox();
+        stopOnErrorCheckBox = new ModernCheckBox();
+        relativeCoordinatesCheckBox = new ModernCheckBox();
 
         rootLayoutPanel.SuspendLayout();
         settingsLayoutPanel.SuspendLayout();

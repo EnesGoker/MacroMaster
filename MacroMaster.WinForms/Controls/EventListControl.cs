@@ -9,6 +9,7 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class EventListControl : UserControl
 {
     private readonly DataGridView _eventGridView;
+    private readonly ModernScrollBar _eventScrollBar;
     private readonly ContextMenuStrip _eventContextMenu;
     private readonly Label _emptyStateLabel;
     private readonly Label _summaryLabel;
@@ -33,6 +34,7 @@ internal sealed class EventListControl : UserControl
         Font = DesignTokens.FontUiNormal;
 
         _eventGridView = new DataGridView();
+        _eventScrollBar = new ModernScrollBar();
         _eventContextMenu = BuildEventContextMenu();
         _emptyStateLabel = new Label();
         _summaryLabel = new Label();
@@ -50,7 +52,9 @@ internal sealed class EventListControl : UserControl
             ClearRows();
             _emptyStateLabel.Visible = true;
             _eventGridView.Visible = false;
+            _eventScrollBar.Visible = false;
             _summaryLabel.Text = "Secili oturum yok";
+            UpdateEventScrollBar();
             return;
         }
 
@@ -85,6 +89,8 @@ internal sealed class EventListControl : UserControl
                 _eventGridView.FirstDisplayedScrollingRowIndex = Math.Max(0, rowIndex);
             }
         }
+
+        UpdateEventScrollBar();
     }
 
     private void ClearRows()
@@ -148,6 +154,18 @@ internal sealed class EventListControl : UserControl
             Padding = Padding.Empty
         };
 
+        var gridLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = DesignTokens.SurfaceInset,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        gridLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(18)));
+
         _eventGridView.Dock = DockStyle.Fill;
         _emptyStateLabel.Dock = DockStyle.Fill;
         _emptyStateLabel.Text = "Secili bir oturum yok. Yeni bir makro kaydedin veya diskten yukleyin.";
@@ -156,7 +174,13 @@ internal sealed class EventListControl : UserControl
         _summaryLabel.Dock = DockStyle.Fill;
         _summaryLabel.TextAlign = ContentAlignment.MiddleLeft;
 
-        gridHostPanel.Controls.Add(_eventGridView);
+        _eventScrollBar.Dock = DockStyle.Fill;
+        _eventScrollBar.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
+        _eventScrollBar.ValueChanged += (_, _) => ScrollGridTo(_eventScrollBar.Value);
+
+        gridLayoutPanel.Controls.Add(_eventGridView, 0, 0);
+        gridLayoutPanel.Controls.Add(_eventScrollBar, 1, 0);
+        gridHostPanel.Controls.Add(gridLayoutPanel);
         gridHostPanel.Controls.Add(_emptyStateLabel);
         rootLayoutPanel.Controls.Add(gridHostPanel, 0, 0);
         rootLayoutPanel.Controls.Add(_summaryLabel, 0, 1);
@@ -182,9 +206,12 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ReadOnly = true;
         _eventGridView.RowHeadersVisible = false;
         _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
-        _eventGridView.ScrollBars = ScrollBars.Both;
+        _eventGridView.ScrollBars = ScrollBars.None;
         _eventGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _eventGridView.Resize += (_, _) => ApplyColumnWidths();
+        _eventGridView.Resize += (_, _) => UpdateEventScrollBar();
+        _eventGridView.Scroll += (_, _) => SyncEventScrollBarFromGrid();
+        _eventGridView.MouseWheel += EventGridView_MouseWheel;
         _eventGridView.CellMouseDown += EventGridView_CellMouseDown;
         _eventGridView.CellPainting += EventGridView_CellPainting;
 
@@ -196,6 +223,14 @@ internal sealed class EventListControl : UserControl
         _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 55, 10));
         _eventGridView.Columns.Add(CreateTextColumn("Detail", "Detay", 80, 31));
         ApplyColumnWidths();
+    }
+
+    private void EventGridView_MouseWheel(object? sender, MouseEventArgs e)
+    {
+        _ = sender;
+
+        int wheelStep = Math.Max(1, SystemInformation.MouseWheelScrollLines);
+        _eventScrollBar.Value -= Math.Sign(e.Delta) * wheelStep;
     }
 
     private ContextMenuStrip BuildEventContextMenu()
@@ -416,6 +451,66 @@ internal sealed class EventListControl : UserControl
 
             column.Width = Math.Max(column.MinimumWidth, targetWidth);
             assignedWidth += column.Width;
+        }
+    }
+
+    private void UpdateEventScrollBar()
+    {
+        if (_eventGridView.Rows.Count == 0 || !_eventGridView.Visible)
+        {
+            _eventScrollBar.SetRange(0, 1, 0);
+            _eventScrollBar.Visible = false;
+            return;
+        }
+
+        int visibleRows = Math.Max(1, _eventGridView.DisplayedRowCount(false));
+        int maximum = Math.Max(0, _eventGridView.Rows.Count - visibleRows);
+        int currentIndex = GetFirstDisplayedRowIndex();
+
+        _eventScrollBar.SetRange(maximum, visibleRows, Math.Min(currentIndex, maximum));
+        _eventScrollBar.Visible = maximum > 0;
+    }
+
+    private void SyncEventScrollBarFromGrid()
+    {
+        if (_eventGridView.Rows.Count == 0)
+        {
+            _eventScrollBar.SetValueSilently(0);
+            return;
+        }
+
+        _eventScrollBar.SetValueSilently(GetFirstDisplayedRowIndex());
+    }
+
+    private void ScrollGridTo(int rowIndex)
+    {
+        if (_eventGridView.Rows.Count == 0)
+        {
+            return;
+        }
+
+        int targetRowIndex = Math.Clamp(rowIndex, 0, _eventGridView.Rows.Count - 1);
+        try
+        {
+            _eventGridView.FirstDisplayedScrollingRowIndex = targetRowIndex;
+        }
+        catch (InvalidOperationException)
+        {
+            // DataGridView can reject the scroll while it is rebuilding rows.
+        }
+    }
+
+    private int GetFirstDisplayedRowIndex()
+    {
+        try
+        {
+            return _eventGridView.FirstDisplayedScrollingRowIndex < 0
+                ? 0
+                : _eventGridView.FirstDisplayedScrollingRowIndex;
+        }
+        catch (InvalidOperationException)
+        {
+            return 0;
         }
     }
 

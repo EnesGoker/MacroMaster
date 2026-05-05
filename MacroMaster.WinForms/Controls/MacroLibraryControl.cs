@@ -7,7 +7,9 @@ namespace MacroMaster.WinForms.Controls;
 
 internal sealed class MacroLibraryControl : UserControl
 {
+    private readonly Panel _listViewportPanel;
     private readonly FlowLayoutPanel _macroListPanel;
+    private readonly ModernScrollBar _listScrollBar;
     private readonly Label _emptyStateLabel;
     private readonly Label _totalMacroValueLabel;
     private readonly Label _totalEventValueLabel;
@@ -33,7 +35,9 @@ internal sealed class MacroLibraryControl : UserControl
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
 
+        _listViewportPanel = new Panel();
         _macroListPanel = new FlowLayoutPanel();
+        _listScrollBar = new ModernScrollBar();
         _emptyStateLabel = CreateEmptyStateLabel();
         _totalMacroValueLabel = CreateFooterValueLabel();
         _totalEventValueLabel = CreateFooterValueLabel();
@@ -82,6 +86,7 @@ internal sealed class MacroLibraryControl : UserControl
                 row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                WireMouseWheelForwarding(row);
                 _macroListPanel.Controls.Add(row);
             }
         }
@@ -90,6 +95,7 @@ internal sealed class MacroLibraryControl : UserControl
         _totalMacroValueLabel.Text = filteredItems.Count.ToString(CultureInfo.InvariantCulture);
         _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
         ResizeLibraryRows();
+        UpdateListScrollLayout();
         _macroListPanel.ResumeLayout();
     }
 
@@ -116,7 +122,7 @@ internal sealed class MacroLibraryControl : UserControl
             ColumnCount = 2,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 0, DesignTokens.ScrollbarReserveWidth, 0),
+            Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
             Padding = Padding.Empty
         };
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
@@ -159,25 +165,53 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(
                 0,
                 DesignTokens.Scale(3),
-                DesignTokens.ScrollbarReserveWidth,
+                DesignTokens.Scale(12),
                 DesignTokens.Scale(8)),
             Padding = new Padding(DesignTokens.Scale(14), 0, DesignTokens.Scale(10), 0)
         };
         searchPanel.Click += (_, _) => _searchTextBox.Focus();
         searchPanel.Controls.Add(_searchTextBox);
 
-        _macroListPanel.Dock = DockStyle.Fill;
+        var listHostPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(20)));
+
+        _listViewportPanel.Dock = DockStyle.Fill;
+        _listViewportPanel.BackColor = DesignTokens.Surface;
+        _listViewportPanel.Margin = Padding.Empty;
+        _listViewportPanel.Padding = Padding.Empty;
+        _listViewportPanel.Resize += (_, _) => UpdateListScrollLayout();
+        _listViewportPanel.MouseWheel += ListViewportPanel_MouseWheel;
+
+        _macroListPanel.Dock = DockStyle.None;
         _macroListPanel.FlowDirection = FlowDirection.TopDown;
         _macroListPanel.WrapContents = false;
-        _macroListPanel.AutoScroll = true;
+        _macroListPanel.AutoScroll = false;
         _macroListPanel.BackColor = DesignTokens.Surface;
         _macroListPanel.Margin = Padding.Empty;
         _macroListPanel.Padding = new Padding(0, 2, 0, 0);
         _macroListPanel.Resize += (_, _) => ResizeLibraryRows();
+        _macroListPanel.MouseWheel += ListViewportPanel_MouseWheel;
+
+        _listScrollBar.Dock = DockStyle.Fill;
+        _listScrollBar.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
+        _listScrollBar.ValueChanged += (_, _) => ScrollListTo(_listScrollBar.Value);
+
+        _listViewportPanel.Controls.Add(_macroListPanel);
+        listHostPanel.Controls.Add(_listViewportPanel, 0, 0);
+        listHostPanel.Controls.Add(_listScrollBar, 1, 0);
 
         rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
         rootLayoutPanel.Controls.Add(searchPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(_macroListPanel, 0, 2);
+        rootLayoutPanel.Controls.Add(listHostPanel, 0, 2);
         rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 3);
 
         Controls.Add(rootLayoutPanel);
@@ -190,7 +224,7 @@ internal sealed class MacroLibraryControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
-            Margin = new Padding(0, DesignTokens.Scale(8), DesignTokens.ScrollbarReserveWidth, 0),
+            Margin = new Padding(0, DesignTokens.Scale(8), DesignTokens.Scale(12), 0),
             Padding = new Padding(DesignTokens.Scale(12), DesignTokens.Scale(5), DesignTokens.Scale(12), DesignTokens.Scale(5))
         };
 
@@ -221,11 +255,70 @@ internal sealed class MacroLibraryControl : UserControl
     {
         int rowWidth = Math.Max(
             180,
-            _macroListPanel.ClientSize.Width - DesignTokens.ScrollbarReserveWidth);
+            _listViewportPanel.ClientSize.Width - DesignTokens.Scale(4));
 
         foreach (Control control in _macroListPanel.Controls)
         {
             control.Width = rowWidth;
+        }
+    }
+
+    private void UpdateListScrollLayout()
+    {
+        if (_listViewportPanel.ClientSize.Width <= 0 || _listViewportPanel.ClientSize.Height <= 0)
+        {
+            return;
+        }
+
+        ResizeLibraryRows();
+
+        int contentHeight = CalculateListContentHeight();
+        int viewportHeight = _listViewportPanel.ClientSize.Height;
+        int maximum = Math.Max(0, contentHeight - viewportHeight);
+        int nextValue = Math.Min(_listScrollBar.Value, maximum);
+
+        _listScrollBar.SetRange(maximum, viewportHeight, nextValue);
+        _listScrollBar.Visible = maximum > 0;
+
+        _macroListPanel.Bounds = new Rectangle(
+            0,
+            -nextValue,
+            Math.Max(0, _listViewportPanel.ClientSize.Width - DesignTokens.Scale(4)),
+            Math.Max(viewportHeight, contentHeight));
+    }
+
+    private int CalculateListContentHeight()
+    {
+        int contentHeight = _macroListPanel.Padding.Vertical;
+
+        foreach (Control control in _macroListPanel.Controls)
+        {
+            contentHeight += control.Height + control.Margin.Vertical;
+        }
+
+        return contentHeight;
+    }
+
+    private void ScrollListTo(int value)
+    {
+        _macroListPanel.Top = -Math.Max(0, value);
+    }
+
+    private void ListViewportPanel_MouseWheel(object? sender, MouseEventArgs e)
+    {
+        _ = sender;
+
+        int wheelStep = Math.Max(DesignTokens.Scale(48), SystemInformation.MouseWheelScrollLines * DesignTokens.Scale(18));
+        _listScrollBar.Value -= Math.Sign(e.Delta) * wheelStep;
+    }
+
+    private void WireMouseWheelForwarding(Control control)
+    {
+        control.MouseWheel += ListViewportPanel_MouseWheel;
+
+        foreach (Control child in control.Controls)
+        {
+            WireMouseWheelForwarding(child);
         }
     }
 
@@ -338,7 +431,7 @@ internal sealed class MacroLibraryControl : UserControl
             {
                 Width = Math.Max(
                     180,
-                    Parent.ClientSize.Width - DesignTokens.ScrollbarReserveWidth);
+                    Parent.ClientSize.Width - DesignTokens.Scale(4));
             }
         }
 
