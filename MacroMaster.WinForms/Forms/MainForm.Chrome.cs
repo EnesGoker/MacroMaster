@@ -7,7 +7,7 @@ public partial class MainForm
 {
     private static bool IsCustomChromeEnabled => true;
 
-    private static bool IsDwmPolishEnabled => false;
+    private static bool IsDwmPolishEnabled => true;
 
     protected override CreateParams CreateParams
     {
@@ -34,6 +34,11 @@ public partial class MainForm
         if (IsCustomChromeEnabled)
         {
             ApplyCustomChromePadding();
+
+            if (IsDwmPolishEnabled && IsHandleCreated)
+            {
+                ApplyCustomChromeDwmPolish();
+            }
         }
     }
 
