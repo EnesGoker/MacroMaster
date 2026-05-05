@@ -6,8 +6,7 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class TitleBarControl : UserControl
 {
     private readonly Label _appNameLabel;
-    private readonly Label _statusLabel;
-    private readonly StatusDotControl _statusDot;
+    private readonly StatusPillControl _statusPill;
     private readonly CaptionButton _minimizeButton;
     private readonly CaptionButton _maximizeButton;
     private readonly CaptionButton _closeButton;
@@ -80,49 +79,12 @@ internal sealed class TitleBarControl : UserControl
 
         textLayoutPanel.Controls.Add(_appNameLabel, 0, 0);
 
-        var statusShellPanel = new RoundedSurfacePanel
+        _statusPill = new StatusPillControl
         {
             Dock = DockStyle.Fill,
-            FillColor = DesignTokens.SurfaceInset,
-            BorderColor = DesignTokens.BorderSoft,
             Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(2), DesignTokens.Scale(8), DesignTokens.Scale(2)),
-            Padding = new Padding(DesignTokens.Scale(10), 0, DesignTokens.Scale(8), 0)
-        };
-
-        var statusLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
             BackColor = Color.Transparent,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
         };
-        statusLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarStatusDotSize + DesignTokens.Scale(8)));
-        statusLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-
-        _statusDot = new StatusDotControl
-        {
-            Dock = DockStyle.Fill,
-            BackColor = Color.Transparent,
-            DotColor = DesignTokens.AccentGreen,
-            Margin = Padding.Empty
-        };
-
-        _statusLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "Hazir",
-            Font = DesignTokens.FontUiNormal,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true
-        };
-
-        statusLayoutPanel.Controls.Add(_statusDot, 0, 0);
-        statusLayoutPanel.Controls.Add(_statusLabel, 1, 0);
-        statusShellPanel.Controls.Add(statusLayoutPanel);
 
         _minimizeButton = new CaptionButton(CaptionButtonKind.Minimize);
         _maximizeButton = new CaptionButton(CaptionButtonKind.Maximize);
@@ -134,7 +96,7 @@ internal sealed class TitleBarControl : UserControl
 
         rootLayoutPanel.Controls.Add(logoPanel, 0, 0);
         rootLayoutPanel.Controls.Add(textLayoutPanel, 1, 0);
-        rootLayoutPanel.Controls.Add(statusShellPanel, 2, 0);
+        rootLayoutPanel.Controls.Add(_statusPill, 2, 0);
         rootLayoutPanel.Controls.Add(_minimizeButton, 3, 0);
         rootLayoutPanel.Controls.Add(_maximizeButton, 4, 0);
         rootLayoutPanel.Controls.Add(_closeButton, 5, 0);
@@ -155,9 +117,7 @@ internal sealed class TitleBarControl : UserControl
 
     public void SetStatus(string status, Color color)
     {
-        _statusLabel.Text = status;
-        _statusDot.DotColor = color;
-        _statusDot.Invalidate();
+        _statusPill.SetStatus(status, color);
     }
 
     public void SetMaximized(bool isMaximized)
@@ -238,29 +198,31 @@ internal sealed class TitleBarControl : UserControl
         DragRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private sealed class RoundedSurfacePanel : Panel
+    private sealed class StatusPillControl : Control
     {
-        private Size _lastRegionSize;
-        private int _lastRegionRadius = -1;
+        private string _statusText = "Hazir";
+        private Color _dotColor = DesignTokens.AccentGreen;
 
-        public Color FillColor { get; set; } = DesignTokens.SurfaceInset;
-
-        public Color BorderColor { get; set; } = DesignTokens.BorderSoft;
-
-        public RoundedSurfacePanel()
+        public StatusPillControl()
         {
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint |
                 ControlStyles.OptimizedDoubleBuffer |
                 ControlStyles.ResizeRedraw |
+                ControlStyles.SupportsTransparentBackColor |
                 ControlStyles.UserPaint,
                 true);
+
+            Font = DesignTokens.FontUiNormal;
+            ForeColor = DesignTokens.TextSecondary;
         }
 
-        protected override void OnResize(EventArgs e)
+        public void SetStatus(string status, Color dotColor)
         {
-            base.OnResize(e);
-            UpdateRegion();
+            _statusText = string.IsNullOrWhiteSpace(status)
+                ? "Hazir"
+                : status;
+            _dotColor = dotColor;
             Invalidate();
         }
 
@@ -282,45 +244,42 @@ internal sealed class TitleBarControl : UserControl
             }
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             using var path = CreateRoundedRectanglePath(bounds, DesignTokens.Scale(8));
-            using var fillBrush = new SolidBrush(FillColor);
-            using var borderPen = new Pen(BorderColor);
+            using var fillBrush = new SolidBrush(DesignTokens.SurfaceInset);
+            using var borderPen = new Pen(DesignTokens.BorderSoft);
 
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
+
+            int dotSize = DesignTokens.TitleBarStatusDotSize;
+            int dotX = bounds.Left + DesignTokens.Scale(12);
+            int dotY = bounds.Top + (bounds.Height - dotSize) / 2;
+            var dotBounds = new Rectangle(dotX, dotY, dotSize, dotSize);
+
+            using var glowBrush = new SolidBrush(Color.FromArgb(55, _dotColor));
+            using var dotBrush = new SolidBrush(_dotColor);
+            e.Graphics.FillEllipse(glowBrush, Rectangle.Inflate(dotBounds, DesignTokens.Scale(2), DesignTokens.Scale(2)));
+            e.Graphics.FillEllipse(dotBrush, dotBounds);
+
             e.Graphics.SmoothingMode = SmoothingMode.None;
-        }
 
-        private void UpdateRegion()
-        {
-            Rectangle bounds = ClientRectangle;
-            int radius = DesignTokens.Scale(8);
+            var textBounds = new Rectangle(
+                dotBounds.Right + DesignTokens.Scale(8),
+                bounds.Top,
+                Math.Max(0, bounds.Right - dotBounds.Right - DesignTokens.Scale(16)),
+                bounds.Height);
 
-            if (bounds.Width <= 0 || bounds.Height <= 0)
-            {
-                Region? emptyRegion = Region;
-                Region = null;
-                emptyRegion?.Dispose();
-                _lastRegionSize = Size.Empty;
-                _lastRegionRadius = -1;
-                return;
-            }
-
-            if (Region is not null
-                && _lastRegionSize == bounds.Size
-                && _lastRegionRadius == radius)
-            {
-                return;
-            }
-
-            using var path = CreateRoundedRectanglePath(
-                Rectangle.Inflate(bounds, -1, -1),
-                radius);
-            Region? previousRegion = Region;
-            Region = new Region(path);
-            previousRegion?.Dispose();
-            _lastRegionSize = bounds.Size;
-            _lastRegionRadius = radius;
+            TextRenderer.DrawText(
+                e.Graphics,
+                _statusText,
+                Font,
+                textBounds,
+                ForeColor,
+                TextFormatFlags.Left |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPrefix);
         }
     }
 
@@ -372,46 +331,6 @@ internal sealed class TitleBarControl : UserControl
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
             e.Graphics.DrawString("M", font, textBrush, bounds, stringFormat);
-        }
-    }
-
-    private sealed class StatusDotControl : Control
-    {
-        public Color DotColor { get; set; } = DesignTokens.AccentGreen;
-
-        public StatusDotControl()
-        {
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            pevent.Graphics.Clear(BackColor == Color.Transparent
-                ? DesignTokens.SurfaceInset
-                : BackColor);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            int size = Math.Min(DesignTokens.TitleBarStatusDotSize, Math.Min(Width, Height));
-            var bounds = new Rectangle(
-                (Width - size) / 2,
-                (Height - size) / 2,
-                size,
-                size);
-
-            using var glowBrush = new SolidBrush(Color.FromArgb(55, DotColor));
-            using var dotBrush = new SolidBrush(DotColor);
-            e.Graphics.FillEllipse(glowBrush, Rectangle.Inflate(bounds, DesignTokens.Scale(2), DesignTokens.Scale(2)));
-            e.Graphics.FillEllipse(dotBrush, bounds);
         }
     }
 
