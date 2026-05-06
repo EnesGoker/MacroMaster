@@ -736,11 +736,12 @@ public sealed class MacroMasterTests
 
             string sourceFilePath = Path.Combine(sourceDirectoryPath, "DesktopMacro.xml");
             await storageService.SaveAsXmlAsync(
-                CreateSession("DesktopMacro", 8, 13),
+                CreateSession("EmbeddedMacroName", 8, 13),
                 sourceFilePath);
 
             string importedFilePath = await libraryService.ImportAsync(sourceFilePath);
             IReadOnlyList<MacroLibraryEntry> entries = await libraryService.ListAsync();
+            MacroSession importedSession = await libraryService.LoadAsync(importedFilePath);
 
             Assert.True(
                 importedFilePath.StartsWith(libraryDirectoryPath, StringComparison.OrdinalIgnoreCase),
@@ -748,6 +749,18 @@ public sealed class MacroMasterTests
             Assert.True(
                 File.Exists(importedFilePath),
                 "Imported XML file should exist in the managed library directory.");
+            Assert.Equal(
+                "DesktopMacro",
+                entries.Single().Name,
+                "Imported macro names should default to the selected file name instead of embedded session metadata.");
+            Assert.Equal(
+                "DesktopMacro.xml",
+                Path.GetFileName(importedFilePath),
+                "Imported XML file names should preserve the selected source file name.");
+            Assert.Equal(
+                "DesktopMacro",
+                importedSession.Name,
+                "Loaded library sessions should use the managed file name as the display name.");
             Assert.Equal(
                 MacroLibraryFileFormat.Xml,
                 entries.Single().Format,
@@ -1102,6 +1115,12 @@ public sealed class MacroMasterTests
         Assert.True(
             reportText.Contains("Optimizasyon adayi: 1", StringComparison.Ordinal),
             "Text report should include optimization candidate count.");
+        Assert.True(
+            reportText.Contains("Olay Detaylari", StringComparison.Ordinal),
+            "Text report should include the detailed event section.");
+        Assert.True(
+            reportText.Contains("001 | 00:00:00.010 | Fare | Move | X: 100, Y: 200 | 10 ms | Fare hareketi", StringComparison.Ordinal),
+            "Text report should include detailed event rows.");
 
         return Task.CompletedTask;
     }
@@ -1113,7 +1132,16 @@ public sealed class MacroMasterTests
             Name = "<Macro & Test>",
             CreatedAtUtc = new DateTime(2026, 5, 6, 9, 30, 0, DateTimeKind.Utc)
         };
-        session.Events.Add(CreateMouseMoveEvent(10, 100, 200));
+        session.Events.Add(
+            new MacroEvent
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.Move,
+                DelayMs = 10,
+                X = 100,
+                Y = 200,
+                Description = "<detail & value>"
+            });
 
         string reportHtml = MacroReportGenerator.GenerateHtml(session, "/tmp/source<unsafe>.json");
 
@@ -1126,6 +1154,12 @@ public sealed class MacroMasterTests
         Assert.True(
             reportHtml.Contains("source&lt;unsafe&gt;.json", StringComparison.Ordinal),
             "HTML report should encode file names.");
+        Assert.True(
+            reportHtml.Contains("&lt;detail &amp; value&gt;", StringComparison.Ordinal),
+            "HTML report should encode event details.");
+        Assert.True(
+            reportHtml.Contains("<th>#</th>", StringComparison.Ordinal),
+            "HTML report should include the detailed event table.");
 
         return Task.CompletedTask;
     }

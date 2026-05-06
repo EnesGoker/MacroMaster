@@ -114,6 +114,16 @@ internal static class MacroReportGenerator
         builder.AppendLine("Oneri");
         builder.AppendLine("-----");
         builder.AppendLine(BuildRecommendation(statistics));
+        builder.AppendLine();
+        builder.AppendLine("Olay Detaylari");
+        builder.AppendLine("---------------");
+        builder.AppendLine("# | Zaman | Tur | Aksiyon | Konum | Gecikme | Detay");
+        builder.AppendLine("--|-------|-----|---------|-------|---------|------");
+
+        foreach (string row in BuildTextEventRows(session.Events))
+        {
+            builder.AppendLine(row);
+        }
 
         return builder.ToString();
     }
@@ -212,6 +222,20 @@ internal static class MacroReportGenerator
                   font-weight: 600;
                 }
                 tr:last-child td { border-bottom: 0; }
+                .table-scroll {
+                  overflow-x: auto;
+                }
+                .detail-table {
+                  min-width: 860px;
+                }
+                .detail-table th,
+                .detail-table td {
+                  white-space: nowrap;
+                }
+                .detail-table td:last-child {
+                  white-space: normal;
+                  min-width: 220px;
+                }
                 .recommendation {
                   border-left: 4px solid var(--accent);
                   padding: 12px 14px;
@@ -282,6 +306,28 @@ internal static class MacroReportGenerator
                   <h2>Oneri</h2>
                   <p class="recommendation">{{Html(recommendation)}}</p>
                 </section>
+
+                <section class="section">
+                  <h2>Olay Detaylari</h2>
+                  <div class="table-scroll">
+                    <table class="detail-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Zaman</th>
+                          <th>Tur</th>
+                          <th>Aksiyon</th>
+                          <th>Konum</th>
+                          <th>Gecikme</th>
+                          <th>Detay</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {{BuildHtmlEventRows(session.Events)}}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
               </main>
             </body>
             </html>
@@ -329,6 +375,68 @@ internal static class MacroReportGenerator
             """;
     }
 
+    private static IEnumerable<string> BuildTextEventRows(IReadOnlyList<MacroEvent> events)
+    {
+        if (events.Count == 0)
+        {
+            yield return "Olay yok.";
+            yield break;
+        }
+
+        int elapsedMs = 0;
+
+        for (int index = 0; index < events.Count; index++)
+        {
+            MacroEvent macroEvent = events[index];
+            elapsedMs += Math.Max(0, macroEvent.DelayMs);
+
+            yield return string.Join(
+                " | ",
+                FormatRowNumber(index),
+                FormatElapsedTime(elapsedMs),
+                FormatEventType(macroEvent.EventType),
+                FormatAction(macroEvent),
+                FormatPosition(macroEvent),
+                FormatMilliseconds(macroEvent.DelayMs),
+                FormatDetail(macroEvent));
+        }
+    }
+
+    private static string BuildHtmlEventRows(IReadOnlyList<MacroEvent> events)
+    {
+        if (events.Count == 0)
+        {
+            return """
+                        <tr>
+                          <td colspan="7">Olay yok.</td>
+                        </tr>
+                """;
+        }
+
+        var builder = new StringBuilder();
+        int elapsedMs = 0;
+
+        for (int index = 0; index < events.Count; index++)
+        {
+            MacroEvent macroEvent = events[index];
+            elapsedMs += Math.Max(0, macroEvent.DelayMs);
+            string rowHtml = $$"""
+                        <tr>
+                          <td>{{Html(FormatRowNumber(index))}}</td>
+                          <td>{{Html(FormatElapsedTime(elapsedMs))}}</td>
+                          <td>{{Html(FormatEventType(macroEvent.EventType))}}</td>
+                          <td>{{Html(FormatAction(macroEvent))}}</td>
+                          <td>{{Html(FormatPosition(macroEvent))}}</td>
+                          <td>{{Html(FormatMilliseconds(macroEvent.DelayMs))}}</td>
+                          <td>{{Html(FormatDetail(macroEvent))}}</td>
+                        </tr>
+                """;
+            builder.AppendLine(rowHtml);
+        }
+
+        return builder.ToString();
+    }
+
     private static string ResolveFileName(string? filePath)
     {
         return string.IsNullOrWhiteSpace(filePath)
@@ -371,6 +479,71 @@ internal static class MacroReportGenerator
     private static string FormatMilliseconds(double milliseconds)
     {
         return string.Create(TurkishCulture, $"{Math.Max(0d, milliseconds):0.#} ms");
+    }
+
+    private static string FormatRowNumber(int sourceIndex)
+    {
+        return (sourceIndex + 1).ToString("000", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatElapsedTime(int elapsedMs)
+    {
+        TimeSpan elapsed = TimeSpan.FromMilliseconds(Math.Max(0, elapsedMs));
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{(int)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}.{elapsed.Milliseconds:000}");
+    }
+
+    private static string FormatEventType(MacroEventType eventType)
+    {
+        return eventType switch
+        {
+            MacroEventType.Keyboard => "Klavye",
+            MacroEventType.Mouse => "Fare",
+            MacroEventType.System => "Sistem",
+            _ => eventType.ToString()
+        };
+    }
+
+    private static string FormatAction(MacroEvent macroEvent)
+    {
+        return macroEvent.EventType switch
+        {
+            MacroEventType.Keyboard => macroEvent.KeyboardActionType.ToString(),
+            MacroEventType.Mouse => macroEvent.MouseActionType.ToString(),
+            MacroEventType.System => "Sistem",
+            _ => "-"
+        };
+    }
+
+    private static string FormatPosition(MacroEvent macroEvent)
+    {
+        return macroEvent.X.HasValue && macroEvent.Y.HasValue
+            ? string.Create(CultureInfo.InvariantCulture, $"X: {macroEvent.X.Value}, Y: {macroEvent.Y.Value}")
+            : "-";
+    }
+
+    private static string FormatDetail(MacroEvent macroEvent)
+    {
+        if (!string.IsNullOrWhiteSpace(macroEvent.Description))
+        {
+            return macroEvent.Description;
+        }
+
+        if (macroEvent.EventType == MacroEventType.Keyboard
+            && !string.IsNullOrWhiteSpace(macroEvent.KeyName))
+        {
+            return macroEvent.KeyName;
+        }
+
+        if (macroEvent.EventType == MacroEventType.Mouse
+            && macroEvent.MouseActionType == MouseActionType.Wheel
+            && macroEvent.WheelDelta.HasValue)
+        {
+            return "Delta: " + macroEvent.WheelDelta.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return "-";
     }
 
     private static bool IsMouseMove(MacroEvent macroEvent)

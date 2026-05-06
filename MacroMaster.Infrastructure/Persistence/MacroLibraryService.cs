@@ -67,9 +67,7 @@ public sealed class MacroLibraryService : IMacroLibraryService
                     fileInfo,
                     format,
                     cancellationToken);
-                string displayName = string.IsNullOrWhiteSpace(metadata.Name)
-                    ? Path.GetFileNameWithoutExtension(fileInfo.FullName)
-                    : metadata.Name;
+                string displayName = Path.GetFileNameWithoutExtension(fileInfo.FullName);
 
                 activeFilePaths.Add(fileInfo.FullName);
 
@@ -105,7 +103,7 @@ public sealed class MacroLibraryService : IMacroLibraryService
         CancellationToken cancellationToken = default)
     {
         string resolvedFilePath = ResolveLibraryFilePath(filePath);
-        return LoadByExtensionAsync(resolvedFilePath, cancellationToken);
+        return LoadLibrarySessionAsync(resolvedFilePath, cancellationToken);
     }
 
     public async Task<string> SaveAsync(
@@ -149,11 +147,7 @@ public sealed class MacroLibraryService : IMacroLibraryService
         MacroLibraryFileFormat format = ResolveFormat(resolvedSourceFilePath);
         string extension = ResolveExtension(format);
         MacroSession session = await LoadByExtensionAsync(resolvedSourceFilePath, cancellationToken);
-        string importName = string.IsNullOrWhiteSpace(session.Name)
-            ? Path.GetFileNameWithoutExtension(resolvedSourceFilePath)
-            : session.Name;
-
-        session.Name = NormalizeSessionName(importName);
+        session.Name = NormalizeSessionName(Path.GetFileNameWithoutExtension(resolvedSourceFilePath));
 
         string filePath = BuildAvailableLibraryFilePath(
             session.Name,
@@ -236,6 +230,15 @@ public sealed class MacroLibraryService : IMacroLibraryService
             MacroLibraryFileFormat.Xml => await _macroStorageService.LoadFromXmlAsync(filePath, cancellationToken),
             _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formati: {filePath}")
         };
+    }
+
+    private async Task<MacroSession> LoadLibrarySessionAsync(
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        MacroSession session = await LoadByExtensionAsync(filePath, cancellationToken);
+        session.Name = NormalizeSessionName(Path.GetFileNameWithoutExtension(filePath));
+        return session;
     }
 
     private async Task<MacroLibraryMetadata> ReadMetadataAsync(
