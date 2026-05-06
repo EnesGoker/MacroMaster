@@ -10,26 +10,27 @@ internal sealed class EventListControl : UserControl
 {
     private static readonly TypeFilterOption[] TypeFilterOptions =
     [
-        new(EventListTypeFilterKind.All, "Tür: Tümü"),
-        new(EventListTypeFilterKind.Keyboard, "Tür: Klavye"),
-        new(EventListTypeFilterKind.Mouse, "Tür: Fare"),
-        new(EventListTypeFilterKind.System, "Tür: Sistem")
+        new(EventListTypeFilterKind.All, "Tur: Tumu"),
+        new(EventListTypeFilterKind.Keyboard, "Tur: Klavye"),
+        new(EventListTypeFilterKind.Mouse, "Tur: Fare"),
+        new(EventListTypeFilterKind.System, "Tur: Sistem")
     ];
 
     private static readonly SmartFilterOption[] SmartFilterOptions =
     [
-        new(EventListSmartFilterKind.All, "Akıllı: Tümü"),
+        new(EventListSmartFilterKind.All, "Akilli: Tumu"),
         new(EventListSmartFilterKind.KeyboardOnly, "Sadece klavye"),
         new(EventListSmartFilterKind.MouseMoves, "Mouse hareketleri"),
-        new(EventListSmartFilterKind.MouseClicks, "Tıklamalar"),
+        new(EventListSmartFilterKind.MouseClicks, "Tiklamalar"),
         new(EventListSmartFilterKind.LongDelays, "Uzun beklemeler"),
-        new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adayları"),
-        new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatalı/eksik")
+        new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adaylari"),
+        new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatali/eksik")
     ];
 
     private readonly DataGridView _eventGridView;
     private readonly ModernScrollBar _eventScrollBar;
     private readonly RoundedGridHostPanel _gridHostPanel;
+    private readonly ContextMenuStrip _eventContextMenu;
     private readonly Label _emptyStateLabel;
     private readonly TextBox _filterSearchTextBox;
     private readonly ModernSelect _typeFilterSelect;
@@ -62,6 +63,7 @@ internal sealed class EventListControl : UserControl
         _eventGridView = new DataGridView();
         _eventScrollBar = new ModernScrollBar();
         _gridHostPanel = new RoundedGridHostPanel();
+        _eventContextMenu = BuildEventContextMenu();
         _emptyStateLabel = new Label();
         _filterSearchTextBox = CreateFilterSearchTextBox();
         _typeFilterSelect = new ModernSelect();
@@ -484,6 +486,29 @@ internal sealed class EventListControl : UserControl
         _eventScrollBar.Value -= Math.Sign(e.Delta) * wheelStep;
     }
 
+    private ContextMenuStrip BuildEventContextMenu()
+    {
+        var contextMenu = new ContextMenuStrip
+        {
+            ShowImageMargin = false
+        };
+        AppToolStripRenderer.ApplyTo(
+            contextMenu,
+            AppToolStripMenuDensity.Comfortable);
+
+        var editItem = new ToolStripMenuItem("Duzenle");
+        editItem.Click += (_, _) =>
+        {
+            if (_eventContextMenu.Tag is int rowIndex)
+            {
+                RequestEditForRow(rowIndex);
+            }
+        };
+        contextMenu.Items.Add(editItem);
+
+        return contextMenu;
+    }
+
     private void EventGridView_CellMouseDown(object? sender, DataGridViewCellMouseEventArgs e)
     {
         _ = sender;
@@ -496,24 +521,8 @@ internal sealed class EventListControl : UserControl
         _eventGridView.ClearSelection();
         _eventGridView.Rows[e.RowIndex].Selected = true;
         _eventGridView.CurrentCell = _eventGridView.Rows[e.RowIndex].Cells[Math.Max(0, e.ColumnIndex)];
-
-        int rowIndex = e.RowIndex;
-        ThemedDropDownMenu.ShowFor(
-            _eventGridView,
-            [
-                new ThemedDropDownMenuItem(
-                    "Düzenle",
-                    () => RequestEditForRow(rowIndex))
-            ],
-            _eventGridView.PointToClient(Cursor.Position),
-            new ThemedDropDownMenuOptions
-            {
-                MinimumWidth = DesignTokens.Scale(126),
-                MaximumWidth = DesignTokens.Scale(220),
-                ItemHeight = DesignTokens.Scale(42),
-                VerticalPadding = DesignTokens.Scale(8),
-                HorizontalPadding = DesignTokens.Scale(14)
-            });
+        _eventContextMenu.Tag = e.RowIndex;
+        _eventContextMenu.Show(_eventGridView, _eventGridView.PointToClient(Cursor.Position));
     }
 
     private void EventGridView_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)

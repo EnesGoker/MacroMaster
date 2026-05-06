@@ -10,7 +10,7 @@ internal sealed class ModernSelect : Control
     private bool _isPressed;
     private bool _isDropDownOpen;
     private int _selectedIndex = -1;
-    private ToolStripDropDown? _dropDownMenu;
+    private ContextMenuStrip? _dropDownMenu;
 
     public ModernSelect()
     {
@@ -169,7 +169,7 @@ internal sealed class ModernSelect : Control
     {
         if (disposing)
         {
-            ToolStripDropDown? menu = _dropDownMenu;
+            ContextMenuStrip? menu = _dropDownMenu;
             _dropDownMenu = null;
             menu?.Dispose();
         }
@@ -219,36 +219,34 @@ internal sealed class ModernSelect : Control
 
         CloseDropDown();
 
-        var menuItems = new List<ThemedDropDownMenuItem>(_items.Count);
+        var menu = new ContextMenuStrip
+        {
+            ShowCheckMargin = false,
+            ShowImageMargin = false,
+            MinimumSize = new Size(Width, 0)
+        };
+        _dropDownMenu = menu;
+        AppToolStripRenderer.ApplyTo(menu);
+
         for (int index = 0; index < _items.Count; index++)
         {
-            int itemIndex = index;
-            menuItems.Add(
-                new ThemedDropDownMenuItem(
-                    _items[index],
-                    () => SetSelectedIndex(itemIndex),
-                    Enabled: true,
-                    Checked: index == _selectedIndex));
+            var item = new ToolStripMenuItem(_items[index])
+            {
+                Checked = index == _selectedIndex,
+                Tag = index
+            };
+            item.Click += (_, _) =>
+            {
+                if (item.Tag is int itemIndex)
+                {
+                    SetSelectedIndex(itemIndex);
+                }
+            };
+            menu.Items.Add(item);
         }
 
         _isDropDownOpen = true;
         Invalidate();
-
-        ToolStripDropDown menu = ThemedDropDownMenu.ShowFor(
-            this,
-            menuItems,
-            new Point(0, Height + DesignTokens.Scale(4)),
-            new ThemedDropDownMenuOptions
-            {
-                MinimumWidth = Width,
-                MaximumWidth = Math.Max(Width, DesignTokens.Scale(320)),
-                ItemHeight = DesignTokens.Scale(38),
-                VerticalPadding = DesignTokens.Scale(7),
-                HorizontalPadding = DesignTokens.Scale(12),
-                ReserveCheckColumn = true
-            });
-
-        _dropDownMenu = menu;
         menu.Closed += (_, _) =>
         {
             _isDropDownOpen = false;
@@ -262,18 +260,78 @@ internal sealed class ModernSelect : Control
             {
                 _dropDownMenu = null;
             }
+
+            DisposeMenuAfterCurrentMessage(menu);
         };
+
+        menu.Show(this, new Point(0, Height + DesignTokens.Scale(4)));
     }
 
     private void CloseDropDown()
     {
-        ToolStripDropDown? menu = _dropDownMenu;
+        ContextMenuStrip? menu = _dropDownMenu;
         if (menu is null || menu.IsDisposed)
         {
             return;
         }
 
         menu.Close();
+    }
+
+    private void DisposeMenuAfterCurrentMessage(ContextMenuStrip menu)
+    {
+        if (menu.IsDisposed)
+        {
+            return;
+        }
+
+        if (IsDisposed || Disposing || !IsHandleCreated)
+        {
+            menu.Dispose();
+            return;
+        }
+
+        try
+        {
+            BeginInvoke((MethodInvoker)(() =>
+            {
+                if (!menu.IsDisposed)
+                {
+                    menu.Dispose();
+                }
+            }));
+        }
+        catch (ObjectDisposedException)
+        {
+            // The owner can be torn down while the drop-down is closing.
+        }
+        catch (InvalidOperationException)
+        {
+            if (!menu.IsDisposed)
+            {
+                menu.Dispose();
+            }
+        }
+    }
+
+    private void SetSelectedIndex(int value, bool raiseEvent = true)
+    {
+        int normalizedValue = _items.Count == 0
+            ? -1
+            : Math.Clamp(value, 0, _items.Count - 1);
+
+        if (_selectedIndex == normalizedValue)
+        {
+            return;
+        }
+
+        _selectedIndex = normalizedValue;
+        Invalidate();
+
+        if (raiseEvent)
+        {
+            SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private Color ResolveFillColor()

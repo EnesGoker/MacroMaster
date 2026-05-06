@@ -23,16 +23,18 @@ public readonly record struct ToolbarButtonState(
 
 public partial class ToolbarControl : UserControl
 {
-    private bool _canSaveLibrary;
-    private bool _canSaveJson;
-    private bool _canSaveXml;
-    private bool _canLoadJson;
-    private bool _canLoadXml;
+    private readonly ContextMenuStrip _saveMenu = new();
+    private readonly ContextMenuStrip _loadMenu = new();
+    private readonly ToolStripMenuItem _saveLibraryMenuItem = new("Kutuphaneye Kaydet");
+    private readonly ToolStripMenuItem _saveJsonMenuItem = new("JSON Kaydet");
+    private readonly ToolStripMenuItem _saveXmlMenuItem = new("XML Kaydet");
+    private readonly ToolStripMenuItem _loadJsonMenuItem = new("JSON Yukle");
+    private readonly ToolStripMenuItem _loadXmlMenuItem = new("XML Yukle");
     private string? _recordHotkey;
     private string? _stopHotkey;
     private string? _playbackHotkey;
     private string? _hotkeysHotkey;
-    private string _recordLabel = "Kaydı Başlat";
+    private string _recordLabel = "Kaydi Baslat";
     private string _playbackLabel = "Oynat";
 
     public event EventHandler? RecordToggleClicked;
@@ -48,6 +50,7 @@ public partial class ToolbarControl : UserControl
     public ToolbarControl()
     {
         InitializeComponent();
+        ConfigureMenus();
         ApplyTheme();
         WireEvents();
         SetHotkeyHints(null, null, null, null);
@@ -55,7 +58,7 @@ public partial class ToolbarControl : UserControl
 
     public void UpdateRecordButton(bool isRecording)
     {
-        _recordLabel = isRecording ? "Kaydı Durdur" : "Kaydı Başlat";
+        _recordLabel = isRecording ? "Kaydi Durdur" : "Kaydi Baslat";
         SetButtonText(recordButton, _recordLabel, _recordHotkey);
         ApplyButtonAccent(recordButton, DesignTokens.AccentRed, DesignTokens.AccentRedSoft);
     }
@@ -82,11 +85,11 @@ public partial class ToolbarControl : UserControl
         loadButton.Enabled = state.CanLoadJson || state.CanLoadXml;
         hotkeysButton.Enabled = state.CanEditHotkeys;
 
-        _canSaveLibrary = state.CanSaveLibrary;
-        _canSaveJson = state.CanSaveJson;
-        _canSaveXml = state.CanSaveXml;
-        _canLoadJson = state.CanLoadJson;
-        _canLoadXml = state.CanLoadXml;
+        _saveLibraryMenuItem.Enabled = state.CanSaveLibrary;
+        _saveJsonMenuItem.Enabled = state.CanSaveJson;
+        _saveXmlMenuItem.Enabled = state.CanSaveXml;
+        _loadJsonMenuItem.Enabled = state.CanLoadJson;
+        _loadXmlMenuItem.Enabled = state.CanLoadXml;
     }
 
     public void SetHotkeyHints(string? record, string? stop, string? playback, string? hotkeys)
@@ -99,7 +102,7 @@ public partial class ToolbarControl : UserControl
         SetButtonText(recordButton, _recordLabel, _recordHotkey);
         SetButtonText(stopButton, "Durdur", _stopHotkey);
         SetButtonText(playbackButton, _playbackLabel, _playbackHotkey);
-        SetButtonText(hotkeysButton, "Kısayollar", _hotkeysHotkey);
+        SetButtonText(hotkeysButton, "Kisayollar", _hotkeysHotkey);
     }
 
     private void WireEvents()
@@ -107,63 +110,55 @@ public partial class ToolbarControl : UserControl
         recordButton.Click += (_, _) => RecordToggleClicked?.Invoke(this, EventArgs.Empty);
         stopButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
         playbackButton.Click += (_, _) => PlaybackToggleClicked?.Invoke(this, EventArgs.Empty);
-        saveButton.Click += (_, _) => ShowSaveMenu();
-        loadButton.Click += (_, _) => ShowLoadMenu();
+        saveButton.Click += (_, _) => ShowMenu(saveButton, _saveMenu);
+        loadButton.Click += (_, _) => ShowMenu(loadButton, _loadMenu);
         hotkeysButton.Click += (_, _) => HotkeysClicked?.Invoke(this, EventArgs.Empty);
+
+        _saveLibraryMenuItem.Click += (_, _) => SaveLibraryClicked?.Invoke(this, EventArgs.Empty);
+        _saveJsonMenuItem.Click += (_, _) => SaveJsonClicked?.Invoke(this, EventArgs.Empty);
+        _saveXmlMenuItem.Click += (_, _) => SaveXmlClicked?.Invoke(this, EventArgs.Empty);
+        _loadJsonMenuItem.Click += (_, _) => LoadJsonClicked?.Invoke(this, EventArgs.Empty);
+        _loadXmlMenuItem.Click += (_, _) => LoadXmlClicked?.Invoke(this, EventArgs.Empty);
     }
 
-    private void ShowSaveMenu()
+    private void ConfigureMenus()
     {
-        ThemedDropDownMenu.ShowFor(
-            saveButton,
-            [
-                new ThemedDropDownMenuItem(
-                    "Kütüphaneye Kaydet",
-                    () => SaveLibraryClicked?.Invoke(this, EventArgs.Empty),
-                    _canSaveLibrary),
-                ThemedDropDownMenuItem.Separator(),
-                new ThemedDropDownMenuItem(
-                    "JSON Kaydet",
-                    () => SaveJsonClicked?.Invoke(this, EventArgs.Empty),
-                    _canSaveJson),
-                new ThemedDropDownMenuItem(
-                    "XML Kaydet",
-                    () => SaveXmlClicked?.Invoke(this, EventArgs.Empty),
-                    _canSaveXml)
-            ],
-            new Point(0, saveButton.Height + DesignTokens.Scale(4)),
-            CreateToolbarMenuOptions(saveButton));
+        components ??= new System.ComponentModel.Container();
+        components.Add(_saveMenu);
+        components.Add(_loadMenu);
+
+        ConfigureMenu(_saveMenu);
+        ConfigureMenu(_loadMenu);
+
+        _saveMenu.Items.Add(_saveLibraryMenuItem);
+        _saveMenu.Items.Add(new ToolStripSeparator());
+        _saveMenu.Items.Add(_saveJsonMenuItem);
+        _saveMenu.Items.Add(_saveXmlMenuItem);
+        _loadMenu.Items.Add(_loadJsonMenuItem);
+        _loadMenu.Items.Add(_loadXmlMenuItem);
     }
 
-    private void ShowLoadMenu()
+    private static void ConfigureMenu(ContextMenuStrip menu)
     {
-        ThemedDropDownMenu.ShowFor(
-            loadButton,
-            [
-                new ThemedDropDownMenuItem(
-                    "JSON Yükle",
-                    () => LoadJsonClicked?.Invoke(this, EventArgs.Empty),
-                    _canLoadJson),
-                new ThemedDropDownMenuItem(
-                    "XML Yükle",
-                    () => LoadXmlClicked?.Invoke(this, EventArgs.Empty),
-                    _canLoadXml)
-            ],
-            new Point(0, loadButton.Height + DesignTokens.Scale(4)),
-            CreateToolbarMenuOptions(loadButton));
-    }
+        menu.ShowImageMargin = false;
+        AppToolStripRenderer.ApplyTo(
+            menu,
+            AppToolStripMenuDensity.Comfortable);
 
-    private static ThemedDropDownMenuOptions CreateToolbarMenuOptions(Control owner)
-    {
-        return new ThemedDropDownMenuOptions
+        menu.Opening += (_, _) =>
         {
-            MinimumWidth = Math.Max(owner.Width, DesignTokens.Scale(184)),
-            MaximumWidth = DesignTokens.Scale(300),
-            ItemHeight = DesignTokens.Scale(42),
-            SeparatorHeight = DesignTokens.Scale(14),
-            VerticalPadding = DesignTokens.Scale(8),
-            HorizontalPadding = DesignTokens.Scale(14)
+            foreach (ToolStripItem item in menu.Items)
+            {
+                item.ForeColor = item.Enabled
+                    ? DesignTokens.TextPrimary
+                    : DesignTokens.TextMuted;
+            }
         };
+    }
+
+    private static void ShowMenu(Control owner, ContextMenuStrip menu)
+    {
+        menu.Show(owner, new Point(0, owner.Height + DesignTokens.Scale(4)));
     }
 
     private void ApplyTheme()
