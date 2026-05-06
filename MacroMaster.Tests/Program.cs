@@ -91,6 +91,12 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "EventListFilterEngine supports structured search expressions")]
     public Task EventListFilterEngine_SupportsStructuredSearchExpressions() => EventListFilterEngine_SupportsStructuredSearchExpressionsAsync();
 
+    [Fact(DisplayName = "MacroOptimizationService removes redundant mouse moves and preserves timing")]
+    public Task MacroOptimizationService_RemovesRedundantMouseMovesAndPreservesTiming() => MacroOptimizationService_RemovesRedundantMouseMovesAndPreservesTimingAsync();
+
+    [Fact(DisplayName = "MacroOptimizationService preserves protected events")]
+    public Task MacroOptimizationService_PreservesProtectedEvents() => MacroOptimizationService_PreservesProtectedEventsAsync();
+
     [Fact(DisplayName = "MacroReportGenerator summarizes session analysis")]
     public Task MacroReportGenerator_SummarizesSessionAnalysis() => MacroReportGenerator_SummarizesSessionAnalysisAsync();
 
@@ -1052,6 +1058,113 @@ public sealed class MacroMasterTests
                     new EventListFilterCriteria("action:move elapsed<20", EventListTypeFilterKind.All, EventListSmartFilterKind.All))
                 .Select(item => item.SourceIndex),
             "Structured action search should combine with elapsed-time comparisons.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task MacroOptimizationService_RemovesRedundantMouseMovesAndPreservesTimingAsync()
+    {
+        var session = new MacroSession
+        {
+            Name = "Optimize Test"
+        };
+        session.Events.AddRange(
+            [
+                CreateMouseMoveEvent(10, 100, 200),
+                CreateMouseMoveEvent(20, 101, 201),
+                CreateMouseMoveEvent(30, 102, 202),
+                CreateMouseMoveEvent(40, 103, 203),
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftDown,
+                    DelayMs = 5,
+                    X = 103,
+                    Y = 203,
+                    Description = "Sol tus basildi"
+                },
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftUp,
+                    DelayMs = 5,
+                    X = 103,
+                    Y = 203,
+                    Description = "Sol tus birakildi"
+                }
+            ]);
+
+        var service = new MacroOptimizationService();
+        MacroOptimizationPreview preview = service.Preview(session);
+
+        Assert.True(preview.HasChanges, "Redundant move events should produce an optimization preview.");
+        Assert.Equal(6, preview.OriginalEventCount, "Original event count should reflect the source session.");
+        Assert.Equal(4, preview.OptimizedEventCount, "Optimizer should keep movement boundaries and click events.");
+        Assert.Equal(2, preview.RemovedEventCount, "Only interior short mouse moves should be removed.");
+        Assert.Equal(session.TotalDurationMs, preview.OptimizedDurationMs, "Removed delays should be transferred to the next kept event.");
+        Assert.Equal(20, session.Events[1].DelayMs, "Preview generation must not mutate the source session.");
+        Assert.Equal(90, preview.OptimizedEvents[1].DelayMs, "Removed move delays should be absorbed by the next kept movement.");
+        Assert.Equal(103, preview.OptimizedEvents[1].X, "The last movement before click should be preserved.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task MacroOptimizationService_PreservesProtectedEventsAsync()
+    {
+        var session = new MacroSession
+        {
+            Name = "Protected Events"
+        };
+        session.Events.AddRange(
+            [
+                CreateMouseMoveEvent(10, 100, 200),
+                CreateMouseMoveEvent(20, 101, 201),
+                CreateMouseMoveEvent(300, 102, 202),
+                CreateMouseMoveEvent(20, 103, 203),
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    DelayMs = 10,
+                    KeyCode = 65,
+                    ScanCode = 30,
+                    KeyName = "A",
+                    Description = "Tus basildi - A"
+                },
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Wheel,
+                    DelayMs = 30,
+                    X = 103,
+                    Y = 203,
+                    WheelDelta = -120,
+                    Description = "Fare tekerlegi"
+                },
+                CreateMouseMoveEvent(20, 104, 204)
+            ]);
+
+        var service = new MacroOptimizationService();
+        MacroOptimizationPreview preview = service.Preview(session);
+
+        Assert.Equal(1, preview.RemovedEventCount, "Only the interior short move should be removed.");
+        Assert.Equal(session.TotalDurationMs, preview.OptimizedDurationMs, "Total timing should remain stable.");
+        Assert.True(
+            preview.OptimizedEvents.Any(macroEvent =>
+                macroEvent.EventType == MacroEventType.Keyboard
+                && macroEvent.KeyboardActionType == KeyboardActionType.KeyDown),
+            "Keyboard events should be preserved.");
+        Assert.True(
+            preview.OptimizedEvents.Any(macroEvent =>
+                macroEvent.EventType == MacroEventType.Mouse
+                && macroEvent.MouseActionType == MouseActionType.Wheel),
+            "Mouse wheel events should be preserved.");
+        Assert.True(
+            preview.OptimizedEvents.Any(macroEvent =>
+                macroEvent.EventType == MacroEventType.Mouse
+                && macroEvent.MouseActionType == MouseActionType.Move
+                && macroEvent.DelayMs >= MacroOptimizationService.LongDelayThresholdMs),
+            "Long-delay mouse movements should be preserved.");
 
         return Task.CompletedTask;
     }

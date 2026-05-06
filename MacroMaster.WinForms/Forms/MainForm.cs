@@ -15,6 +15,7 @@ public partial class MainForm : Form
     private readonly IApplicationStateService _applicationStateService;
     private readonly IMacroRecorderService _macroRecorderService;
     private readonly IMacroPlaybackService _macroPlaybackService;
+    private readonly IMacroOptimizationService _macroOptimizationService;
     private readonly IMacroStorageService _macroStorageService;
     private readonly IMacroLibraryService _macroLibraryService;
     private readonly IPlaybackSettingsStore _playbackSettingsStore;
@@ -46,6 +47,7 @@ public partial class MainForm : Form
         IApplicationStateService applicationStateService,
         IMacroRecorderService macroRecorderService,
         IMacroPlaybackService macroPlaybackService,
+        IMacroOptimizationService macroOptimizationService,
         IMacroStorageService macroStorageService,
         IMacroLibraryService macroLibraryService,
         IPlaybackSettingsStore playbackSettingsStore,
@@ -58,6 +60,7 @@ public partial class MainForm : Form
         _applicationStateService = applicationStateService;
         _macroRecorderService = macroRecorderService;
         _macroPlaybackService = macroPlaybackService;
+        _macroOptimizationService = macroOptimizationService;
         _macroStorageService = macroStorageService;
         _macroLibraryService = macroLibraryService;
         _playbackSettingsStore = playbackSettingsStore;
@@ -674,6 +677,13 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(() => EditEventAsync(e), "Olay duzenleme");
     }
 
+    private void sessionSummaryControl_OptimizeRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(OptimizeMacroAsync, "Makro optimizasyonu");
+    }
+
     private void preserveTimingCheckBox_CheckedChanged(object? sender, EventArgs e)
     {
         _ = sender;
@@ -1012,6 +1022,33 @@ public partial class MainForm : Form
         return Task.CompletedTask;
     }
 
+    private Task OptimizeMacroAsync()
+    {
+        EnsureSessionMutationAllowed();
+
+        MacroSession session = GetRequiredSession();
+        MacroOptimizationPreview preview = _macroOptimizationService.Preview(session);
+
+        if (!preview.HasChanges)
+        {
+            MacroOptimizationDialog.ShowNoChanges(this);
+            return Task.CompletedTask;
+        }
+
+        using var dialog = new MacroOptimizationDialog(preview);
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return Task.CompletedTask;
+        }
+
+        session.ReplaceEvents(preview.OptimizedEvents);
+        _playedEventCount = 0;
+        _playedDurationMs = 0;
+        RefreshUiState(forceEventListReload: true);
+        return Task.CompletedTask;
+    }
+
     private async Task RefreshMacroLibraryAsync()
     {
         IReadOnlyList<MacroLibraryEntry> entries = await _macroLibraryService.ListAsync();
@@ -1345,7 +1382,8 @@ public partial class MainForm : Form
                 displayedSession?.TotalDurationMs ?? 0,
                 string.IsNullOrWhiteSpace(_lastSessionPath)
                     ? "Kaydedilmedi"
-                    : Path.GetFileName(_lastSessionPath)));
+                    : Path.GetFileName(_lastSessionPath),
+                isIdle && hasSession && !_shutdownInProgress));
         _titleBarControl.SetStatus(
             FormatAppState(_applicationStateService.CurrentState),
             ResolveTitleBarStatusColor(_applicationStateService.CurrentState));
@@ -1462,6 +1500,7 @@ public partial class MainForm : Form
 
         _sessionSummaryControl.Name = "sessionSummaryControl";
         _sessionSummaryControl.Dock = DockStyle.Fill;
+        _sessionSummaryControl.OptimizeRequested += sessionSummaryControl_OptimizeRequested;
 
         _playbackControl.Name = "playbackControl";
         _playbackControl.Dock = DockStyle.Fill;

@@ -9,7 +9,8 @@ public readonly record struct SessionSummaryState(
     string SessionName,
     int EventCount,
     int TotalDurationMs,
-    string FileName);
+    string FileName,
+    bool CanOptimize);
 
 internal sealed class SessionSummaryControl : UserControl
 {
@@ -18,6 +19,9 @@ internal sealed class SessionSummaryControl : UserControl
     private readonly Label _durationValueLabel;
     private readonly Label _sessionNameValueLabel;
     private readonly Label _fileNameValueLabel;
+    private readonly SummaryActionButton _optimizeButton;
+
+    public event EventHandler? OptimizeRequested;
 
     public SessionSummaryControl()
     {
@@ -37,9 +41,10 @@ internal sealed class SessionSummaryControl : UserControl
         _durationValueLabel = CreateValueLabel();
         _sessionNameValueLabel = CreateValueLabel();
         _fileNameValueLabel = CreateValueLabel();
+        _optimizeButton = new SummaryActionButton();
 
         BuildLayout();
-        UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi"));
+        UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi", false));
     }
 
     public void UpdateState(SessionSummaryState state)
@@ -49,6 +54,7 @@ internal sealed class SessionSummaryControl : UserControl
         _durationValueLabel.Text = FormattableString.Invariant($"{Math.Max(0, state.TotalDurationMs)} ms");
         _sessionNameValueLabel.Text = state.SessionName;
         _fileNameValueLabel.Text = state.FileName;
+        _optimizeButton.Enabled = state.CanOptimize;
         _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
             : DesignTokens.AccentGreen;
@@ -60,7 +66,7 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 6,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
@@ -71,6 +77,7 @@ internal sealed class SessionSummaryControl : UserControl
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
 
         rootLayoutPanel.Controls.Add(CreateSummaryCard("Durum", _statusValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(6))), 0, 0);
         rootLayoutPanel.Controls.Add(CreateSummaryCard("Olay", _eventCountValueLabel, new Padding(0, 0, 0, DesignTokens.Scale(6))), 0, 1);
@@ -84,11 +91,29 @@ internal sealed class SessionSummaryControl : UserControl
         rootLayoutPanel.Controls.Add(CreateSummaryCard(
             "Dosya",
             _fileNameValueLabel,
-            new Padding(0, 0, 0, 0)),
+            new Padding(0, 0, 0, DesignTokens.Scale(6))),
             0,
             4);
+        rootLayoutPanel.Controls.Add(CreateOptimizeButtonHost(), 0, 5);
 
         Controls.Add(rootLayoutPanel);
+    }
+
+    private Panel CreateOptimizeButtonHost()
+    {
+        var hostPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+
+        _optimizeButton.Dock = DockStyle.Fill;
+        _optimizeButton.Text = "Optimize Et";
+        _optimizeButton.Click += (_, _) => OptimizeRequested?.Invoke(this, EventArgs.Empty);
+        hostPanel.Controls.Add(_optimizeButton);
+        return hostPanel;
     }
 
     private static SoftPanel CreateSummaryCard(string caption, Label valueLabel, Padding margin)
@@ -187,6 +212,132 @@ internal sealed class SessionSummaryControl : UserControl
             using var borderPen = new Pen(BorderColor);
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
+        }
+    }
+
+    private sealed class SummaryActionButton : Button
+    {
+        private bool _isHovered;
+        private bool _isPressed;
+
+        public SummaryActionButton()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            Font = DesignTokens.FontUiBold;
+            ForeColor = DesignTokens.TextPrimary;
+            BackColor = DesignTokens.Surface;
+            Cursor = Cursors.Hand;
+            UseVisualStyleBackColor = false;
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            _isHovered = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _isHovered = false;
+            _isPressed = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs mevent)
+        {
+            if (Enabled && mevent.Button == MouseButtons.Left)
+            {
+                _isPressed = true;
+                Invalidate();
+            }
+
+            base.OnMouseDown(mevent);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs mevent)
+        {
+            _isPressed = false;
+            Invalidate();
+            base.OnMouseUp(mevent);
+        }
+
+        protected override void OnEnabledChanged(EventArgs e)
+        {
+            Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+            Invalidate();
+            base.OnEnabledChanged(e);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs pevent)
+        {
+            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
+        }
+
+        protected override void OnPaint(PaintEventArgs pevent)
+        {
+            Graphics graphics = pevent.Graphics;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            Color fillColor = ResolveFillColor();
+            Color borderColor = Enabled
+                ? DesignTokens.Accent
+                : DesignTokens.BorderSoft;
+            Color textColor = Enabled
+                ? DesignTokens.TextPrimary
+                : DesignTokens.TextMuted;
+
+            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(8));
+            using var fillBrush = new SolidBrush(fillColor);
+            using var borderPen = new Pen(borderColor, Math.Max(1f, DesignTokens.DensityScale));
+            graphics.FillPath(fillBrush, path);
+            graphics.DrawPath(borderPen, path);
+
+            TextRenderer.DrawText(
+                graphics,
+                Text,
+                Font,
+                bounds,
+                textColor,
+                TextFormatFlags.HorizontalCenter |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPrefix);
+        }
+
+        private Color ResolveFillColor()
+        {
+            if (!Enabled)
+            {
+                return Color.FromArgb(16, 20, 31);
+            }
+
+            if (_isPressed)
+            {
+                return DesignTokens.AccentDeep;
+            }
+
+            if (_isHovered || Focused)
+            {
+                return Color.FromArgb(20, DesignTokens.Accent);
+            }
+
+            return DesignTokens.Surface2;
         }
     }
 

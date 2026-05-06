@@ -14,6 +14,7 @@ internal sealed class AppCompositionRoot : IDisposable
     public IApplicationStateService ApplicationStateService { get; }
     public IMacroRecorderService MacroRecorderService { get; }
     public IMacroPlaybackService MacroPlaybackService { get; }
+    public IMacroOptimizationService MacroOptimizationService { get; }
     public IMacroStorageService MacroStorageService { get; }
     public IMacroLibraryService MacroLibraryService { get; }
     public IPlaybackSettingsStore PlaybackSettingsStore { get; }
@@ -30,6 +31,7 @@ internal sealed class AppCompositionRoot : IDisposable
         IApplicationStateService applicationStateService,
         IMacroRecorderService macroRecorderService,
         IMacroPlaybackService macroPlaybackService,
+        IMacroOptimizationService macroOptimizationService,
         IMacroStorageService macroStorageService,
         IMacroLibraryService macroLibraryService,
         IPlaybackSettingsStore playbackSettingsStore,
@@ -43,6 +45,7 @@ internal sealed class AppCompositionRoot : IDisposable
         ApplicationStateService = applicationStateService;
         MacroRecorderService = macroRecorderService;
         MacroPlaybackService = macroPlaybackService;
+        MacroOptimizationService = macroOptimizationService;
         MacroStorageService = macroStorageService;
         MacroLibraryService = macroLibraryService;
         PlaybackSettingsStore = playbackSettingsStore;
@@ -103,6 +106,7 @@ internal sealed class AppCompositionRoot : IDisposable
             inputPlaybackAdapter,
             applicationStateService,
             resolvedLogger);
+        IMacroOptimizationService macroOptimizationService = new MacroOptimizationService();
 
         List<IDisposable> disposables = [];
 
@@ -130,6 +134,7 @@ internal sealed class AppCompositionRoot : IDisposable
             applicationStateService,
             macroRecorderService,
             macroPlaybackService,
+            macroOptimizationService,
             macroStorageService,
             macroLibraryService,
             playbackSettingsStore,
@@ -147,6 +152,7 @@ internal sealed class AppCompositionRoot : IDisposable
             ApplicationStateService,
             MacroRecorderService,
             MacroPlaybackService,
+            MacroOptimizationService,
             MacroStorageService,
             MacroLibraryService,
             PlaybackSettingsStore,
