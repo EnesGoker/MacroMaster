@@ -3,8 +3,10 @@ using MacroMaster.Domain.Enums;
 using MacroMaster.Domain.Models;
 using MacroMaster.WinForms.Controls;
 using MacroMaster.WinForms.Platform;
+using MacroMaster.WinForms.Reporting;
 using MacroMaster.WinForms.Theme;
 using System.Globalization;
+using System.Text;
 
 namespace MacroMaster.WinForms.Forms;
 
@@ -607,6 +609,20 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(SaveXmlAsync, "XML kaydetme");
     }
 
+    private void saveHtmlReportButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(SaveHtmlReportAsync, "HTML rapor olusturma");
+    }
+
+    private void saveTextReportButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(SaveTextReportAsync, "TXT rapor olusturma");
+    }
+
     private void loadXmlButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
@@ -800,6 +816,51 @@ public partial class MainForm : Form
         _lastSessionPath = dialog.FileName;
         await RefreshMacroLibraryAsync();
         RefreshUiState();
+    }
+
+    private async Task SaveHtmlReportAsync()
+    {
+        await SaveReportAsync(
+            "HTML rapor (*.html)|*.html|Tum dosyalar (*.*)|*.*",
+            ".html",
+            "html",
+            MacroReportGenerator.GenerateHtml);
+    }
+
+    private async Task SaveTextReportAsync()
+    {
+        await SaveReportAsync(
+            "TXT rapor (*.txt)|*.txt|Tum dosyalar (*.*)|*.*",
+            ".txt",
+            "txt",
+            MacroReportGenerator.GenerateText);
+    }
+
+    private async Task SaveReportAsync(
+        string filter,
+        string extension,
+        string defaultExtension,
+        Func<MacroSession, string?, string> buildReport)
+    {
+        MacroSession session = GetRequiredSession();
+        EnsureSessionMutationAllowed();
+
+        using var dialog = new SaveFileDialog
+        {
+            Filter = filter,
+            FileName = BuildDefaultFileName(session.Name + "_Rapor", extension),
+            AddExtension = true,
+            DefaultExt = defaultExtension,
+            RestoreDirectory = true
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        string reportContent = buildReport(session, _lastSessionPath);
+        await File.WriteAllTextAsync(dialog.FileName, reportContent, Encoding.UTF8);
     }
 
     private async Task LoadXmlAsync()
@@ -1369,6 +1430,8 @@ public partial class MainForm : Form
         _toolbarControl.SaveLibraryClicked += saveLibraryButton_Click;
         _toolbarControl.SaveJsonClicked += saveJsonButton_Click;
         _toolbarControl.SaveXmlClicked += saveXmlButton_Click;
+        _toolbarControl.SaveHtmlReportClicked += saveHtmlReportButton_Click;
+        _toolbarControl.SaveTextReportClicked += saveTextReportButton_Click;
         _toolbarControl.LoadJsonClicked += loadJsonButton_Click;
         _toolbarControl.LoadXmlClicked += loadXmlButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;

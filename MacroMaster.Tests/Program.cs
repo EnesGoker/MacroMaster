@@ -20,6 +20,7 @@ using MacroMaster.WinForms;
 using MacroMaster.WinForms.Composition;
 using MacroMaster.WinForms.Controls;
 using MacroMaster.WinForms.Forms;
+using MacroMaster.WinForms.Reporting;
 using Xunit;
 using Assert = global::MacroMaster.Tests.Expect;
 
@@ -89,6 +90,12 @@ public sealed class MacroMasterTests
 
     [Fact(DisplayName = "EventListFilterEngine supports structured search expressions")]
     public Task EventListFilterEngine_SupportsStructuredSearchExpressions() => EventListFilterEngine_SupportsStructuredSearchExpressionsAsync();
+
+    [Fact(DisplayName = "MacroReportGenerator summarizes session analysis")]
+    public Task MacroReportGenerator_SummarizesSessionAnalysis() => MacroReportGenerator_SummarizesSessionAnalysisAsync();
+
+    [Fact(DisplayName = "MacroReportGenerator escapes HTML report values")]
+    public Task MacroReportGenerator_EscapesHtmlReportValues() => MacroReportGenerator_EscapesHtmlReportValuesAsync();
 
     [Fact(DisplayName = "HotkeySettingsDialog exposes all controls within the dialog bounds")]
     public Task HotkeySettingsDialog_UsesStableLayout() => HotkeySettingsDialog_UsesStableLayoutAsync();
@@ -847,7 +854,7 @@ public sealed class MacroMasterTests
 
         EventListViewItem[] keyboardItems = EventListFilterEngine.Apply(
             events,
-            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.KeyboardOnly));
+            new EventListFilterCriteria(null, EventListTypeFilterKind.Keyboard, EventListSmartFilterKind.All));
         EventListViewItem[] clickItems = EventListFilterEngine.Apply(
             events,
             new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.MouseClicks));
@@ -864,7 +871,7 @@ public sealed class MacroMasterTests
         Assert.Equal(
             [2],
             keyboardItems.Select(item => item.SourceIndex),
-            "Keyboard smart filter should preserve source indexes.");
+            "Keyboard type filter should preserve source indexes.");
         Assert.Equal(
             [1],
             clickItems.Select(item => item.SourceIndex),
@@ -1032,6 +1039,93 @@ public sealed class MacroMasterTests
                     new EventListFilterCriteria("action:move elapsed<20", EventListTypeFilterKind.All, EventListSmartFilterKind.All))
                 .Select(item => item.SourceIndex),
             "Structured action search should combine with elapsed-time comparisons.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task MacroReportGenerator_SummarizesSessionAnalysisAsync()
+    {
+        var session = new MacroSession
+        {
+            Name = "Report Session",
+            CreatedAtUtc = new DateTime(2026, 5, 6, 9, 30, 0, DateTimeKind.Utc)
+        };
+        session.Events.AddRange(
+            [
+                CreateMouseMoveEvent(10, 100, 200),
+                CreateMouseMoveEvent(20, 101, 201),
+                CreateMouseMoveEvent(30, 102, 202),
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftDown,
+                    DelayMs = 320,
+                    X = 102,
+                    Y = 202,
+                    Description = "Sol tus basildi"
+                },
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftUp,
+                    DelayMs = 5,
+                    X = 102,
+                    Y = 202,
+                    Description = "Sol tus birakildi"
+                },
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    DelayMs = 50,
+                    KeyCode = 13,
+                    ScanCode = 28,
+                    KeyName = "Enter",
+                    Description = "Enter tusu"
+                }
+            ]);
+
+        MacroReportStatistics statistics = MacroReportGenerator.Analyze(session, "/tmp/report-session.json");
+        string reportText = MacroReportGenerator.GenerateText(session, "/tmp/report-session.json");
+
+        Assert.Equal(6, statistics.TotalEventCount, "Report should count every macro event.");
+        Assert.Equal(435, statistics.TotalDurationMs, "Report should sum normalized delays.");
+        Assert.Equal(1, statistics.KeyboardEventCount, "Report should count keyboard events.");
+        Assert.Equal(5, statistics.MouseEventCount, "Report should count mouse events.");
+        Assert.Equal(3, statistics.MouseMoveCount, "Report should count mouse movement events.");
+        Assert.Equal(2, statistics.MouseClickCount, "Report should count mouse click edges.");
+        Assert.Equal(1, statistics.LongDelayCount, "Report should flag long delays.");
+        Assert.Equal(1, statistics.OptimizationCandidateCount, "Report should reuse optimization-candidate analysis.");
+        Assert.True(
+            reportText.Contains("Toplam olay: 6", StringComparison.Ordinal),
+            "Text report should include total event count.");
+        Assert.True(
+            reportText.Contains("Optimizasyon adayi: 1", StringComparison.Ordinal),
+            "Text report should include optimization candidate count.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task MacroReportGenerator_EscapesHtmlReportValuesAsync()
+    {
+        var session = new MacroSession
+        {
+            Name = "<Macro & Test>",
+            CreatedAtUtc = new DateTime(2026, 5, 6, 9, 30, 0, DateTimeKind.Utc)
+        };
+        session.Events.Add(CreateMouseMoveEvent(10, 100, 200));
+
+        string reportHtml = MacroReportGenerator.GenerateHtml(session, "/tmp/source<unsafe>.json");
+
+        Assert.True(
+            reportHtml.Contains("&lt;Macro &amp; Test&gt;", StringComparison.Ordinal),
+            "HTML report should encode the session name.");
+        Assert.False(
+            reportHtml.Contains("<Macro & Test>", StringComparison.Ordinal),
+            "HTML report should not emit raw user-provided names.");
+        Assert.True(
+            reportHtml.Contains("source&lt;unsafe&gt;.json", StringComparison.Ordinal),
+            "HTML report should encode file names.");
 
         return Task.CompletedTask;
     }

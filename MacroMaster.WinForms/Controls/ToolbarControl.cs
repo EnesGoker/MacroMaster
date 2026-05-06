@@ -28,6 +28,8 @@ public partial class ToolbarControl : UserControl
     private readonly ToolStripMenuItem _saveLibraryMenuItem = new("Kutuphaneye Kaydet");
     private readonly ToolStripMenuItem _saveJsonMenuItem = new("JSON Kaydet");
     private readonly ToolStripMenuItem _saveXmlMenuItem = new("XML Kaydet");
+    private readonly ToolStripMenuItem _saveHtmlReportMenuItem = new("HTML Rapor Olustur");
+    private readonly ToolStripMenuItem _saveTextReportMenuItem = new("TXT Rapor Olustur");
     private readonly ToolStripMenuItem _loadJsonMenuItem = new("JSON Yukle");
     private readonly ToolStripMenuItem _loadXmlMenuItem = new("XML Yukle");
     private string? _recordHotkey;
@@ -43,6 +45,8 @@ public partial class ToolbarControl : UserControl
     public event EventHandler? SaveLibraryClicked;
     public event EventHandler? SaveJsonClicked;
     public event EventHandler? SaveXmlClicked;
+    public event EventHandler? SaveHtmlReportClicked;
+    public event EventHandler? SaveTextReportClicked;
     public event EventHandler? LoadJsonClicked;
     public event EventHandler? LoadXmlClicked;
     public event EventHandler? HotkeysClicked;
@@ -88,6 +92,8 @@ public partial class ToolbarControl : UserControl
         _saveLibraryMenuItem.Enabled = state.CanSaveLibrary;
         _saveJsonMenuItem.Enabled = state.CanSaveJson;
         _saveXmlMenuItem.Enabled = state.CanSaveXml;
+        _saveHtmlReportMenuItem.Enabled = state.CanSaveLibrary || state.CanSaveJson || state.CanSaveXml;
+        _saveTextReportMenuItem.Enabled = state.CanSaveLibrary || state.CanSaveJson || state.CanSaveXml;
         _loadJsonMenuItem.Enabled = state.CanLoadJson;
         _loadXmlMenuItem.Enabled = state.CanLoadXml;
     }
@@ -117,6 +123,8 @@ public partial class ToolbarControl : UserControl
         _saveLibraryMenuItem.Click += (_, _) => SaveLibraryClicked?.Invoke(this, EventArgs.Empty);
         _saveJsonMenuItem.Click += (_, _) => SaveJsonClicked?.Invoke(this, EventArgs.Empty);
         _saveXmlMenuItem.Click += (_, _) => SaveXmlClicked?.Invoke(this, EventArgs.Empty);
+        _saveHtmlReportMenuItem.Click += (_, _) => SaveHtmlReportClicked?.Invoke(this, EventArgs.Empty);
+        _saveTextReportMenuItem.Click += (_, _) => SaveTextReportClicked?.Invoke(this, EventArgs.Empty);
         _loadJsonMenuItem.Click += (_, _) => LoadJsonClicked?.Invoke(this, EventArgs.Empty);
         _loadXmlMenuItem.Click += (_, _) => LoadXmlClicked?.Invoke(this, EventArgs.Empty);
     }
@@ -134,6 +142,9 @@ public partial class ToolbarControl : UserControl
         _saveMenu.Items.Add(new ToolStripSeparator());
         _saveMenu.Items.Add(_saveJsonMenuItem);
         _saveMenu.Items.Add(_saveXmlMenuItem);
+        _saveMenu.Items.Add(new ToolStripSeparator());
+        _saveMenu.Items.Add(_saveHtmlReportMenuItem);
+        _saveMenu.Items.Add(_saveTextReportMenuItem);
         _loadMenu.Items.Add(_loadJsonMenuItem);
         _loadMenu.Items.Add(_loadXmlMenuItem);
     }

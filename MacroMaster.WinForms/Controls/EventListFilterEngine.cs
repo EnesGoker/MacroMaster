@@ -104,7 +104,6 @@ internal static class EventListFilterEngine
         return smartFilter switch
         {
             EventListSmartFilterKind.All => true,
-            EventListSmartFilterKind.KeyboardOnly => macroEvent.EventType == MacroEventType.Keyboard,
             EventListSmartFilterKind.MouseMoves => IsMouseMove(macroEvent),
             EventListSmartFilterKind.MouseClicks => IsMouseClick(macroEvent),
             EventListSmartFilterKind.LongDelays => macroEvent.DelayMs >= LongDelayThresholdMs,

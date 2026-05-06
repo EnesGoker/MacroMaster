@@ -19,7 +19,6 @@ internal sealed class EventListControl : UserControl
     private static readonly SmartFilterOption[] SmartFilterOptions =
     [
         new(EventListSmartFilterKind.All, "Akıllı: Tümü"),
-        new(EventListSmartFilterKind.KeyboardOnly, "Sadece klavye"),
         new(EventListSmartFilterKind.MouseMoves, "Mouse hareketleri"),
         new(EventListSmartFilterKind.MouseClicks, "Tıklamalar"),
         new(EventListSmartFilterKind.LongDelays, "Uzun beklemeler"),
