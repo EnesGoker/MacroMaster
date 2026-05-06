@@ -20,6 +20,7 @@ partial class PlaybackSettingsControl
     private ModernCheckBox loopIndefinitelyCheckBox = null!;
     private ModernCheckBox stopOnErrorCheckBox = null!;
     private ModernCheckBox relativeCoordinatesCheckBox = null!;
+    private ModernCheckBox simulationModeCheckBox = null!;
 
     protected override void Dispose(bool disposing)
     {
@@ -46,6 +47,7 @@ partial class PlaybackSettingsControl
         loopIndefinitelyCheckBox = new ModernCheckBox();
         stopOnErrorCheckBox = new ModernCheckBox();
         relativeCoordinatesCheckBox = new ModernCheckBox();
+        simulationModeCheckBox = new ModernCheckBox();
 
         rootLayoutPanel.SuspendLayout();
         settingsLayoutPanel.SuspendLayout();
@@ -106,14 +108,16 @@ partial class PlaybackSettingsControl
         optionsLayoutPanel.Controls.Add(loopIndefinitelyCheckBox, 0, 1);
         optionsLayoutPanel.Controls.Add(stopOnErrorCheckBox, 0, 2);
         optionsLayoutPanel.Controls.Add(relativeCoordinatesCheckBox, 0, 3);
+        optionsLayoutPanel.Controls.Add(simulationModeCheckBox, 0, 4);
         optionsLayoutPanel.Dock = DockStyle.Fill;
         optionsLayoutPanel.Margin = Padding.Empty;
         optionsLayoutPanel.Name = "optionsLayoutPanel";
-        optionsLayoutPanel.RowCount = 4;
-        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+        optionsLayoutPanel.RowCount = 5;
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
+        optionsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
 
         // initialDelayValueLayoutPanel
         initialDelayValueLayoutPanel.ColumnCount = 2;
@@ -194,6 +198,11 @@ partial class PlaybackSettingsControl
         relativeCoordinatesCheckBox.Text = "Göreceli koordinat";
         relativeCoordinatesCheckBox.Name = "relativeCoordinatesCheckBox";
         relativeCoordinatesCheckBox.TabIndex = 10;
+
+        simulationModeCheckBox.Dock = DockStyle.Fill;
+        simulationModeCheckBox.Text = "Simülasyon modu";
+        simulationModeCheckBox.Name = "simulationModeCheckBox";
+        simulationModeCheckBox.TabIndex = 11;
 
         AutoScaleMode = AutoScaleMode.None;
         Controls.Add(rootLayoutPanel);

@@ -37,6 +37,7 @@ public partial class PlaybackSettingsControl : UserControl
             InitialDelayMs = Decimal.ToInt32(initialDelayNumericUpDown.Value),
             LoopIndefinitely = loopIndefinitelyCheckBox.Checked,
             UseRelativeCoordinates = relativeCoordinatesCheckBox.Checked,
+            SimulationMode = simulationModeCheckBox.Checked,
             StopOnError = stopOnErrorCheckBox.Checked,
             PreserveOriginalTiming = preserveTimingCheckBox.Checked
         };
@@ -63,6 +64,7 @@ public partial class PlaybackSettingsControl : UserControl
             stopOnErrorCheckBox.Checked = settings.StopOnError;
             loopIndefinitelyCheckBox.Checked = settings.LoopIndefinitely;
             relativeCoordinatesCheckBox.Checked = settings.UseRelativeCoordinates;
+            simulationModeCheckBox.Checked = settings.SimulationMode;
             RefreshDependentControlState();
         }
         finally
@@ -77,6 +79,7 @@ public partial class PlaybackSettingsControl : UserControl
         stopOnErrorCheckBox.Enabled = enabled;
         loopIndefinitelyCheckBox.Enabled = enabled;
         relativeCoordinatesCheckBox.Enabled = enabled;
+        simulationModeCheckBox.Enabled = enabled;
         initialDelayNumericUpDown.Enabled = enabled;
         speedComboBox.Enabled = enabled && !preserveTimingCheckBox.Checked;
         repeatCountNumericUpDown.Enabled = enabled && !loopIndefinitelyCheckBox.Checked;
@@ -176,16 +179,22 @@ public partial class PlaybackSettingsControl : UserControl
 
         int optionLeftMargin = DesignTokens.Scale(22);
         int optionRightMargin = DesignTokens.Scale(30);
+        int optionVerticalMargin = DesignTokens.Scale(2);
         foreach (ModernCheckBox optionCheckBox in new[]
         {
             preserveTimingCheckBox,
             loopIndefinitelyCheckBox,
             stopOnErrorCheckBox,
-            relativeCoordinatesCheckBox
+            relativeCoordinatesCheckBox,
+            simulationModeCheckBox
         })
         {
-            optionCheckBox.Margin = new Padding(optionLeftMargin, inputTopMargin, optionRightMargin, inputTopMargin);
-            optionCheckBox.MinimumSize = new Size(0, DesignTokens.Scale(30));
+            optionCheckBox.Margin = new Padding(
+                optionLeftMargin,
+                optionVerticalMargin,
+                optionRightMargin,
+                optionVerticalMargin);
+            optionCheckBox.MinimumSize = new Size(0, DesignTokens.Scale(26));
         }
     }
 
@@ -204,6 +213,7 @@ public partial class PlaybackSettingsControl : UserControl
         stopOnErrorCheckBox.CheckedChanged += OnSettingChanged;
         loopIndefinitelyCheckBox.CheckedChanged += OnSettingChanged;
         relativeCoordinatesCheckBox.CheckedChanged += OnSettingChanged;
+        simulationModeCheckBox.CheckedChanged += OnSettingChanged;
     }
 
     private void OnSettingChanged(object? sender, EventArgs e)

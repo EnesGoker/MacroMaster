@@ -59,7 +59,9 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
         CancellationTokenSource? playbackCancellationTokenSource = null;
         bool playbackStarted = false;
         List<Exception> playbackErrors = [];
-        CursorPosition? recordedMouseAnchor = effectiveSettings.UseRelativeCoordinates
+        bool shouldRebaseMouseCoordinates = effectiveSettings.UseRelativeCoordinates
+            && !effectiveSettings.SimulationMode;
+        CursorPosition? recordedMouseAnchor = shouldRebaseMouseCoordinates
             ? GetRecordedMouseAnchor(session)
             : null;
 
@@ -131,9 +133,12 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
 
                     try
                     {
-                        await _inputPlaybackAdapter.PlayEventAsync(
-                            playbackEvent,
-                            playbackCancellationToken);
+                        if (!effectiveSettings.SimulationMode)
+                        {
+                            await _inputPlaybackAdapter.PlayEventAsync(
+                                playbackEvent,
+                                playbackCancellationToken);
+                        }
 
                         SafeInvokeEventPlayed(playbackEvent);
                     }
@@ -351,7 +356,9 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
 
         PlaybackSettings effectiveSettings = NormalizeSettingsForExecution(settings);
         MacroEvent sourceEvent = session.Events[eventIndex];
-        CursorPosition? recordedMouseAnchor = effectiveSettings.UseRelativeCoordinates
+        bool shouldRebaseMouseCoordinates = effectiveSettings.UseRelativeCoordinates
+            && !effectiveSettings.SimulationMode;
+        CursorPosition? recordedMouseAnchor = shouldRebaseMouseCoordinates
             ? GetRecordedMouseAnchor(session)
             : null;
         CursorPosition? playbackMouseAnchor = recordedMouseAnchor.HasValue
@@ -364,11 +371,17 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
 
         try
         {
-            await _inputPlaybackAdapter.PlayEventAsync(playbackEvent, cancellationToken);
+            if (!effectiveSettings.SimulationMode)
+            {
+                await _inputPlaybackAdapter.PlayEventAsync(playbackEvent, cancellationToken);
+            }
+
             _logger.Log(
                 AppLogLevel.Information,
                 nameof(MacroPlaybackService),
-                $"Tek olay oynatildi. Oturum: {session.Name}, olay: {eventIndex + 1}.");
+                effectiveSettings.SimulationMode
+                    ? $"Tek olay simule edildi. Oturum: {session.Name}, olay: {eventIndex + 1}."
+                    : $"Tek olay oynatildi. Oturum: {session.Name}, olay: {eventIndex + 1}.");
             return playbackEvent;
         }
         catch (OperationCanceledException)
@@ -451,6 +464,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
             InitialDelayMs = Math.Max(settings.InitialDelayMs, 0),
             LoopIndefinitely = settings.LoopIndefinitely,
             UseRelativeCoordinates = settings.UseRelativeCoordinates,
+            SimulationMode = settings.SimulationMode,
             StopOnError = settings.StopOnError,
             PreserveOriginalTiming = settings.PreserveOriginalTiming
         };

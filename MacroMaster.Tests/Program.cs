@@ -166,6 +166,9 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroPlaybackService preserves absolute mouse coordinates when relative playback is disabled")]
     public Task MacroPlaybackService_UseRelativeCoordinatesFalse_PreservesAbsoluteCoordinates() => MacroPlaybackService_UseRelativeCoordinatesFalse_PreservesAbsoluteCoordinatesAsync();
 
+    [Fact(DisplayName = "MacroPlaybackService simulation mode advances without sending input")]
+    public Task MacroPlaybackService_SimulationMode_AdvancesWithoutSendingInput() => MacroPlaybackService_SimulationMode_AdvancesWithoutSendingInputAsync();
+
     [Fact(DisplayName = "MacroPlaybackService honors repeat count")]
     public Task MacroPlaybackService_RepeatCount_ReplaysEntireSession() => MacroPlaybackService_RepeatCount_ReplaysEntireSessionAsync();
 
@@ -459,6 +462,7 @@ public sealed class MacroMasterTests
                 InitialDelayMs = 500,
                 LoopIndefinitely = true,
                 UseRelativeCoordinates = true,
+                SimulationMode = true,
                 StopOnError = false,
                 PreserveOriginalTiming = false
             };
@@ -471,6 +475,7 @@ public sealed class MacroMasterTests
             Assert.Equal(expectedSettings.InitialDelayMs, loadedSettings.InitialDelayMs, "Playback initial delay should round-trip.");
             Assert.Equal(expectedSettings.LoopIndefinitely, loadedSettings.LoopIndefinitely, "Loop-indefinitely should round-trip.");
             Assert.Equal(expectedSettings.UseRelativeCoordinates, loadedSettings.UseRelativeCoordinates, "Relative coordinate mode should round-trip.");
+            Assert.Equal(expectedSettings.SimulationMode, loadedSettings.SimulationMode, "Simulation mode should round-trip.");
             Assert.Equal(expectedSettings.StopOnError, loadedSettings.StopOnError, "Stop-on-error should round-trip.");
             Assert.Equal(expectedSettings.PreserveOriginalTiming, loadedSettings.PreserveOriginalTiming, "Preserve-original-timing should round-trip.");
         }
@@ -2000,6 +2005,41 @@ public sealed class MacroMasterTests
         Assert.Equal(1, inputPlaybackAdapter.PlayedEvents.Count, "The mouse event should be played once.");
         Assert.Equal(42, inputPlaybackAdapter.PlayedEvents[0].X, "Absolute playback should preserve the recorded X coordinate.");
         Assert.Equal(64, inputPlaybackAdapter.PlayedEvents[0].Y, "Absolute playback should preserve the recorded Y coordinate.");
+    }
+
+    private static async Task MacroPlaybackService_SimulationMode_AdvancesWithoutSendingInputAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter
+        {
+            CurrentCursorPosition = new CursorPosition(900, 900)
+        };
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            new ApplicationStateService());
+        List<Guid> simulatedEventIds = [];
+
+        playbackService.EventPlayed += macroEvent => simulatedEventIds.Add(macroEvent.Id);
+
+        MacroSession session = CreatePlaybackSession();
+
+        await playbackService.PlayAsync(
+            session,
+            new PlaybackSettings
+            {
+                SimulationMode = true,
+                UseRelativeCoordinates = true,
+                PreserveOriginalTiming = false,
+                SpeedMultiplier = 4.0,
+                StopOnError = true
+            });
+
+        Assert.Equal(0, inputPlaybackAdapter.AttemptedEventIds.Count, "Simulation mode must not call the real input playback adapter.");
+        Assert.Equal(0, inputPlaybackAdapter.CursorPositionReadCount, "Simulation mode should not query cursor anchors for relative playback.");
+        Assert.Equal(
+            session.Events.Select(macroEvent => macroEvent.Id).ToArray(),
+            simulatedEventIds,
+            "Simulation mode should still publish progress for every event.");
     }
 
     private static async Task MacroPlaybackService_UseRelativeCoordinates_ReanchorsEachIterationAsync()
