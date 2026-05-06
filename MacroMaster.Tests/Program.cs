@@ -97,6 +97,9 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroOptimizationService preserves protected events")]
     public Task MacroOptimizationService_PreservesProtectedEvents() => MacroOptimizationService_PreservesProtectedEventsAsync();
 
+    [Fact(DisplayName = "MacroOptimizationService keeps balanced mouse path samples")]
+    public Task MacroOptimizationService_KeepsBalancedMousePathSamples() => MacroOptimizationService_KeepsBalancedMousePathSamplesAsync();
+
     [Fact(DisplayName = "MacroReportGenerator summarizes session analysis")]
     public Task MacroReportGenerator_SummarizesSessionAnalysis() => MacroReportGenerator_SummarizesSessionAnalysisAsync();
 
@@ -1165,6 +1168,48 @@ public sealed class MacroMasterTests
                 && macroEvent.MouseActionType == MouseActionType.Move
                 && macroEvent.DelayMs >= MacroOptimizationService.LongDelayThresholdMs),
             "Long-delay mouse movements should be preserved.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task MacroOptimizationService_KeepsBalancedMousePathSamplesAsync()
+    {
+        var session = new MacroSession
+        {
+            Name = "Balanced Path"
+        };
+
+        for (int index = 0; index < 10; index++)
+        {
+            session.Events.Add(CreateMouseMoveEvent(50, index * 10, 100));
+        }
+
+        session.Events.Add(
+            new MacroEvent
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.LeftDown,
+                DelayMs = 10,
+                X = 90,
+                Y = 100,
+                Description = "Sol tus basildi"
+            });
+
+        var service = new MacroOptimizationService();
+        MacroOptimizationPreview preview = service.Preview(session);
+
+        MacroEvent[] optimizedMoves = preview.OptimizedEvents
+            .Where(macroEvent => macroEvent.EventType == MacroEventType.Mouse
+                && macroEvent.MouseActionType == MouseActionType.Move)
+            .ToArray();
+
+        Assert.Equal(5, preview.OptimizedEventCount, "Balanced optimization should keep sampled movement points plus the click.");
+        Assert.Equal(4, optimizedMoves.Length, "Balanced optimization should keep first, sampled, and final movement points.");
+        Assert.Equal(
+            [0, 40, 80, 90],
+            optimizedMoves.Select(macroEvent => macroEvent.X!.Value),
+            "Mouse path samples should be kept at stable elapsed intervals.");
+        Assert.Equal(session.TotalDurationMs, preview.OptimizedDurationMs, "Balanced sampling should preserve total timing.");
 
         return Task.CompletedTask;
     }

@@ -7,12 +7,14 @@ namespace MacroMaster.Application.Services;
 public sealed class MacroOptimizationService : IMacroOptimizationService
 {
     public const int LongDelayThresholdMs = 250;
-    public const int RedundantMouseMoveMaxDelayMs = 100;
+    public const int BalancedMouseMoveSampleIntervalMs = 200;
+    public const int BalancedMouseMoveSampleDistancePx = 280;
 
     public MacroOptimizationPreview Preview(MacroSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
 
+        bool[] keepMap = BuildKeepMap(session.Events);
         var optimizedEvents = new List<MacroEvent>(session.Events.Count);
         long absorbedDelayMs = 0;
         int removedEventCount = 0;
@@ -21,7 +23,7 @@ public sealed class MacroOptimizationService : IMacroOptimizationService
         {
             MacroEvent macroEvent = session.Events[index];
 
-            if (ShouldKeepEvent(session.Events, index))
+            if (keepMap[index])
             {
                 MacroEvent keptEvent = CloneMacroEvent(macroEvent);
                 keptEvent.DelayMs = AddDelaySafely(keptEvent.DelayMs, absorbedDelayMs);
@@ -53,44 +55,92 @@ public sealed class MacroOptimizationService : IMacroOptimizationService
             optimizedEvents);
     }
 
-    private static bool ShouldKeepEvent(
-        IReadOnlyList<MacroEvent> events,
-        int index)
+    private static bool[] BuildKeepMap(IReadOnlyList<MacroEvent> events)
     {
-        MacroEvent macroEvent = events[index];
+        var keepMap = new bool[events.Count];
+        int index = 0;
 
-        if (!IsMouseMove(macroEvent))
+        while (index < events.Count)
         {
-            return true;
+            if (!IsOptimizableMouseMove(events[index]))
+            {
+                keepMap[index] = true;
+                index++;
+                continue;
+            }
+
+            int segmentStart = index;
+            while (index < events.Count && IsOptimizableMouseMove(events[index]))
+            {
+                index++;
+            }
+
+            MarkBalancedMouseMoveSegment(events, keepMap, segmentStart, index - 1);
         }
 
-        if (!macroEvent.X.HasValue || !macroEvent.Y.HasValue)
-        {
-            return true;
-        }
-
-        if (macroEvent.DelayMs >= LongDelayThresholdMs)
-        {
-            return true;
-        }
-
-        if (macroEvent.DelayMs > RedundantMouseMoveMaxDelayMs)
-        {
-            return true;
-        }
-
-        bool previousIsMove = index > 0 && IsMouseMove(events[index - 1]);
-        bool nextIsMove = index < events.Count - 1 && IsMouseMove(events[index + 1]);
-
-        // Keep movement segment boundaries: the first point and the last point before
-        // a click, wheel, keyboard event, or any other non-move action.
-        return !previousIsMove || !nextIsMove;
+        return keepMap;
     }
 
-    private static bool IsMouseMove(MacroEvent macroEvent)
+    private static void MarkBalancedMouseMoveSegment(
+        IReadOnlyList<MacroEvent> events,
+        bool[] keepMap,
+        int startIndex,
+        int endIndex)
+    {
+        keepMap[startIndex] = true;
+
+        if (startIndex == endIndex)
+        {
+            return;
+        }
+
+        int lastKeptIndex = startIndex;
+        int accumulatedDelayMs = 0;
+
+        for (int index = startIndex + 1; index <= endIndex; index++)
+        {
+            MacroEvent candidate = events[index];
+            accumulatedDelayMs = AddDelaySafely(accumulatedDelayMs, Math.Max(0, candidate.DelayMs));
+
+            bool isLastMoveBeforeAction = index == endIndex;
+            bool shouldKeepSample = accumulatedDelayMs >= BalancedMouseMoveSampleIntervalMs
+                || HasMovedFarEnough(events[lastKeptIndex], candidate);
+
+            if (isLastMoveBeforeAction
+                || candidate.DelayMs >= LongDelayThresholdMs
+                || shouldKeepSample)
+            {
+                keepMap[index] = true;
+                lastKeptIndex = index;
+                accumulatedDelayMs = 0;
+            }
+        }
+    }
+
+    private static bool HasMovedFarEnough(MacroEvent previousKeptMove, MacroEvent candidate)
+    {
+        if (!previousKeptMove.X.HasValue
+            || !previousKeptMove.Y.HasValue
+            || !candidate.X.HasValue
+            || !candidate.Y.HasValue)
+        {
+            return false;
+        }
+
+        long deltaX = candidate.X.Value - previousKeptMove.X.Value;
+        long deltaY = candidate.Y.Value - previousKeptMove.Y.Value;
+        long squaredDistance = deltaX * deltaX + deltaY * deltaY;
+        long squaredThreshold = (long)BalancedMouseMoveSampleDistancePx * BalancedMouseMoveSampleDistancePx;
+
+        return squaredDistance >= squaredThreshold;
+    }
+
+    private static bool IsOptimizableMouseMove(MacroEvent macroEvent)
     {
         return macroEvent.EventType == MacroEventType.Mouse
-            && macroEvent.MouseActionType == MouseActionType.Move;
+            && macroEvent.MouseActionType == MouseActionType.Move
+            && macroEvent.X.HasValue
+            && macroEvent.Y.HasValue;
     }
 
     private static int CalculateTotalDurationMs(IEnumerable<MacroEvent> events)
