@@ -12,15 +12,12 @@ internal sealed class EventListControl : UserControl
     [
         new(EventListTypeFilterKind.All, "Tür: Tümü"),
         new(EventListTypeFilterKind.Keyboard, "Tür: Klavye"),
-        new(EventListTypeFilterKind.Mouse, "Tür: Fare"),
-        new(EventListTypeFilterKind.System, "Tür: Sistem")
+        new(EventListTypeFilterKind.Mouse, "Tür: Fare")
     ];
 
     private static readonly SmartFilterOption[] SmartFilterOptions =
     [
-        new(EventListSmartFilterKind.All, "Akıllı: Tümü"),
-        new(EventListSmartFilterKind.MouseMoves, "Mouse hareketleri"),
-        new(EventListSmartFilterKind.MouseClicks, "Tıklamalar"),
+        new(EventListSmartFilterKind.All, "Analiz: Tümü"),
         new(EventListSmartFilterKind.LongDelays, "Uzun beklemeler"),
         new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adayları"),
         new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatalı/eksik")
@@ -592,22 +589,44 @@ internal sealed class EventListControl : UserControl
 
         if (!string.IsNullOrWhiteSpace(_filterSearchTextBox.Text))
         {
-            segments.Add("arama");
+            segments.Add("Arama");
         }
 
         if (_selectedTypeFilterKind != EventListTypeFilterKind.All)
         {
-            segments.Add(TypeFilterOptions.First(option => option.Kind == _selectedTypeFilterKind).Label.Replace("Tür: ", string.Empty, StringComparison.Ordinal));
+            segments.Add("Tür: " + GetTypeFilterStatusLabel(_selectedTypeFilterKind));
         }
 
         if (_selectedSmartFilterKind != EventListSmartFilterKind.All)
         {
-            segments.Add(SmartFilterOptions.First(option => option.Kind == _selectedSmartFilterKind).Label.Replace("Akıllı: ", string.Empty, StringComparison.Ordinal));
+            segments.Add("Analiz: " + GetSmartFilterStatusLabel(_selectedSmartFilterKind));
         }
 
         return segments.Count == 0
             ? baseText
-            : baseText + " • " + string.Join(" • ", segments);
+            : baseText + " • Filtre: " + string.Join(", ", segments);
+    }
+
+    private static string GetTypeFilterStatusLabel(EventListTypeFilterKind kind)
+    {
+        return kind switch
+        {
+            EventListTypeFilterKind.Keyboard => "Klavye",
+            EventListTypeFilterKind.Mouse => "Fare",
+            EventListTypeFilterKind.System => "Sistem",
+            _ => "Tümü"
+        };
+    }
+
+    private static string GetSmartFilterStatusLabel(EventListSmartFilterKind kind)
+    {
+        return kind switch
+        {
+            EventListSmartFilterKind.LongDelays => "Uzun beklemeler",
+            EventListSmartFilterKind.OptimizationCandidates => "Optimize adayları",
+            EventListSmartFilterKind.InvalidOrIncomplete => "Hatalı/eksik",
+            _ => "Tümü"
+        };
     }
 
     private void EventGridView_MouseWheel(object? sender, MouseEventArgs e)

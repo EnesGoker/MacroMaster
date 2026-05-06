@@ -882,9 +882,9 @@ public sealed class MacroMasterTests
         EventListViewItem[] keyboardItems = EventListFilterEngine.Apply(
             events,
             new EventListFilterCriteria(null, EventListTypeFilterKind.Keyboard, EventListSmartFilterKind.All));
-        EventListViewItem[] clickItems = EventListFilterEngine.Apply(
+        EventListViewItem[] mouseItems = EventListFilterEngine.Apply(
             events,
-            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.MouseClicks));
+            new EventListFilterCriteria(null, EventListTypeFilterKind.Mouse, EventListSmartFilterKind.All));
         EventListViewItem[] longDelayItems = EventListFilterEngine.Apply(
             events,
             new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.LongDelays));
@@ -900,9 +900,9 @@ public sealed class MacroMasterTests
             keyboardItems.Select(item => item.SourceIndex),
             "Keyboard type filter should preserve source indexes.");
         Assert.Equal(
-            [1],
-            clickItems.Select(item => item.SourceIndex),
-            "Click smart filter should include mouse click events.");
+            [0, 1, 3],
+            mouseItems.Select(item => item.SourceIndex),
+            "Mouse type filter should include all mouse events without relying on analysis filters.");
         Assert.Equal(
             [3],
             longDelayItems.Select(item => item.SourceIndex),

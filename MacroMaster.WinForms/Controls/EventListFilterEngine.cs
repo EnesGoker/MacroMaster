@@ -104,8 +104,6 @@ internal static class EventListFilterEngine
         return smartFilter switch
         {
             EventListSmartFilterKind.All => true,
-            EventListSmartFilterKind.MouseMoves => IsMouseMove(macroEvent),
-            EventListSmartFilterKind.MouseClicks => IsMouseClick(macroEvent),
             EventListSmartFilterKind.LongDelays => macroEvent.DelayMs >= LongDelayThresholdMs,
             EventListSmartFilterKind.OptimizationCandidates => IsOptimizationCandidate(events, sourceIndex),
             EventListSmartFilterKind.InvalidOrIncomplete => IsInvalidOrIncomplete(macroEvent),
@@ -426,18 +424,6 @@ internal static class EventListFilterEngine
     {
         return macroEvent.EventType == MacroEventType.Mouse
             && macroEvent.MouseActionType == MouseActionType.Move;
-    }
-
-    private static bool IsMouseClick(MacroEvent macroEvent)
-    {
-        return macroEvent.EventType == MacroEventType.Mouse
-            && macroEvent.MouseActionType is MouseActionType.LeftDown
-                or MouseActionType.LeftUp
-                or MouseActionType.RightDown
-                or MouseActionType.RightUp
-                or MouseActionType.MiddleDown
-                or MouseActionType.MiddleUp
-                or MouseActionType.DoubleClick;
     }
 
     private static bool RequiresCoordinates(MouseActionType mouseActionType)
