@@ -9,12 +9,12 @@ internal sealed class MacroLibraryControl : UserControl
 {
     private static readonly MacroLibraryFilterOption[] FilterOptions =
     [
-        new(MacroLibraryFilterKind.All, "Tum makrolar"),
+        new(MacroLibraryFilterKind.All, "Tüm makrolar"),
         new(MacroLibraryFilterKind.Favorites, "Favoriler"),
-        new(MacroLibraryFilterKind.Recent, "Son kullanilanlar"),
-        new(MacroLibraryFilterKind.Json, "JSON dosyalari"),
-        new(MacroLibraryFilterKind.Xml, "XML dosyalari"),
-        new(MacroLibraryFilterKind.Short, "Kisa makrolar"),
+        new(MacroLibraryFilterKind.Recent, "Son kullanılanlar"),
+        new(MacroLibraryFilterKind.Json, "JSON dosyaları"),
+        new(MacroLibraryFilterKind.Xml, "XML dosyaları"),
+        new(MacroLibraryFilterKind.Short, "Kısa makrolar"),
         new(MacroLibraryFilterKind.Long, "Uzun makrolar")
     ];
 
@@ -26,6 +26,7 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _totalEventValueLabel;
     private readonly TextBox _searchTextBox;
     private readonly FilterIconButton _filterButton;
+    private ToolStripDropDown? _filterDropDown;
     private IReadOnlyList<MacroLibraryViewItem> _items = [];
     private MacroLibraryFilterKind _selectedFilterKind = MacroLibraryFilterKind.All;
     private string? _selectedFilePath;
@@ -80,28 +81,36 @@ internal sealed class MacroLibraryControl : UserControl
             MacroLibraryFilterEngine.Apply(_items, searchTerm, _selectedFilterKind);
 
         _macroListPanel.SuspendLayout();
-        _macroListPanel.Controls.Clear();
 
-        if (filteredItems.Length == 0)
+        try
         {
-            _emptyStateLabel.Text = _items.Count == 0
-                ? "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin."
-                : "Filtreyle eslesen makro bulunamadi.";
-            _macroListPanel.Controls.Add(_emptyStateLabel);
-        }
-        else
-        {
-            foreach (MacroLibraryViewItem item in filteredItems)
+            ClearMacroListPanel();
+
+            if (filteredItems.Length == 0)
             {
-                bool isSelected = IsSamePath(item.Entry.FilePath, _selectedFilePath);
-                var row = new MacroLibraryRow(item, isSelected);
-                row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                row.FavoriteToggled += (_, _) => FavoriteToggled?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                WireMouseWheelForwarding(row);
-                _macroListPanel.Controls.Add(row);
+                _emptyStateLabel.Text = _items.Count == 0
+                    ? "Kayıtlı makro yok. Kaydet butonu ile kütüphaneye ekleyebilirsin."
+                    : "Filtreyle eşleşen makro bulunamadı.";
+                _macroListPanel.Controls.Add(_emptyStateLabel);
             }
+            else
+            {
+                foreach (MacroLibraryViewItem item in filteredItems)
+                {
+                    bool isSelected = IsSamePath(item.Entry.FilePath, _selectedFilePath);
+                    var row = new MacroLibraryRow(item, isSelected);
+                    row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.FavoriteToggled += (_, _) => FavoriteToggled?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    WireMouseWheelForwarding(row);
+                    _macroListPanel.Controls.Add(row);
+                }
+            }
+        }
+        finally
+        {
+            _macroListPanel.ResumeLayout(performLayout: false);
         }
 
         int totalEventCount = filteredItems.Sum(item => Math.Max(0, item.Entry.EventCount));
@@ -109,7 +118,21 @@ internal sealed class MacroLibraryControl : UserControl
         _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
         ResizeLibraryRows();
         UpdateListScrollLayout();
-        _macroListPanel.ResumeLayout();
+        _macroListPanel.PerformLayout();
+    }
+
+    private void ClearMacroListPanel()
+    {
+        while (_macroListPanel.Controls.Count > 0)
+        {
+            Control control = _macroListPanel.Controls[0];
+            _macroListPanel.Controls.RemoveAt(0);
+
+            if (!ReferenceEquals(control, _emptyStateLabel))
+            {
+                control.Dispose();
+            }
+        }
     }
 
     private void BuildLayout()
@@ -145,7 +168,7 @@ internal sealed class MacroLibraryControl : UserControl
         var titleLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Makro Kutuphanesi",
+            Text = "Makro Kütüphanesi",
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Surface,
@@ -380,7 +403,7 @@ internal sealed class MacroLibraryControl : UserControl
             Font = DesignTokens.FontUiNormal,
             ForeColor = DesignTokens.TextMuted,
             BackColor = Color.Transparent,
-            Text = "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin.",
+            Text = "Kayıtlı makro yok. Kaydet butonu ile kütüphaneye ekleyebilirsin.",
             TextAlign = ContentAlignment.MiddleCenter,
             AutoEllipsis = true
         };
@@ -405,33 +428,149 @@ internal sealed class MacroLibraryControl : UserControl
 
     private void ShowFilterMenu()
     {
-        var menu = new ContextMenuStrip
+        CloseFilterDropDown();
+
+        Size dropDownSize = CalculateFilterDropDownSize();
+        int rowHeight = DesignTokens.Scale(44);
+        var filterMenu = new FilterDropDownPanel(
+            FilterOptions,
+            _selectedFilterKind,
+            dropDownSize.Width,
+            rowHeight);
+
+        var host = new ToolStripControlHost(filterMenu)
         {
-            ShowCheckMargin = true,
-            ShowImageMargin = false,
-            MinimumSize = new Size(DesignTokens.Scale(184), 0)
+            AutoSize = false,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+            Size = dropDownSize
         };
-        AppToolStripRenderer.ApplyTo(menu, AppToolStripMenuDensity.Comfortable);
+
+        var dropDown = new ToolStripDropDown
+        {
+            AutoClose = true,
+            AutoSize = false,
+            BackColor = DesignTokens.Surface,
+            CanOverflow = false,
+            DropShadowEnabled = false,
+            GripStyle = ToolStripGripStyle.Hidden,
+            Padding = Padding.Empty
+        };
+        dropDown.Items.Add(host);
+        dropDown.Size = dropDownSize;
+
+        filterMenu.FilterSelected += (_, filterKind) =>
+        {
+            SetFilter(filterKind);
+            dropDown.Close(ToolStripDropDownCloseReason.ItemClicked);
+        };
+        filterMenu.CloseRequested += (_, _) => dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
+        dropDown.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_filterDropDown, dropDown))
+            {
+                _filterDropDown = null;
+            }
+
+            DisposeFilterDropDownAfterCurrentMessage(dropDown);
+        };
+
+        _filterDropDown = dropDown;
+        dropDown.Show(this, ResolveFilterDropDownLocation(dropDownSize));
+        filterMenu.Focus();
+    }
+
+    private void CloseFilterDropDown()
+    {
+        if (_filterDropDown is null)
+        {
+            return;
+        }
+
+        ToolStripDropDown dropDown = _filterDropDown;
+        _filterDropDown = null;
+
+        if (!dropDown.IsDisposed)
+        {
+            dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
+        }
+    }
+
+    private Size CalculateFilterDropDownSize()
+    {
+        int rowHeight = DesignTokens.Scale(44);
+        int verticalPadding = DesignTokens.Scale(2);
+        int horizontalChrome = DesignTokens.Scale(64);
+        int preferredTextWidth = 0;
 
         foreach (MacroLibraryFilterOption option in FilterOptions)
         {
-            var menuItem = new ToolStripMenuItem(option.Label)
-            {
-                Checked = option.Kind == _selectedFilterKind,
-                Tag = option.Kind
-            };
-            menuItem.Click += (_, _) =>
-            {
-                if (menuItem.Tag is MacroLibraryFilterKind filterKind)
-                {
-                    SetFilter(filterKind);
-                }
-            };
-            menu.Items.Add(menuItem);
+            preferredTextWidth = Math.Max(
+                preferredTextWidth,
+                TextRenderer.MeasureText(
+                    option.Label,
+                    DesignTokens.FontUiNormal,
+                    Size.Empty,
+                    TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine).Width);
         }
 
-        menu.Closed += (_, _) => DisposeMenuAfterCurrentMessage(menu);
-        menu.Show(_filterButton, new Point(0, _filterButton.Height + DesignTokens.Scale(4)));
+        int minimumWidth = DesignTokens.Scale(188);
+        int preferredWidth = preferredTextWidth + horizontalChrome;
+        int maximumWidth = Math.Max(minimumWidth, ClientSize.Width - DesignTokens.Scale(28));
+        int width = Math.Min(maximumWidth, Math.Max(minimumWidth, preferredWidth));
+        int height = (FilterOptions.Length * rowHeight) + verticalPadding;
+
+        return new Size(width, height);
+    }
+
+    private Point ResolveFilterDropDownLocation(Size dropDownSize)
+    {
+        int gap = DesignTokens.Scale(8);
+        int outerMargin = DesignTokens.Scale(12);
+        Point buttonLocation = PointToClient(_filterButton.PointToScreen(Point.Empty));
+
+        int preferredX = buttonLocation.X + _filterButton.Width - dropDownSize.Width;
+        int maxX = Math.Max(0, ClientSize.Width - dropDownSize.Width - outerMargin);
+        int x = Math.Min(maxX, Math.Max(0, preferredX));
+        int y = buttonLocation.Y + _filterButton.Height + gap;
+
+        return new Point(x, y);
+    }
+
+    private void DisposeFilterDropDownAfterCurrentMessage(ToolStripDropDown dropDown)
+    {
+        if (dropDown.IsDisposed)
+        {
+            return;
+        }
+
+        if (IsDisposed || Disposing || !IsHandleCreated)
+        {
+            dropDown.Dispose();
+            return;
+        }
+
+        try
+        {
+            BeginInvoke((MethodInvoker)(() =>
+            {
+                if (!dropDown.IsDisposed)
+                {
+                    dropDown.Dispose();
+                }
+            }));
+        }
+        catch (ObjectDisposedException)
+        {
+            // The owner can be torn down while the drop-down is closing.
+        }
+        catch (InvalidOperationException)
+        {
+            if (!dropDown.IsDisposed)
+            {
+                dropDown.Dispose();
+            }
+        }
     }
 
     private void SetFilter(MacroLibraryFilterKind filterKind)
@@ -444,42 +583,6 @@ internal sealed class MacroLibraryControl : UserControl
         _selectedFilterKind = filterKind;
         _filterButton.IsActive = filterKind != MacroLibraryFilterKind.All;
         ApplyFilter();
-    }
-
-    private void DisposeMenuAfterCurrentMessage(ContextMenuStrip menu)
-    {
-        if (menu.IsDisposed)
-        {
-            return;
-        }
-
-        if (IsDisposed || Disposing || !IsHandleCreated)
-        {
-            menu.Dispose();
-            return;
-        }
-
-        try
-        {
-            BeginInvoke((MethodInvoker)(() =>
-            {
-                if (!menu.IsDisposed)
-                {
-                    menu.Dispose();
-                }
-            }));
-        }
-        catch (ObjectDisposedException)
-        {
-            // The owner can be torn down while the drop-down is closing.
-        }
-        catch (InvalidOperationException)
-        {
-            if (!menu.IsDisposed)
-            {
-                menu.Dispose();
-            }
-        }
     }
 
     private sealed class FilterIconButton : Control
@@ -678,7 +781,6 @@ internal sealed class MacroLibraryControl : UserControl
                 : DesignTokens.BorderSoft;
 
             BuildRow();
-            BuildContextMenu();
             WireActivation(this);
         }
 
@@ -774,36 +876,51 @@ internal sealed class MacroLibraryControl : UserControl
             Controls.Add(layoutPanel);
         }
 
-        private void BuildContextMenu()
+        private void ShowContextMenu(Point rowLocation)
         {
-            var contextMenu = new ContextMenuStrip
-            {
-                ShowImageMargin = false
-            };
-            AppToolStripRenderer.ApplyTo(
-                contextMenu,
-                AppToolStripMenuDensity.Comfortable);
-
-            var favoriteItem = new ToolStripMenuItem(_item.IsFavorite ? "Favoriden Cikar" : "Favoriye Ekle");
-            favoriteItem.Click += (_, _) => FavoriteToggled?.Invoke(this, EventArgs.Empty);
-
-            var renameItem = new ToolStripMenuItem("Isim Duzenle");
-            renameItem.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
-
-            var deleteItem = new ToolStripMenuItem("Sil");
-            deleteItem.Click += (_, _) => DeleteRequested?.Invoke(this, EventArgs.Empty);
-            contextMenu.Items.Add(favoriteItem);
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(renameItem);
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(deleteItem);
-            ContextMenuStrip = contextMenu;
+            ThemedDropDownMenu.ShowFor(
+                this,
+                [
+                    new ThemedDropDownMenuItem(
+                        _item.IsFavorite ? "Favoriden Çıkar" : "Favoriye Ekle",
+                        () => FavoriteToggled?.Invoke(this, EventArgs.Empty)),
+                    ThemedDropDownMenuItem.Separator(),
+                    new ThemedDropDownMenuItem(
+                        "İsim Düzenle",
+                        () => RenameRequested?.Invoke(this, EventArgs.Empty)),
+                    ThemedDropDownMenuItem.Separator(),
+                    new ThemedDropDownMenuItem(
+                        "Sil",
+                        () => DeleteRequested?.Invoke(this, EventArgs.Empty))
+                ],
+                rowLocation,
+                new ThemedDropDownMenuOptions
+                {
+                    MinimumWidth = DesignTokens.Scale(184),
+                    MaximumWidth = DesignTokens.Scale(280),
+                    ItemHeight = DesignTokens.Scale(42),
+                    SeparatorHeight = DesignTokens.Scale(14),
+                    VerticalPadding = DesignTokens.Scale(8),
+                    HorizontalPadding = DesignTokens.Scale(14)
+                });
         }
 
         private void WireActivation(Control control)
         {
-            control.Click += (_, _) => Activated?.Invoke(this, EventArgs.Empty);
-            control.ContextMenuStrip = ContextMenuStrip;
+            control.MouseUp += (_, eventArgs) =>
+            {
+                if (eventArgs.Button == MouseButtons.Left)
+                {
+                    Activated?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
+
+                if (eventArgs.Button == MouseButtons.Right)
+                {
+                    Point rowLocation = PointToClient(control.PointToScreen(eventArgs.Location));
+                    ShowContextMenu(rowLocation);
+                }
+            };
 
             foreach (Control child in control.Controls)
             {
@@ -833,7 +950,7 @@ internal sealed class MacroLibraryControl : UserControl
             protected override void OnPaint(PaintEventArgs e)
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                e.Graphics.Clear(Parent?.BackColor ?? Color.Transparent);
+                e.Graphics.Clear(ResolveEffectiveBackColor());
 
                 int starSize = DesignTokens.Scale(12);
                 Rectangle bounds = new(
@@ -849,7 +966,21 @@ internal sealed class MacroLibraryControl : UserControl
 
             protected override void OnPaintBackground(PaintEventArgs pevent)
             {
-                // Parent row handles the rounded background.
+                // The marker paints the effective row background itself to avoid
+                // transparent TableLayoutPanel cells rendering as black rectangles.
+            }
+
+            private Color ResolveEffectiveBackColor()
+            {
+                for (Control? current = Parent; current is not null; current = current.Parent)
+                {
+                    if (current.BackColor.A > 0 && current.BackColor != Color.Transparent)
+                    {
+                        return current.BackColor;
+                    }
+                }
+
+                return DesignTokens.SurfaceInset;
             }
 
             private static GraphicsPath CreateStarPath(Rectangle bounds)

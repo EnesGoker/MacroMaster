@@ -71,7 +71,7 @@ partial class ToolbarControl
         recordButton.Name = "recordButton";
         recordButton.Size = new Size(190, 36);
         recordButton.TabIndex = 0;
-        recordButton.Text = "Kaydi Baslat   F8";
+        recordButton.Text = "Kaydı Başlat   F8";
         // 
         // stopButton
         // 
@@ -107,7 +107,7 @@ partial class ToolbarControl
         loadButton.Name = "loadButton";
         loadButton.Size = new Size(190, 36);
         loadButton.TabIndex = 4;
-        loadButton.Text = "Yukle";
+        loadButton.Text = "Yükle";
         // 
         // hotkeysButton
         // 
@@ -116,7 +116,7 @@ partial class ToolbarControl
         hotkeysButton.Name = "hotkeysButton";
         hotkeysButton.Size = new Size(190, 36);
         hotkeysButton.TabIndex = 5;
-        hotkeysButton.Text = "Kisayollar   F12";
+        hotkeysButton.Text = "Kısayollar   F12";
         // 
         // ToolbarControl
         // 

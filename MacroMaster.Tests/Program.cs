@@ -81,6 +81,12 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroLibraryFilterEngine applies search and library filters")]
     public Task MacroLibraryFilterEngine_AppliesSearchAndFilters() => MacroLibraryFilterEngine_AppliesSearchAndFiltersAsync();
 
+    [Fact(DisplayName = "EventListFilterEngine applies search and smart filters")]
+    public Task EventListFilterEngine_AppliesSearchAndSmartFilters() => EventListFilterEngine_AppliesSearchAndSmartFiltersAsync();
+
+    [Fact(DisplayName = "EventListFilterEngine identifies optimization candidates and invalid events")]
+    public Task EventListFilterEngine_IdentifiesOptimizationCandidatesAndInvalidEvents() => EventListFilterEngine_IdentifiesOptimizationCandidatesAndInvalidEventsAsync();
+
     [Fact(DisplayName = "HotkeySettingsDialog exposes all controls within the dialog bounds")]
     public Task HotkeySettingsDialog_UsesStableLayout() => HotkeySettingsDialog_UsesStableLayoutAsync();
 
@@ -790,6 +796,164 @@ public sealed class MacroMasterTests
             ["FavoriteJson"],
             shortItems.Select(item => item.Entry.Name),
             "Short filter should include compact macros and support duration search.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task EventListFilterEngine_AppliesSearchAndSmartFiltersAsync()
+    {
+        MacroEvent[] events =
+        [
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.Move,
+                DelayMs = 10,
+                X = 10,
+                Y = 20,
+                Description = "Fare hareketi"
+            },
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.LeftDown,
+                DelayMs = 30,
+                X = 11,
+                Y = 21,
+                Description = "Sol tus basildi"
+            },
+            new()
+            {
+                EventType = MacroEventType.Keyboard,
+                KeyboardActionType = KeyboardActionType.KeyDown,
+                DelayMs = 5,
+                KeyCode = 13,
+                ScanCode = 28,
+                KeyName = "Enter",
+                Description = "Enter tusu"
+            },
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.Wheel,
+                DelayMs = 260,
+                WheelDelta = 120,
+                Description = "Fare tekerlegi"
+            }
+        ];
+
+        EventListViewItem[] keyboardItems = EventListFilterEngine.Apply(
+            events,
+            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.KeyboardOnly));
+        EventListViewItem[] clickItems = EventListFilterEngine.Apply(
+            events,
+            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.MouseClicks));
+        EventListViewItem[] longDelayItems = EventListFilterEngine.Apply(
+            events,
+            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.LongDelays));
+        EventListViewItem[] searchItems = EventListFilterEngine.Apply(
+            events,
+            new EventListFilterCriteria("enter", EventListTypeFilterKind.All, EventListSmartFilterKind.All));
+        EventListViewItem[] mousePositionItems = EventListFilterEngine.Apply(
+            events,
+            new EventListFilterCriteria("21", EventListTypeFilterKind.Mouse, EventListSmartFilterKind.All));
+
+        Assert.Equal(
+            [2],
+            keyboardItems.Select(item => item.SourceIndex),
+            "Keyboard smart filter should preserve source indexes.");
+        Assert.Equal(
+            [1],
+            clickItems.Select(item => item.SourceIndex),
+            "Click smart filter should include mouse click events.");
+        Assert.Equal(
+            [3],
+            longDelayItems.Select(item => item.SourceIndex),
+            "Long delay smart filter should use the configured threshold.");
+        Assert.Equal(
+            [2],
+            searchItems.Select(item => item.SourceIndex),
+            "Search should match key names and details.");
+        Assert.Equal(
+            [1],
+            mousePositionItems.Select(item => item.SourceIndex),
+            "Type filter should combine with coordinate search.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task EventListFilterEngine_IdentifiesOptimizationCandidatesAndInvalidEventsAsync()
+    {
+        MacroEvent[] optimizationEvents =
+        [
+            CreateMouseMoveEvent(8, 100, 200),
+            CreateMouseMoveEvent(9, 101, 201),
+            CreateMouseMoveEvent(10, 102, 202),
+            CreateMouseMoveEvent(11, 103, 203),
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.LeftDown,
+                DelayMs = 20,
+                X = 103,
+                Y = 203,
+                Description = "Sol tus basildi"
+            }
+        ];
+        MacroEvent[] invalidEvents =
+        [
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.LeftDown,
+                DelayMs = 10,
+                Description = "Koordinatsiz tiklama"
+            },
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.Wheel,
+                DelayMs = 10,
+                Description = "Eksik wheel delta"
+            },
+            new()
+            {
+                EventType = MacroEventType.Keyboard,
+                KeyboardActionType = KeyboardActionType.KeyDown,
+                DelayMs = 10,
+                KeyName = "A"
+            },
+            new()
+            {
+                EventType = MacroEventType.Keyboard,
+                KeyboardActionType = KeyboardActionType.None,
+                DelayMs = 10,
+                KeyCode = 65,
+                ScanCode = 30
+            },
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.None,
+                DelayMs = 10
+            }
+        ];
+
+        EventListViewItem[] optimizationCandidates = EventListFilterEngine.Apply(
+            optimizationEvents,
+            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.OptimizationCandidates));
+        EventListViewItem[] invalidItems = EventListFilterEngine.Apply(
+            invalidEvents,
+            new EventListFilterCriteria(null, EventListTypeFilterKind.All, EventListSmartFilterKind.InvalidOrIncomplete));
+
+        Assert.Equal(
+            [1, 2],
+            optimizationCandidates.Select(item => item.SourceIndex),
+            "Optimization filter should protect first move, last move and click-adjacent position.");
+        Assert.Equal(
+            [0, 1, 2, 3, 4],
+            invalidItems.Select(item => item.SourceIndex),
+            "Invalid filter should catch incomplete keyboard and mouse events.");
 
         return Task.CompletedTask;
     }
@@ -1804,6 +1968,19 @@ public sealed class MacroMasterTests
         }
 
         return session;
+    }
+
+    private static MacroEvent CreateMouseMoveEvent(int delayMs, int x, int y)
+    {
+        return new MacroEvent
+        {
+            EventType = MacroEventType.Mouse,
+            MouseActionType = MouseActionType.Move,
+            DelayMs = delayMs,
+            X = x,
+            Y = y,
+            Description = "Fare hareketi"
+        };
     }
 
     private static MacroLibraryViewItem CreateLibraryViewItem(
