@@ -1,5 +1,6 @@
 using MacroMaster.Application.Abstractions;
 using MacroMaster.Domain.Models;
+using System.Globalization;
 using System.Text.Json;
 using System.Xml;
 
@@ -78,6 +79,7 @@ public sealed class MacroLibraryService : IMacroLibraryService
                         fileInfo.FullName,
                         fileInfo.LastWriteTimeUtc,
                         metadata.EventCount,
+                        metadata.TotalDurationMs,
                         format));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -251,6 +253,7 @@ public sealed class MacroLibraryService : IMacroLibraryService
         JsonElement root = document.RootElement;
         string? name = null;
         int eventCount = 0;
+        int totalDurationMs = 0;
 
         if (TryGetPropertyIgnoreCase(root, nameof(MacroSession.Name), out JsonElement nameElement)
             && nameElement.ValueKind == JsonValueKind.String)
@@ -262,9 +265,20 @@ public sealed class MacroLibraryService : IMacroLibraryService
             && eventsElement.ValueKind == JsonValueKind.Array)
         {
             eventCount = eventsElement.GetArrayLength();
+
+            foreach (JsonElement eventElement in eventsElement.EnumerateArray())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (TryGetPropertyIgnoreCase(eventElement, nameof(MacroEvent.DelayMs), out JsonElement delayElement)
+                    && delayElement.TryGetInt32(out int delayMs))
+                {
+                    totalDurationMs = AddClampedDuration(totalDurationMs, delayMs);
+                }
+            }
         }
 
-        return new MacroLibraryMetadata(name, eventCount);
+        return new MacroLibraryMetadata(name, eventCount, totalDurationMs);
     }
 
     private static async Task<MacroLibraryMetadata> ReadXmlMetadataAsync(
@@ -286,8 +300,11 @@ public sealed class MacroLibraryService : IMacroLibraryService
 
         string? name = null;
         int eventCount = 0;
+        int totalDurationMs = 0;
         bool isInsideEvents = false;
         int eventsDepth = -1;
+        bool isInsideMacroEvent = false;
+        int macroEventDepth = -1;
 
         while (await reader.ReadAsync())
         {
@@ -313,7 +330,33 @@ public sealed class MacroLibraryService : IMacroLibraryService
                     && string.Equals(reader.LocalName, nameof(MacroEvent), StringComparison.Ordinal))
                 {
                     eventCount++;
+                    isInsideMacroEvent = !reader.IsEmptyElement;
+                    macroEventDepth = reader.Depth;
+                    continue;
                 }
+
+                if (isInsideMacroEvent
+                    && string.Equals(reader.LocalName, nameof(MacroEvent.DelayMs), StringComparison.Ordinal))
+                {
+                    string rawDelay = await reader.ReadElementContentAsStringAsync();
+
+                    if (int.TryParse(
+                            rawDelay,
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out int delayMs))
+                    {
+                        totalDurationMs = AddClampedDuration(totalDurationMs, delayMs);
+                    }
+                }
+            }
+            else if (reader.NodeType == XmlNodeType.EndElement
+                     && isInsideMacroEvent
+                     && reader.Depth == macroEventDepth
+                     && string.Equals(reader.LocalName, nameof(MacroEvent), StringComparison.Ordinal))
+            {
+                isInsideMacroEvent = false;
+                macroEventDepth = -1;
             }
             else if (reader.NodeType == XmlNodeType.EndElement
                      && isInsideEvents
@@ -325,7 +368,20 @@ public sealed class MacroLibraryService : IMacroLibraryService
             }
         }
 
-        return new MacroLibraryMetadata(name, eventCount);
+        return new MacroLibraryMetadata(name, eventCount, totalDurationMs);
+    }
+
+    private static int AddClampedDuration(int currentTotalMs, int delayMs)
+    {
+        if (delayMs <= 0)
+        {
+            return currentTotalMs;
+        }
+
+        long nextTotalMs = (long)currentTotalMs + delayMs;
+        return nextTotalMs >= int.MaxValue
+            ? int.MaxValue
+            : (int)nextTotalMs;
     }
 
     private static bool TryGetPropertyIgnoreCase(
@@ -479,7 +535,10 @@ public sealed class MacroLibraryService : IMacroLibraryService
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private sealed record MacroLibraryMetadata(string? Name, int EventCount);
+    private sealed record MacroLibraryMetadata(
+        string? Name,
+        int EventCount,
+        int TotalDurationMs);
 
     private sealed record MacroFileSignature(DateTime LastWriteTimeUtc, long Length);
 

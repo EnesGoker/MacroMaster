@@ -18,6 +18,7 @@ internal sealed class AppCompositionRoot : IDisposable
     public IMacroLibraryService MacroLibraryService { get; }
     public IPlaybackSettingsStore PlaybackSettingsStore { get; }
     public IHotkeySettingsStore HotkeySettingsStore { get; }
+    public IMacroLibraryUserStateStore MacroLibraryUserStateStore { get; }
     public IMutableHotkeyConfiguration HotkeyConfiguration { get; }
     public IHotkeyService HotkeyService { get; }
     public IAppLogger AppLogger { get; }
@@ -33,6 +34,7 @@ internal sealed class AppCompositionRoot : IDisposable
         IMacroLibraryService macroLibraryService,
         IPlaybackSettingsStore playbackSettingsStore,
         IHotkeySettingsStore hotkeySettingsStore,
+        IMacroLibraryUserStateStore macroLibraryUserStateStore,
         IMutableHotkeyConfiguration hotkeyConfiguration,
         IHotkeyService hotkeyService,
         IAppLogger appLogger,
@@ -45,6 +47,7 @@ internal sealed class AppCompositionRoot : IDisposable
         MacroLibraryService = macroLibraryService;
         PlaybackSettingsStore = playbackSettingsStore;
         HotkeySettingsStore = hotkeySettingsStore;
+        MacroLibraryUserStateStore = macroLibraryUserStateStore;
         HotkeyConfiguration = hotkeyConfiguration;
         HotkeyService = hotkeyService;
         AppLogger = appLogger;
@@ -83,6 +86,8 @@ internal sealed class AppCompositionRoot : IDisposable
             new JsonPlaybackSettingsStore(storagePaths.PlaybackSettingsFilePath);
         IHotkeySettingsStore hotkeySettingsStore =
             new JsonHotkeySettingsStore(storagePaths.HotkeySettingsFilePath);
+        IMacroLibraryUserStateStore macroLibraryUserStateStore =
+            new JsonMacroLibraryUserStateStore(storagePaths.MacroLibraryStateFilePath);
 
         WindowsInputPlaybackAdapter inputPlaybackAdapter = new(resolvedLogger);
 
@@ -129,6 +134,7 @@ internal sealed class AppCompositionRoot : IDisposable
             macroLibraryService,
             playbackSettingsStore,
             hotkeySettingsStore,
+            macroLibraryUserStateStore,
             hotkeyConfiguration,
             hotkeyService,
             resolvedLogger,
@@ -145,6 +151,7 @@ internal sealed class AppCompositionRoot : IDisposable
             MacroLibraryService,
             PlaybackSettingsStore,
             HotkeySettingsStore,
+            MacroLibraryUserStateStore,
             HotkeyConfiguration,
             HotkeyService,
             AppLogger);

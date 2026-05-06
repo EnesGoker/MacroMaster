@@ -18,6 +18,7 @@ using MacroMaster.Infrastructure.Hooks;
 using MacroMaster.Infrastructure.Persistence;
 using MacroMaster.WinForms;
 using MacroMaster.WinForms.Composition;
+using MacroMaster.WinForms.Controls;
 using MacroMaster.WinForms.Forms;
 using Xunit;
 using Assert = global::MacroMaster.Tests.Expect;
@@ -67,6 +68,15 @@ public sealed class MacroMasterTests
 
     [Fact(DisplayName = "JsonHotkeySettingsStore rejects duplicate bindings")]
     public Task JsonHotkeySettingsStore_RejectsDuplicateBindings() => JsonHotkeySettingsStore_RejectsDuplicateBindingsAsync();
+
+    [Fact(DisplayName = "JsonMacroLibraryUserStateStore round-trips normalized state")]
+    public Task JsonMacroLibraryUserStateStore_RoundTripsNormalizedState() => JsonMacroLibraryUserStateStore_RoundTripsNormalizedStateAsync();
+
+    [Fact(DisplayName = "MacroLibraryService reads duration metadata")]
+    public Task MacroLibraryService_ReadsDurationMetadata() => MacroLibraryService_ReadsDurationMetadataAsync();
+
+    [Fact(DisplayName = "MacroLibraryFilterEngine applies search and library filters")]
+    public Task MacroLibraryFilterEngine_AppliesSearchAndFilters() => MacroLibraryFilterEngine_AppliesSearchAndFiltersAsync();
 
     [Fact(DisplayName = "HotkeySettingsDialog exposes all controls within the dialog bounds")]
     public Task HotkeySettingsDialog_UsesStableLayout() => HotkeySettingsDialog_UsesStableLayoutAsync();
@@ -601,6 +611,139 @@ public sealed class MacroMasterTests
         }
     }
 
+    private static async Task JsonMacroLibraryUserStateStore_RoundTripsNormalizedStateAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            string filePath = Path.Combine(directoryPath, "library-state.json");
+            string favoritePath = Path.Combine(directoryPath, "Favorite.json");
+            string recentPath = Path.Combine(directoryPath, "Recent.json");
+            var stateStore = new JsonMacroLibraryUserStateStore(filePath);
+            var expectedState = new MacroLibraryUserState
+            {
+                FavoriteFilePaths =
+                [
+                    favoritePath,
+                    favoritePath.ToUpperInvariant()
+                ],
+                LastUsedUtcByFilePath = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [recentPath] = new DateTime(2026, 5, 6, 9, 30, 0, DateTimeKind.Utc),
+                    [Path.Combine(directoryPath, "ignored.json")] = new DateTime(2026, 5, 5, 9, 30, 0, DateTimeKind.Local)
+                }
+            };
+
+            await stateStore.SaveAsync(expectedState);
+            MacroLibraryUserState loadedState = await stateStore.LoadAsync();
+
+            Assert.Equal(
+                1,
+                loadedState.FavoriteFilePaths.Count,
+                "Favorite paths should be normalized and de-duplicated.");
+            Assert.Equal(
+                Path.GetFullPath(favoritePath),
+                loadedState.FavoriteFilePaths[0],
+                "Favorite paths should persist as full paths.");
+            Assert.True(
+                loadedState.LastUsedUtcByFilePath.ContainsKey(Path.GetFullPath(recentPath)),
+                "Recent macro usage should round-trip.");
+            Assert.Equal(
+                DateTimeKind.Utc,
+                loadedState.LastUsedUtcByFilePath[Path.GetFullPath(recentPath)].Kind,
+                "Recent timestamps should be normalized to UTC.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static async Task MacroLibraryService_ReadsDurationMetadataAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            var storageService = new MacroStorageService(
+                new JsonMacroStorageService(),
+                new XmlMacroStorageService());
+            var libraryService = new MacroLibraryService(
+                storageService,
+                new RecordingTestLogger(),
+                directoryPath);
+
+            await storageService.SaveAsJsonAsync(
+                CreateSession("JsonMacro", 15, 20),
+                Path.Combine(directoryPath, "json-macro.json"));
+            await storageService.SaveAsXmlAsync(
+                CreateSession("XmlMacro", 30, 45),
+                Path.Combine(directoryPath, "xml-macro.xml"));
+
+            IReadOnlyList<MacroLibraryEntry> entries = await libraryService.ListAsync();
+
+            MacroLibraryEntry jsonEntry = entries.Single(entry => entry.Format == MacroLibraryFileFormat.Json);
+            MacroLibraryEntry xmlEntry = entries.Single(entry => entry.Format == MacroLibraryFileFormat.Xml);
+
+            Assert.Equal(2, jsonEntry.EventCount, "JSON event count should be read from metadata.");
+            Assert.Equal(35, jsonEntry.TotalDurationMs, "JSON duration metadata should sum event delays.");
+            Assert.Equal(2, xmlEntry.EventCount, "XML event count should be read from metadata.");
+            Assert.Equal(75, xmlEntry.TotalDurationMs, "XML duration metadata should sum event delays.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static Task MacroLibraryFilterEngine_AppliesSearchAndFiltersAsync()
+    {
+        DateTime now = new(2026, 5, 6, 12, 0, 0, DateTimeKind.Utc);
+        MacroLibraryViewItem[] items =
+        [
+            CreateLibraryViewItem("FavoriteJson", "favorite.json", now, 50, 5_000, MacroLibraryFileFormat.Json, isFavorite: true, lastUsedUtc: null),
+            CreateLibraryViewItem("RecentXml", "recent.xml", now.AddMinutes(-1), 150, 12_000, MacroLibraryFileFormat.Xml, isFavorite: false, lastUsedUtc: now),
+            CreateLibraryViewItem("LongJson", "long.json", now.AddMinutes(-2), 650, 90_000, MacroLibraryFileFormat.Json, isFavorite: false, lastUsedUtc: now.AddMinutes(-5))
+        ];
+
+        MacroLibraryViewItem[] favoriteItems = MacroLibraryFilterEngine.Apply(
+            items,
+            "json",
+            MacroLibraryFilterKind.Favorites);
+        MacroLibraryViewItem[] recentItems = MacroLibraryFilterEngine.Apply(
+            items,
+            null,
+            MacroLibraryFilterKind.Recent);
+        MacroLibraryViewItem[] longItems = MacroLibraryFilterEngine.Apply(
+            items,
+            null,
+            MacroLibraryFilterKind.Long);
+        MacroLibraryViewItem[] shortItems = MacroLibraryFilterEngine.Apply(
+            items,
+            "5000",
+            MacroLibraryFilterKind.Short);
+
+        Assert.Equal(
+            ["FavoriteJson"],
+            favoriteItems.Select(item => item.Entry.Name),
+            "Favorite filter should combine with text search.");
+        Assert.Equal(
+            ["RecentXml", "LongJson"],
+            recentItems.Select(item => item.Entry.Name),
+            "Recent filter should sort by last-used timestamp.");
+        Assert.Equal(
+            ["LongJson"],
+            longItems.Select(item => item.Entry.Name),
+            "Long filter should include event-heavy or duration-heavy macros.");
+        Assert.Equal(
+            ["FavoriteJson"],
+            shortItems.Select(item => item.Entry.Name),
+            "Short filter should include compact macros and support duration search.");
+
+        return Task.CompletedTask;
+    }
+
     private static async Task HotkeySettingsDialog_UsesStableLayoutAsync()
     {
         _ = await RunOnStaThreadAsync(() =>
@@ -816,6 +959,11 @@ public sealed class MacroMasterTests
                     PlaybackToggleHotkey = new HotkeyBinding(0x71, HotkeyModifiers.Shift),
                     StopHotkey = new HotkeyBinding(0x72, HotkeyModifiers.Alt)
                 });
+            await compositionRoot.MacroLibraryUserStateStore.SaveAsync(
+                new MacroLibraryUserState
+                {
+                    FavoriteFilePaths = [Path.Combine(directoryPath, "macros", "favorite.json")]
+                });
 
             Assert.True(
                 File.Exists(storagePaths.PlaybackSettingsFilePath),
@@ -823,6 +971,9 @@ public sealed class MacroMasterTests
             Assert.True(
                 File.Exists(storagePaths.HotkeySettingsFilePath),
                 "Hotkey settings should be persisted under the injected app storage root.");
+            Assert.True(
+                File.Exists(storagePaths.MacroLibraryStateFilePath),
+                "Macro library state should be persisted under the injected app storage root.");
             Assert.True(
                 storagePaths.LogDirectoryPath.StartsWith(directoryPath, StringComparison.OrdinalIgnoreCase),
                 "Derived log directory should remain within the injected app storage root.");
@@ -1579,6 +1730,52 @@ public sealed class MacroMasterTests
         return result is IntPtr pointer
             ? pointer
             : IntPtr.Zero;
+    }
+
+    private static MacroSession CreateSession(string name, params int[] delayValuesMs)
+    {
+        var session = new MacroSession
+        {
+            Name = name
+        };
+
+        for (int index = 0; index < delayValuesMs.Length; index++)
+        {
+            session.Events.Add(
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    DelayMs = delayValuesMs[index],
+                    X = 100 + index,
+                    Y = 200 + index,
+                    Description = $"Mouse move {index}"
+                });
+        }
+
+        return session;
+    }
+
+    private static MacroLibraryViewItem CreateLibraryViewItem(
+        string name,
+        string fileName,
+        DateTime lastModifiedUtc,
+        int eventCount,
+        int totalDurationMs,
+        MacroLibraryFileFormat format,
+        bool isFavorite,
+        DateTime? lastUsedUtc)
+    {
+        return new MacroLibraryViewItem(
+            new MacroLibraryEntry(
+                name,
+                Path.Combine(Path.GetTempPath(), fileName),
+                lastModifiedUtc,
+                eventCount,
+                totalDurationMs,
+                format),
+            isFavorite,
+            lastUsedUtc);
     }
 
     private static string CreateTempDirectory()

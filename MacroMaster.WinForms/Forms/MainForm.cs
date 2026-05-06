@@ -17,6 +17,7 @@ public partial class MainForm : Form
     private readonly IMacroLibraryService _macroLibraryService;
     private readonly IPlaybackSettingsStore _playbackSettingsStore;
     private readonly IHotkeySettingsStore _hotkeySettingsStore;
+    private readonly IMacroLibraryUserStateStore _macroLibraryUserStateStore;
     private readonly IMutableHotkeyConfiguration _hotkeyConfiguration;
     private readonly IHotkeyService _hotkeyService;
     private readonly IAppLogger _logger;
@@ -30,6 +31,7 @@ public partial class MainForm : Form
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
+    private MacroLibraryUserState _macroLibraryUserState = new();
     private int _playedEventCount;
     private int _playedDurationMs;
     private bool _applyingPlaybackSettings;
@@ -46,6 +48,7 @@ public partial class MainForm : Form
         IMacroLibraryService macroLibraryService,
         IPlaybackSettingsStore playbackSettingsStore,
         IHotkeySettingsStore hotkeySettingsStore,
+        IMacroLibraryUserStateStore macroLibraryUserStateStore,
         IMutableHotkeyConfiguration hotkeyConfiguration,
         IHotkeyService hotkeyService,
         IAppLogger logger)
@@ -57,6 +60,7 @@ public partial class MainForm : Form
         _macroLibraryService = macroLibraryService;
         _playbackSettingsStore = playbackSettingsStore;
         _hotkeySettingsStore = hotkeySettingsStore;
+        _macroLibraryUserStateStore = macroLibraryUserStateStore;
         _hotkeyConfiguration = hotkeyConfiguration;
         _hotkeyService = hotkeyService;
         _logger = logger;
@@ -97,6 +101,18 @@ public partial class MainForm : Form
             _hotkeyConfiguration.Apply(HotkeySettings.CreateDefault());
             ShowError(
                 "Kisayol ayarlari yuklenemedi. Varsayilan kisayollar kullanilacak.",
+                ex);
+        }
+
+        try
+        {
+            await LoadMacroLibraryUserStateAsync();
+        }
+        catch (Exception ex)
+        {
+            _macroLibraryUserState = new MacroLibraryUserState();
+            ShowError(
+                "Makro kutuphanesi kullanici tercihleri yuklenemedi. Favori ve son kullanilan bilgileri bu oturumda bos baslatilacak.",
                 ex);
         }
 
@@ -623,6 +639,12 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(() => DeleteLibraryMacroAsync(e.Item), "Makro kutuphanesi silme");
     }
 
+    private void macroLibraryControl_FavoriteToggled(object? sender, MacroLibraryItemEventArgs e)
+    {
+        _ = sender;
+        _ = ExecuteUiActionAsync(() => ToggleLibraryFavoriteAsync(e.Item), "Makro favori degistirme");
+    }
+
     private void eventListControl_EventEditRequested(object? sender, EventEditRequestedEventArgs e)
     {
         _ = sender;
@@ -697,6 +719,8 @@ public partial class MainForm : Form
 
         string filePath = await _macroLibraryService.SaveAsync(session);
         _lastSessionPath = filePath;
+        MarkLibraryFileUsed(filePath);
+        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
@@ -786,6 +810,8 @@ public partial class MainForm : Form
 
         MacroSession session = await _macroLibraryService.LoadAsync(item.FilePath);
         AdoptLoadedSession(session, item.FilePath);
+        MarkLibraryFileUsed(item.FilePath);
+        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
         await RefreshMacroLibraryAsync();
     }
 
@@ -816,6 +842,8 @@ public partial class MainForm : Form
             }
         }
 
+        MoveLibraryStatePath(previousFilePath, renamedFilePath);
+        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi kullanici tercihi tasima");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
@@ -837,8 +865,25 @@ public partial class MainForm : Form
             _lastSessionPath = null;
         }
 
+        RemoveLibraryStatePath(item.FilePath);
+        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi kullanici tercihi silme");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
+    }
+
+    private async Task ToggleLibraryFavoriteAsync(MacroLibraryEntry item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        string normalizedFilePath = NormalizeLibraryStatePath(item.FilePath);
+
+        if (!RemoveFavoritePath(normalizedFilePath))
+        {
+            _macroLibraryUserState.FavoriteFilePaths.Add(normalizedFilePath);
+        }
+
+        await SaveMacroLibraryUserStateAsync();
+        await RefreshMacroLibraryAsync();
     }
 
     private Task EditEventAsync(EventEditRequestedEventArgs editRequest)
@@ -877,7 +922,191 @@ public partial class MainForm : Form
     private async Task RefreshMacroLibraryAsync()
     {
         IReadOnlyList<MacroLibraryEntry> entries = await _macroLibraryService.ListAsync();
-        _macroLibraryControl.SetItems(entries, _lastSessionPath);
+
+        if (PruneMacroLibraryUserState(entries))
+        {
+            await TrySaveMacroLibraryUserStateAsync(
+                "Makro kutuphanesi kullanici tercihleri temizleme");
+        }
+
+        _macroLibraryControl.SetItems(BuildMacroLibraryViewItems(entries), _lastSessionPath);
+    }
+
+    private async Task LoadMacroLibraryUserStateAsync()
+    {
+        _macroLibraryUserState = await _macroLibraryUserStateStore.LoadAsync();
+    }
+
+    private async Task SaveMacroLibraryUserStateAsync()
+    {
+        await _macroLibraryUserStateStore.SaveAsync(_macroLibraryUserState);
+    }
+
+    private async Task TrySaveMacroLibraryUserStateAsync(string operationName)
+    {
+        try
+        {
+            await SaveMacroLibraryUserStateAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.Log(
+                AppLogLevel.Warning,
+                nameof(MainForm),
+                $"{operationName} islemi tamamlanamadi.",
+                ex);
+        }
+    }
+
+    private MacroLibraryViewItem[] BuildMacroLibraryViewItems(
+        IReadOnlyList<MacroLibraryEntry> entries)
+    {
+        return entries
+            .Select(entry => new MacroLibraryViewItem(
+                entry,
+                IsFavoritePath(entry.FilePath),
+                GetLastUsedUtc(entry.FilePath)))
+            .ToArray();
+    }
+
+    private bool PruneMacroLibraryUserState(IReadOnlyList<MacroLibraryEntry> entries)
+    {
+        var activeFilePaths = entries
+            .Select(entry => NormalizeLibraryStatePath(entry.FilePath))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        int originalFavoriteCount = _macroLibraryUserState.FavoriteFilePaths.Count;
+        int originalRecentCount = _macroLibraryUserState.LastUsedUtcByFilePath.Count;
+        bool changed = false;
+
+        List<string> normalizedFavoriteFilePaths = _macroLibraryUserState.FavoriteFilePaths
+            .Select(NormalizeLibraryStatePath)
+            .Where(activeFilePaths.Contains)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        changed = changed
+            || originalFavoriteCount != normalizedFavoriteFilePaths.Count
+            || !_macroLibraryUserState.FavoriteFilePaths.SequenceEqual(
+                normalizedFavoriteFilePaths,
+                StringComparer.OrdinalIgnoreCase);
+        _macroLibraryUserState.FavoriteFilePaths = normalizedFavoriteFilePaths;
+
+        foreach (string filePath in _macroLibraryUserState.LastUsedUtcByFilePath.Keys.ToArray())
+        {
+            string normalizedFilePath = NormalizeLibraryStatePath(filePath);
+
+            if (!activeFilePaths.Contains(normalizedFilePath))
+            {
+                _macroLibraryUserState.LastUsedUtcByFilePath.Remove(filePath);
+                changed = true;
+            }
+            else if (!string.Equals(filePath, normalizedFilePath, StringComparison.Ordinal))
+            {
+                DateTime lastUsedUtc = _macroLibraryUserState.LastUsedUtcByFilePath[filePath];
+                _macroLibraryUserState.LastUsedUtcByFilePath.Remove(filePath);
+                _macroLibraryUserState.LastUsedUtcByFilePath[normalizedFilePath] = NormalizeUtc(lastUsedUtc);
+                changed = true;
+            }
+        }
+
+        return changed
+            || originalRecentCount != _macroLibraryUserState.LastUsedUtcByFilePath.Count;
+    }
+
+    private void MarkLibraryFileUsed(string filePath)
+    {
+        string normalizedFilePath = NormalizeLibraryStatePath(filePath);
+        _macroLibraryUserState.LastUsedUtcByFilePath[normalizedFilePath] = DateTime.UtcNow;
+    }
+
+    private void MoveLibraryStatePath(
+        string previousFilePath,
+        string nextFilePath)
+    {
+        string previousNormalizedFilePath = NormalizeLibraryStatePath(previousFilePath);
+        string nextNormalizedFilePath = NormalizeLibraryStatePath(nextFilePath);
+
+        if (string.Equals(previousNormalizedFilePath, nextNormalizedFilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        bool wasFavorite = RemoveFavoritePath(previousNormalizedFilePath);
+
+        if (wasFavorite)
+        {
+            _macroLibraryUserState.FavoriteFilePaths.Add(nextNormalizedFilePath);
+        }
+
+        if (_macroLibraryUserState.LastUsedUtcByFilePath.TryGetValue(
+                previousNormalizedFilePath,
+                out DateTime lastUsedUtc))
+        {
+            _macroLibraryUserState.LastUsedUtcByFilePath.Remove(previousNormalizedFilePath);
+            _macroLibraryUserState.LastUsedUtcByFilePath[nextNormalizedFilePath] = NormalizeUtc(lastUsedUtc);
+        }
+    }
+
+    private void RemoveLibraryStatePath(string filePath)
+    {
+        string normalizedFilePath = NormalizeLibraryStatePath(filePath);
+        RemoveFavoritePath(normalizedFilePath);
+        _macroLibraryUserState.LastUsedUtcByFilePath.Remove(normalizedFilePath);
+    }
+
+    private bool IsFavoritePath(string filePath)
+    {
+        string normalizedFilePath = NormalizeLibraryStatePath(filePath);
+        return _macroLibraryUserState.FavoriteFilePaths.Any(path =>
+            string.Equals(
+                NormalizeLibraryStatePath(path),
+                normalizedFilePath,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private DateTime? GetLastUsedUtc(string filePath)
+    {
+        string normalizedFilePath = NormalizeLibraryStatePath(filePath);
+
+        return _macroLibraryUserState.LastUsedUtcByFilePath.TryGetValue(
+            normalizedFilePath,
+            out DateTime lastUsedUtc)
+            ? NormalizeUtc(lastUsedUtc)
+            : null;
+    }
+
+    private bool RemoveFavoritePath(string normalizedFilePath)
+    {
+        bool removed = false;
+
+        for (int index = _macroLibraryUserState.FavoriteFilePaths.Count - 1; index >= 0; index--)
+        {
+            if (string.Equals(
+                    NormalizeLibraryStatePath(_macroLibraryUserState.FavoriteFilePaths[index]),
+                    normalizedFilePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                _macroLibraryUserState.FavoriteFilePaths.RemoveAt(index);
+                removed = true;
+            }
+        }
+
+        return removed;
+    }
+
+    private static string NormalizeLibraryStatePath(string filePath)
+    {
+        return Path.GetFullPath(filePath);
+    }
+
+    private static DateTime NormalizeUtc(DateTime timestamp)
+    {
+        return timestamp.Kind switch
+        {
+            DateTimeKind.Local => timestamp.ToUniversalTime(),
+            DateTimeKind.Unspecified => DateTime.SpecifyKind(timestamp, DateTimeKind.Utc),
+            _ => timestamp
+        };
     }
 
     private void AdoptLoadedSession(MacroSession session, string filePath)
@@ -1134,6 +1363,7 @@ public partial class MainForm : Form
         _macroLibraryControl.LoadRequested += macroLibraryControl_LoadRequested;
         _macroLibraryControl.RenameRequested += macroLibraryControl_RenameRequested;
         _macroLibraryControl.DeleteRequested += macroLibraryControl_DeleteRequested;
+        _macroLibraryControl.FavoriteToggled += macroLibraryControl_FavoriteToggled;
 
         _sessionSummaryControl.Name = "sessionSummaryControl";
         _sessionSummaryControl.Dock = DockStyle.Fill;

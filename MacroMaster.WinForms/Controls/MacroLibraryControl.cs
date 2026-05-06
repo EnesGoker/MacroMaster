@@ -7,6 +7,17 @@ namespace MacroMaster.WinForms.Controls;
 
 internal sealed class MacroLibraryControl : UserControl
 {
+    private static readonly MacroLibraryFilterOption[] FilterOptions =
+    [
+        new(MacroLibraryFilterKind.All, "Tum makrolar"),
+        new(MacroLibraryFilterKind.Favorites, "Favoriler"),
+        new(MacroLibraryFilterKind.Recent, "Son kullanilanlar"),
+        new(MacroLibraryFilterKind.Json, "JSON dosyalari"),
+        new(MacroLibraryFilterKind.Xml, "XML dosyalari"),
+        new(MacroLibraryFilterKind.Short, "Kisa makrolar"),
+        new(MacroLibraryFilterKind.Long, "Uzun makrolar")
+    ];
+
     private readonly Panel _listViewportPanel;
     private readonly FlowLayoutPanel _macroListPanel;
     private readonly ModernScrollBar _listScrollBar;
@@ -14,13 +25,15 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _totalMacroValueLabel;
     private readonly Label _totalEventValueLabel;
     private readonly TextBox _searchTextBox;
-    private IReadOnlyList<MacroLibraryEntry> _items = [];
+    private readonly ModernSelect _filterSelect;
+    private IReadOnlyList<MacroLibraryViewItem> _items = [];
     private string? _selectedFilePath;
 
     public event EventHandler? AddRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? LoadRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? RenameRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? DeleteRequested;
+    public event EventHandler<MacroLibraryItemEventArgs>? FavoriteToggled;
 
     public MacroLibraryControl()
     {
@@ -42,13 +55,14 @@ internal sealed class MacroLibraryControl : UserControl
         _totalMacroValueLabel = CreateFooterValueLabel();
         _totalEventValueLabel = CreateFooterValueLabel();
         _searchTextBox = CreateSearchTextBox();
+        _filterSelect = CreateFilterSelect();
 
         BuildLayout();
         SetItems([], null);
     }
 
     public void SetItems(
-        IReadOnlyList<MacroLibraryEntry> items,
+        IReadOnlyList<MacroLibraryViewItem> items,
         string? selectedFilePath)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -61,38 +75,37 @@ internal sealed class MacroLibraryControl : UserControl
     private void ApplyFilter()
     {
         string searchTerm = _searchTextBox.Text.Trim();
-        IReadOnlyList<MacroLibraryEntry> filteredItems = string.IsNullOrWhiteSpace(searchTerm)
-            ? _items
-            : _items
-                .Where(item => item.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+        MacroLibraryFilterKind filterKind = GetSelectedFilterKind();
+        MacroLibraryViewItem[] filteredItems =
+            MacroLibraryFilterEngine.Apply(_items, searchTerm, filterKind);
 
         _macroListPanel.SuspendLayout();
         _macroListPanel.Controls.Clear();
 
-        if (filteredItems.Count == 0)
+        if (filteredItems.Length == 0)
         {
             _emptyStateLabel.Text = _items.Count == 0
                 ? "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin."
-                : "Arama ile eslesen makro bulunamadi.";
+                : "Filtreyle eslesen makro bulunamadi.";
             _macroListPanel.Controls.Add(_emptyStateLabel);
         }
         else
         {
-            foreach (MacroLibraryEntry item in filteredItems)
+            foreach (MacroLibraryViewItem item in filteredItems)
             {
-                bool isSelected = IsSamePath(item.FilePath, _selectedFilePath);
+                bool isSelected = IsSamePath(item.Entry.FilePath, _selectedFilePath);
                 var row = new MacroLibraryRow(item, isSelected);
                 row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                row.FavoriteToggled += (_, _) => FavoriteToggled?.Invoke(this, new MacroLibraryItemEventArgs(item));
                 WireMouseWheelForwarding(row);
                 _macroListPanel.Controls.Add(row);
             }
         }
 
-        int totalEventCount = filteredItems.Sum(item => Math.Max(0, item.EventCount));
-        _totalMacroValueLabel.Text = filteredItems.Count.ToString(CultureInfo.InvariantCulture);
+        int totalEventCount = filteredItems.Sum(item => Math.Max(0, item.Entry.EventCount));
+        _totalMacroValueLabel.Text = filteredItems.Length.ToString(CultureInfo.InvariantCulture);
         _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
         ResizeLibraryRows();
         UpdateListScrollLayout();
@@ -105,7 +118,7 @@ internal sealed class MacroLibraryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 5,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
@@ -113,6 +126,7 @@ internal sealed class MacroLibraryControl : UserControl
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(50)));
 
@@ -176,6 +190,13 @@ internal sealed class MacroLibraryControl : UserControl
         searchPanel.Click += (_, _) => _searchTextBox.Focus();
         searchPanel.Controls.Add(_searchTextBox);
 
+        _filterSelect.Dock = DockStyle.Fill;
+        _filterSelect.Margin = new Padding(
+            0,
+            0,
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(8));
+
         var listHostPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -215,8 +236,9 @@ internal sealed class MacroLibraryControl : UserControl
 
         rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
         rootLayoutPanel.Controls.Add(searchPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(listHostPanel, 0, 2);
-        rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 3);
+        rootLayoutPanel.Controls.Add(_filterSelect, 0, 2);
+        rootLayoutPanel.Controls.Add(listHostPanel, 0, 3);
+        rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 4);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -384,16 +406,38 @@ internal sealed class MacroLibraryControl : UserControl
         return textBox;
     }
 
+    private ModernSelect CreateFilterSelect()
+    {
+        var select = new ModernSelect
+        {
+            Height = DesignTokens.Scale(32)
+        };
+
+        select.SetItems(FilterOptions.Select(option => option.Label));
+        select.SelectedIndexChanged += (_, _) => ApplyFilter();
+        return select;
+    }
+
+    private MacroLibraryFilterKind GetSelectedFilterKind()
+    {
+        int selectedIndex = _filterSelect.SelectedIndex;
+
+        return selectedIndex >= 0 && selectedIndex < FilterOptions.Length
+            ? FilterOptions[selectedIndex].Kind
+            : MacroLibraryFilterKind.All;
+    }
+
     private sealed class MacroLibraryRow : RoundedPanel
     {
-        private readonly MacroLibraryEntry _item;
+        private readonly MacroLibraryViewItem _item;
         private readonly bool _isSelected;
 
         public event EventHandler? Activated;
         public event EventHandler? RenameRequested;
         public event EventHandler? DeleteRequested;
+        public event EventHandler? FavoriteToggled;
 
-        public MacroLibraryRow(MacroLibraryEntry item, bool isSelected)
+        public MacroLibraryRow(MacroLibraryViewItem item, bool isSelected)
         {
             _item = item;
             _isSelected = isSelected;
@@ -468,7 +512,7 @@ internal sealed class MacroLibraryControl : UserControl
                 new Label
                 {
                     Dock = DockStyle.Fill,
-                    Text = _item.Name,
+                    Text = _item.Entry.Name,
                     Font = DesignTokens.FontUiBold,
                     ForeColor = DesignTokens.TextPrimary,
                     BackColor = Color.Transparent,
@@ -481,7 +525,7 @@ internal sealed class MacroLibraryControl : UserControl
                 new Label
                 {
                     Dock = DockStyle.Fill,
-                    Text = FormatLastModified(_item.LastModifiedUtc),
+                    Text = FormatMetadataLine(_item),
                     Font = DesignTokens.FontUiNormal,
                     ForeColor = DesignTokens.TextSecondary,
                     BackColor = Color.Transparent,
@@ -505,11 +549,16 @@ internal sealed class MacroLibraryControl : UserControl
                 contextMenu,
                 AppToolStripMenuDensity.Comfortable);
 
+            var favoriteItem = new ToolStripMenuItem(_item.IsFavorite ? "Favoriden Cikar" : "Favoriye Ekle");
+            favoriteItem.Click += (_, _) => FavoriteToggled?.Invoke(this, EventArgs.Empty);
+
             var renameItem = new ToolStripMenuItem("Isim Duzenle");
             renameItem.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
 
             var deleteItem = new ToolStripMenuItem("Sil");
             deleteItem.Click += (_, _) => DeleteRequested?.Invoke(this, EventArgs.Empty);
+            contextMenu.Items.Add(favoriteItem);
+            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(renameItem);
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(deleteItem);
@@ -527,11 +576,51 @@ internal sealed class MacroLibraryControl : UserControl
             }
         }
 
+        private static string FormatMetadataLine(MacroLibraryViewItem item)
+        {
+            string format = item.Entry.Format switch
+            {
+                MacroLibraryFileFormat.Json => "JSON",
+                MacroLibraryFileFormat.Xml => "XML",
+                _ => item.Entry.Format.ToString()
+            };
+
+            string[] metadataParts = item.IsFavorite
+                ?
+                [
+                    "Favori",
+                    FormatLastModified(item.Entry.LastModifiedUtc),
+                    format,
+                    item.Entry.EventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) + " olay",
+                    FormatDuration(item.Entry.TotalDurationMs)
+                ]
+                :
+                [
+                    FormatLastModified(item.Entry.LastModifiedUtc),
+                    format,
+                    item.Entry.EventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) + " olay",
+                    FormatDuration(item.Entry.TotalDurationMs)
+                ];
+
+            return string.Join(" | ", metadataParts);
+        }
+
         private static string FormatLastModified(DateTime lastModifiedUtc)
         {
             return lastModifiedUtc
                 .ToLocalTime()
                 .ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR"));
+        }
+
+        private static string FormatDuration(int totalDurationMs)
+        {
+            if (totalDurationMs < 1_000)
+            {
+                return totalDurationMs.ToString(CultureInfo.InvariantCulture) + " ms";
+            }
+
+            double totalSeconds = totalDurationMs / 1_000d;
+            return totalSeconds.ToString("0.#", CultureInfo.GetCultureInfo("tr-TR")) + " sn";
         }
     }
 
@@ -613,10 +702,13 @@ internal sealed class MacroLibraryControl : UserControl
 
 internal sealed class MacroLibraryItemEventArgs : EventArgs
 {
-    public MacroLibraryItemEventArgs(MacroLibraryEntry item)
+    public MacroLibraryItemEventArgs(MacroLibraryViewItem viewItem)
     {
-        Item = item;
+        ViewItem = viewItem;
+        Item = viewItem.Entry;
     }
 
     public MacroLibraryEntry Item { get; }
+
+    public MacroLibraryViewItem ViewItem { get; }
 }

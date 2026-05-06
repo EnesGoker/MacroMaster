@@ -5,4 +5,5 @@ public sealed record MacroLibraryEntry(
     string FilePath,
     DateTime LastModifiedUtc,
     int EventCount,
+    int TotalDurationMs,
     MacroLibraryFileFormat Format);
