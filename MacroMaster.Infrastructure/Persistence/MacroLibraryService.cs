@@ -112,14 +112,55 @@ public sealed class MacroLibraryService : IMacroLibraryService
         MacroSession session,
         CancellationToken cancellationToken = default)
     {
+        return await SaveAsync(session, MacroLibraryFileFormat.Json, cancellationToken);
+    }
+
+    public async Task<string> SaveAsync(
+        MacroSession session,
+        MacroLibraryFileFormat format,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(session);
         EnsureLibraryDirectoryExists();
 
+        string extension = ResolveExtension(format);
         string filePath = Path.Combine(
             _libraryDirectoryPath,
-            BuildSafeFileName(session.Name, ".json"));
+            BuildSafeFileName(session.Name, extension));
 
-        await _macroStorageService.SaveAsJsonAsync(session, filePath, cancellationToken);
+        await SaveByFormatAsync(session, filePath, format, cancellationToken);
+        return filePath;
+    }
+
+    public async Task<string> ImportAsync(
+        string sourceFilePath,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sourceFilePath))
+        {
+            throw new ArgumentException("Ice aktarilacak makro dosya yolu bos olamaz.", nameof(sourceFilePath));
+        }
+
+        string resolvedSourceFilePath = Path.GetFullPath(sourceFilePath);
+        AtomicFileWriteHelper.EnsureFileExists(resolvedSourceFilePath);
+
+        EnsureLibraryDirectoryExists();
+
+        MacroLibraryFileFormat format = ResolveFormat(resolvedSourceFilePath);
+        string extension = ResolveExtension(format);
+        MacroSession session = await LoadByExtensionAsync(resolvedSourceFilePath, cancellationToken);
+        string importName = string.IsNullOrWhiteSpace(session.Name)
+            ? Path.GetFileNameWithoutExtension(resolvedSourceFilePath)
+            : session.Name;
+
+        session.Name = NormalizeSessionName(importName);
+
+        string filePath = BuildAvailableLibraryFilePath(
+            session.Name,
+            extension,
+            resolvedSourceFilePath);
+
+        await SaveByFormatAsync(session, filePath, format, cancellationToken);
         return filePath;
     }
 
@@ -475,9 +516,51 @@ public sealed class MacroLibraryService : IMacroLibraryService
         throw new NotSupportedException($"Desteklenmeyen makro dosya uzantisi: {extension}");
     }
 
+    private static string ResolveExtension(MacroLibraryFileFormat format)
+    {
+        return format switch
+        {
+            MacroLibraryFileFormat.Json => ".json",
+            MacroLibraryFileFormat.Xml => ".xml",
+            _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formati: {format}")
+        };
+    }
+
     private void EnsureLibraryDirectoryExists()
     {
         Directory.CreateDirectory(_libraryDirectoryPath);
+    }
+
+    private string BuildAvailableLibraryFilePath(
+        string sessionName,
+        string extension,
+        string? sourceFilePath)
+    {
+        string safeFileName = BuildSafeFileName(sessionName, extension);
+        string baseName = Path.GetFileNameWithoutExtension(safeFileName);
+        string candidateFilePath = Path.Combine(_libraryDirectoryPath, safeFileName);
+
+        if (!File.Exists(candidateFilePath)
+            || (sourceFilePath is not null && IsSamePath(sourceFilePath, candidateFilePath)))
+        {
+            return candidateFilePath;
+        }
+
+        for (int suffix = 2; suffix <= 999; suffix++)
+        {
+            candidateFilePath = Path.Combine(
+                _libraryDirectoryPath,
+                $"{baseName} ({suffix.ToString(CultureInfo.InvariantCulture)}){extension}");
+
+            if (!File.Exists(candidateFilePath)
+                || (sourceFilePath is not null && IsSamePath(sourceFilePath, candidateFilePath)))
+            {
+                return candidateFilePath;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Makro kutuphanesi icin benzersiz dosya adi olusturulamadi: {baseName}{extension}");
     }
 
     private static string BuildSafeFileName(string sessionName, string extension)

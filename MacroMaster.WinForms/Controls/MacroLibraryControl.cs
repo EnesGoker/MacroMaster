@@ -25,8 +25,9 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _totalMacroValueLabel;
     private readonly Label _totalEventValueLabel;
     private readonly TextBox _searchTextBox;
-    private readonly ModernSelect _filterSelect;
+    private readonly FilterIconButton _filterButton;
     private IReadOnlyList<MacroLibraryViewItem> _items = [];
+    private MacroLibraryFilterKind _selectedFilterKind = MacroLibraryFilterKind.All;
     private string? _selectedFilePath;
 
     public event EventHandler? AddRequested;
@@ -55,7 +56,7 @@ internal sealed class MacroLibraryControl : UserControl
         _totalMacroValueLabel = CreateFooterValueLabel();
         _totalEventValueLabel = CreateFooterValueLabel();
         _searchTextBox = CreateSearchTextBox();
-        _filterSelect = CreateFilterSelect();
+        _filterButton = new FilterIconButton();
 
         BuildLayout();
         SetItems([], null);
@@ -75,9 +76,8 @@ internal sealed class MacroLibraryControl : UserControl
     private void ApplyFilter()
     {
         string searchTerm = _searchTextBox.Text.Trim();
-        MacroLibraryFilterKind filterKind = GetSelectedFilterKind();
         MacroLibraryViewItem[] filteredItems =
-            MacroLibraryFilterEngine.Apply(_items, searchTerm, filterKind);
+            MacroLibraryFilterEngine.Apply(_items, searchTerm, _selectedFilterKind);
 
         _macroListPanel.SuspendLayout();
         _macroListPanel.Controls.Clear();
@@ -118,7 +118,7 @@ internal sealed class MacroLibraryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 4,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
@@ -126,20 +126,20 @@ internal sealed class MacroLibraryControl : UserControl
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(50)));
 
         var headerLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
             Padding = Padding.Empty
         };
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
 
         var titleLabel = new Label
@@ -168,8 +168,13 @@ internal sealed class MacroLibraryControl : UserControl
         addButton.FlatAppearance.BorderSize = 1;
         addButton.Click += (_, _) => AddRequested?.Invoke(this, EventArgs.Empty);
 
+        _filterButton.Dock = DockStyle.Fill;
+        _filterButton.Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7));
+        _filterButton.Click += (_, _) => ShowFilterMenu();
+
         headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
-        headerLayoutPanel.Controls.Add(addButton, 1, 0);
+        headerLayoutPanel.Controls.Add(_filterButton, 1, 0);
+        headerLayoutPanel.Controls.Add(addButton, 2, 0);
 
         var searchPanel = new RoundedPanel
         {
@@ -189,13 +194,6 @@ internal sealed class MacroLibraryControl : UserControl
         };
         searchPanel.Click += (_, _) => _searchTextBox.Focus();
         searchPanel.Controls.Add(_searchTextBox);
-
-        _filterSelect.Dock = DockStyle.Fill;
-        _filterSelect.Margin = new Padding(
-            0,
-            0,
-            DesignTokens.Scale(12),
-            DesignTokens.Scale(8));
 
         var listHostPanel = new TableLayoutPanel
         {
@@ -236,9 +234,8 @@ internal sealed class MacroLibraryControl : UserControl
 
         rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
         rootLayoutPanel.Controls.Add(searchPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(_filterSelect, 0, 2);
-        rootLayoutPanel.Controls.Add(listHostPanel, 0, 3);
-        rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 4);
+        rootLayoutPanel.Controls.Add(listHostPanel, 0, 2);
+        rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 3);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -406,25 +403,249 @@ internal sealed class MacroLibraryControl : UserControl
         return textBox;
     }
 
-    private ModernSelect CreateFilterSelect()
+    private void ShowFilterMenu()
     {
-        var select = new ModernSelect
+        var menu = new ContextMenuStrip
         {
-            Height = DesignTokens.Scale(32)
+            ShowCheckMargin = true,
+            ShowImageMargin = false,
+            MinimumSize = new Size(DesignTokens.Scale(184), 0)
         };
+        AppToolStripRenderer.ApplyTo(menu, AppToolStripMenuDensity.Comfortable);
 
-        select.SetItems(FilterOptions.Select(option => option.Label));
-        select.SelectedIndexChanged += (_, _) => ApplyFilter();
-        return select;
+        foreach (MacroLibraryFilterOption option in FilterOptions)
+        {
+            var menuItem = new ToolStripMenuItem(option.Label)
+            {
+                Checked = option.Kind == _selectedFilterKind,
+                Tag = option.Kind
+            };
+            menuItem.Click += (_, _) =>
+            {
+                if (menuItem.Tag is MacroLibraryFilterKind filterKind)
+                {
+                    SetFilter(filterKind);
+                }
+            };
+            menu.Items.Add(menuItem);
+        }
+
+        menu.Closed += (_, _) => DisposeMenuAfterCurrentMessage(menu);
+        menu.Show(_filterButton, new Point(0, _filterButton.Height + DesignTokens.Scale(4)));
     }
 
-    private MacroLibraryFilterKind GetSelectedFilterKind()
+    private void SetFilter(MacroLibraryFilterKind filterKind)
     {
-        int selectedIndex = _filterSelect.SelectedIndex;
+        if (_selectedFilterKind == filterKind)
+        {
+            return;
+        }
 
-        return selectedIndex >= 0 && selectedIndex < FilterOptions.Length
-            ? FilterOptions[selectedIndex].Kind
-            : MacroLibraryFilterKind.All;
+        _selectedFilterKind = filterKind;
+        _filterButton.IsActive = filterKind != MacroLibraryFilterKind.All;
+        ApplyFilter();
+    }
+
+    private void DisposeMenuAfterCurrentMessage(ContextMenuStrip menu)
+    {
+        if (menu.IsDisposed)
+        {
+            return;
+        }
+
+        if (IsDisposed || Disposing || !IsHandleCreated)
+        {
+            menu.Dispose();
+            return;
+        }
+
+        try
+        {
+            BeginInvoke((MethodInvoker)(() =>
+            {
+                if (!menu.IsDisposed)
+                {
+                    menu.Dispose();
+                }
+            }));
+        }
+        catch (ObjectDisposedException)
+        {
+            // The owner can be torn down while the drop-down is closing.
+        }
+        catch (InvalidOperationException)
+        {
+            if (!menu.IsDisposed)
+            {
+                menu.Dispose();
+            }
+        }
+    }
+
+    private sealed class FilterIconButton : Control
+    {
+        private bool _isHovered;
+        private bool _isPressed;
+        private bool _isActive;
+
+        public FilterIconButton()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.Selectable |
+                ControlStyles.UserPaint,
+                true);
+
+            Cursor = Cursors.Hand;
+            TabStop = true;
+            AccessibleName = "Makro filtresi";
+            AccessibleRole = AccessibleRole.PushButton;
+        }
+
+        public bool IsActive
+        {
+            get => _isActive;
+            set
+            {
+                if (_isActive == value)
+                {
+                    return;
+                }
+
+                _isActive = value;
+                Invalidate();
+            }
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            _isHovered = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _isHovered = false;
+            _isPressed = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left && Enabled)
+            {
+                _isPressed = true;
+                Focus();
+                Invalidate();
+            }
+
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            _isPressed = false;
+            Invalidate();
+            base.OnMouseUp(e);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
+
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            using GraphicsPath backgroundPath = CreateRoundPath(bounds, DesignTokens.Scale(4));
+            using var fillBrush = new SolidBrush(ResolveFillColor());
+            using var borderPen = new Pen(ResolveBorderColor());
+            e.Graphics.FillPath(fillBrush, backgroundPath);
+            e.Graphics.DrawPath(borderPen, backgroundPath);
+
+            DrawFilterGlyph(e.Graphics, bounds);
+        }
+
+        protected override bool IsInputKey(Keys keyData)
+        {
+            Keys keyCode = keyData & Keys.KeyCode;
+            return keyCode is Keys.Space or Keys.Enter || base.IsInputKey(keyData);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (Enabled && e.KeyCode is Keys.Space or Keys.Enter)
+            {
+                OnClick(EventArgs.Empty);
+                e.Handled = true;
+                return;
+            }
+
+            base.OnKeyDown(e);
+        }
+
+        private Color ResolveFillColor()
+        {
+            if (_isPressed)
+            {
+                return DesignTokens.Surface3;
+            }
+
+            if (_isActive)
+            {
+                return Color.FromArgb(30, DesignTokens.Accent);
+            }
+
+            return _isHovered
+                ? DesignTokens.SurfaceHover
+                : DesignTokens.Surface2;
+        }
+
+        private Color ResolveBorderColor()
+        {
+            if (_isActive || Focused)
+            {
+                return DesignTokens.Accent;
+            }
+
+            return _isHovered
+                ? DesignTokens.BorderBright
+                : DesignTokens.BorderSoft;
+        }
+
+        private void DrawFilterGlyph(Graphics graphics, Rectangle bounds)
+        {
+            int iconWidth = DesignTokens.Scale(14);
+            int iconHeight = DesignTokens.Scale(13);
+            int left = bounds.Left + (bounds.Width - iconWidth) / 2;
+            int top = bounds.Top + (bounds.Height - iconHeight) / 2;
+            int right = left + iconWidth;
+            int bottom = top + iconHeight;
+            int centerX = left + iconWidth / 2;
+            int neckY = top + DesignTokens.Scale(6);
+            int stemBottom = bottom - DesignTokens.Scale(1);
+
+            using var path = new GraphicsPath();
+            path.AddLine(left, top, right, top);
+            path.AddLine(right, top, centerX + DesignTokens.Scale(3), neckY);
+            path.AddLine(centerX + DesignTokens.Scale(3), neckY, centerX + DesignTokens.Scale(1), neckY);
+            path.AddLine(centerX + DesignTokens.Scale(1), neckY, centerX + DesignTokens.Scale(1), stemBottom);
+            path.AddLine(centerX + DesignTokens.Scale(1), stemBottom, centerX - DesignTokens.Scale(1), stemBottom);
+            path.AddLine(centerX - DesignTokens.Scale(1), stemBottom, centerX - DesignTokens.Scale(1), neckY);
+            path.AddLine(centerX - DesignTokens.Scale(1), neckY, centerX - DesignTokens.Scale(3), neckY);
+            path.CloseFigure();
+
+            using var iconBrush = new SolidBrush(_isActive ? DesignTokens.Accent : DesignTokens.TextSecondary);
+            graphics.FillPath(iconBrush, path);
+        }
     }
 
     private sealed class MacroLibraryRow : RoundedPanel
@@ -525,7 +746,7 @@ internal sealed class MacroLibraryControl : UserControl
                 new Label
                 {
                     Dock = DockStyle.Fill,
-                    Text = FormatMetadataLine(_item),
+                    Text = FormatLastModified(_item.Entry.LastModifiedUtc),
                     Font = DesignTokens.FontUiNormal,
                     ForeColor = DesignTokens.TextSecondary,
                     BackColor = Color.Transparent,
@@ -576,51 +797,11 @@ internal sealed class MacroLibraryControl : UserControl
             }
         }
 
-        private static string FormatMetadataLine(MacroLibraryViewItem item)
-        {
-            string format = item.Entry.Format switch
-            {
-                MacroLibraryFileFormat.Json => "JSON",
-                MacroLibraryFileFormat.Xml => "XML",
-                _ => item.Entry.Format.ToString()
-            };
-
-            string[] metadataParts = item.IsFavorite
-                ?
-                [
-                    "Favori",
-                    FormatLastModified(item.Entry.LastModifiedUtc),
-                    format,
-                    item.Entry.EventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) + " olay",
-                    FormatDuration(item.Entry.TotalDurationMs)
-                ]
-                :
-                [
-                    FormatLastModified(item.Entry.LastModifiedUtc),
-                    format,
-                    item.Entry.EventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) + " olay",
-                    FormatDuration(item.Entry.TotalDurationMs)
-                ];
-
-            return string.Join(" | ", metadataParts);
-        }
-
         private static string FormatLastModified(DateTime lastModifiedUtc)
         {
             return lastModifiedUtc
                 .ToLocalTime()
                 .ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR"));
-        }
-
-        private static string FormatDuration(int totalDurationMs)
-        {
-            if (totalDurationMs < 1_000)
-            {
-                return totalDurationMs.ToString(CultureInfo.InvariantCulture) + " ms";
-            }
-
-            double totalSeconds = totalDurationMs / 1_000d;
-            return totalSeconds.ToString("0.#", CultureInfo.GetCultureInfo("tr-TR")) + " sn";
         }
     }
 

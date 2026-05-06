@@ -14,6 +14,15 @@ public interface IMacroLibraryService
         MacroSession session,
         CancellationToken cancellationToken = default);
 
+    Task<string> SaveAsync(
+        MacroSession session,
+        MacroLibraryFileFormat format,
+        CancellationToken cancellationToken = default);
+
+    Task<string> ImportAsync(
+        string sourceFilePath,
+        CancellationToken cancellationToken = default);
+
     Task<string> RenameAsync(
         string filePath,
         string newName,

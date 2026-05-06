@@ -593,6 +593,13 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(LoadJsonAsync, "JSON yukleme");
     }
 
+    private void importLibraryMacroButton_Click(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _ = ExecuteUiActionAsync(ImportLibraryMacroAsync, "Makro kutuphanesine ice aktarma");
+    }
+
     private void saveXmlButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
@@ -717,7 +724,8 @@ public partial class MainForm : Form
         MacroSession session = GetRequiredSession();
         EnsureSessionMutationAllowed();
 
-        string filePath = await _macroLibraryService.SaveAsync(session);
+        MacroLibraryFileFormat format = ResolveCurrentLibrarySaveFormat();
+        string filePath = await _macroLibraryService.SaveAsync(session, format);
         _lastSessionPath = filePath;
         MarkLibraryFileUsed(filePath);
         await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
@@ -742,6 +750,30 @@ public partial class MainForm : Form
 
         MacroSession session = await _macroStorageService.LoadFromJsonAsync(dialog.FileName);
         AdoptLoadedSession(session, dialog.FileName);
+        await RefreshMacroLibraryAsync();
+    }
+
+    private async Task ImportLibraryMacroAsync()
+    {
+        EnsureSessionMutationAllowed();
+
+        using var dialog = new OpenFileDialog
+        {
+            Filter = "Makro dosyalari (*.json;*.xml)|*.json;*.xml|JSON makro (*.json)|*.json|XML makro (*.xml)|*.xml|Tum dosyalar (*.*)|*.*",
+            RestoreDirectory = true
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        string importedFilePath = await _macroLibraryService.ImportAsync(dialog.FileName);
+        MacroSession session = await _macroLibraryService.LoadAsync(importedFilePath);
+
+        AdoptLoadedSession(session, importedFilePath);
+        MarkLibraryFileUsed(importedFilePath);
+        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
         await RefreshMacroLibraryAsync();
     }
 
@@ -1359,7 +1391,7 @@ public partial class MainForm : Form
 
         _macroLibraryControl.Name = "macroLibraryControl";
         _macroLibraryControl.Dock = DockStyle.Fill;
-        _macroLibraryControl.AddRequested += loadJsonButton_Click;
+        _macroLibraryControl.AddRequested += importLibraryMacroButton_Click;
         _macroLibraryControl.LoadRequested += macroLibraryControl_LoadRequested;
         _macroLibraryControl.RenameRequested += macroLibraryControl_RenameRequested;
         _macroLibraryControl.DeleteRequested += macroLibraryControl_DeleteRequested;
@@ -1754,6 +1786,17 @@ public partial class MainForm : Form
         }
 
         return sanitizedName + extension;
+    }
+
+    private MacroLibraryFileFormat ResolveCurrentLibrarySaveFormat()
+    {
+        string extension = string.IsNullOrWhiteSpace(_lastSessionPath)
+            ? string.Empty
+            : Path.GetExtension(_lastSessionPath);
+
+        return extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)
+            ? MacroLibraryFileFormat.Xml
+            : MacroLibraryFileFormat.Json;
     }
 
     private static bool IsSamePath(string? left, string right)

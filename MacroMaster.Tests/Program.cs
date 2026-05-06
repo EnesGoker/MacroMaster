@@ -75,6 +75,9 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroLibraryService reads duration metadata")]
     public Task MacroLibraryService_ReadsDurationMetadata() => MacroLibraryService_ReadsDurationMetadataAsync();
 
+    [Fact(DisplayName = "MacroLibraryService imports XML files into the library")]
+    public Task MacroLibraryService_ImportsXmlFilesIntoLibrary() => MacroLibraryService_ImportsXmlFilesIntoLibraryAsync();
+
     [Fact(DisplayName = "MacroLibraryFilterEngine applies search and library filters")]
     public Task MacroLibraryFilterEngine_AppliesSearchAndFilters() => MacroLibraryFilterEngine_AppliesSearchAndFiltersAsync();
 
@@ -690,6 +693,53 @@ public sealed class MacroMasterTests
             Assert.Equal(35, jsonEntry.TotalDurationMs, "JSON duration metadata should sum event delays.");
             Assert.Equal(2, xmlEntry.EventCount, "XML event count should be read from metadata.");
             Assert.Equal(75, xmlEntry.TotalDurationMs, "XML duration metadata should sum event delays.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static async Task MacroLibraryService_ImportsXmlFilesIntoLibraryAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            string libraryDirectoryPath = Path.Combine(directoryPath, "library");
+            string sourceDirectoryPath = Path.Combine(directoryPath, "source");
+            Directory.CreateDirectory(sourceDirectoryPath);
+
+            var storageService = new MacroStorageService(
+                new JsonMacroStorageService(),
+                new XmlMacroStorageService());
+            var libraryService = new MacroLibraryService(
+                storageService,
+                new RecordingTestLogger(),
+                libraryDirectoryPath);
+
+            string sourceFilePath = Path.Combine(sourceDirectoryPath, "DesktopMacro.xml");
+            await storageService.SaveAsXmlAsync(
+                CreateSession("DesktopMacro", 8, 13),
+                sourceFilePath);
+
+            string importedFilePath = await libraryService.ImportAsync(sourceFilePath);
+            IReadOnlyList<MacroLibraryEntry> entries = await libraryService.ListAsync();
+
+            Assert.True(
+                importedFilePath.StartsWith(libraryDirectoryPath, StringComparison.OrdinalIgnoreCase),
+                "Imported XML files should be copied into the managed library directory.");
+            Assert.True(
+                File.Exists(importedFilePath),
+                "Imported XML file should exist in the managed library directory.");
+            Assert.Equal(
+                MacroLibraryFileFormat.Xml,
+                entries.Single().Format,
+                "Imported XML files should remain XML in the library.");
+            Assert.Equal(
+                21,
+                entries.Single().TotalDurationMs,
+                "Imported XML metadata should be visible through the library listing.");
         }
         finally
         {
