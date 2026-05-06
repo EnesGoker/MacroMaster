@@ -87,6 +87,9 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "EventListFilterEngine identifies optimization candidates and invalid events")]
     public Task EventListFilterEngine_IdentifiesOptimizationCandidatesAndInvalidEvents() => EventListFilterEngine_IdentifiesOptimizationCandidatesAndInvalidEventsAsync();
 
+    [Fact(DisplayName = "EventListFilterEngine supports structured search expressions")]
+    public Task EventListFilterEngine_SupportsStructuredSearchExpressions() => EventListFilterEngine_SupportsStructuredSearchExpressionsAsync();
+
     [Fact(DisplayName = "HotkeySettingsDialog exposes all controls within the dialog bounds")]
     public Task HotkeySettingsDialog_UsesStableLayout() => HotkeySettingsDialog_UsesStableLayoutAsync();
 
@@ -954,6 +957,81 @@ public sealed class MacroMasterTests
             [0, 1, 2, 3, 4],
             invalidItems.Select(item => item.SourceIndex),
             "Invalid filter should catch incomplete keyboard and mouse events.");
+
+        Assert.Equal(
+            EventListRowInsight.OptimizationCandidate,
+            EventListFilterEngine.GetInsight(optimizationEvents, 1),
+            "Insight classification should identify optimization candidates.");
+        Assert.Equal(
+            EventListRowInsight.InvalidOrIncomplete,
+            EventListFilterEngine.GetInsight(invalidEvents, 0),
+            "Insight classification should prioritize invalid events.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task EventListFilterEngine_SupportsStructuredSearchExpressionsAsync()
+    {
+        MacroEvent[] events =
+        [
+            CreateMouseMoveEvent(10, 680, 291),
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.LeftDown,
+                DelayMs = 231,
+                X = 521,
+                Y = 288,
+                Description = "Sol tus basildi"
+            },
+            new()
+            {
+                EventType = MacroEventType.Keyboard,
+                KeyboardActionType = KeyboardActionType.KeyDown,
+                DelayMs = 12,
+                KeyCode = 13,
+                ScanCode = 28,
+                KeyName = "Enter",
+                Description = "Enter tusu"
+            },
+            new()
+            {
+                EventType = MacroEventType.Mouse,
+                MouseActionType = MouseActionType.Wheel,
+                DelayMs = 320,
+                WheelDelta = -120,
+                Description = "Fare tekerlegi"
+            }
+        ];
+
+        Assert.Equal(
+            [1],
+            EventListFilterEngine.Apply(
+                    events,
+                    new EventListFilterCriteria("x:521 y:288", EventListTypeFilterKind.All, EventListSmartFilterKind.All))
+                .Select(item => item.SourceIndex),
+            "Structured coordinate search should require all coordinate tokens.");
+        Assert.Equal(
+            [3],
+            EventListFilterEngine.Apply(
+                    events,
+                    new EventListFilterCriteria("delay>=250 type:mouse", EventListTypeFilterKind.All, EventListSmartFilterKind.All))
+                .Select(item => item.SourceIndex),
+            "Structured comparison search should combine with type aliases.");
+        Assert.Equal(
+            [2],
+            EventListFilterEngine.Apply(
+                    events,
+                    new EventListFilterCriteria("row:3 key:enter", EventListTypeFilterKind.All, EventListSmartFilterKind.All))
+                .Select(item => item.SourceIndex),
+            "Structured row and key search should preserve source indexes.");
+        Assert.Equal(
+            [0],
+            EventListFilterEngine.Apply(
+                    events,
+                    new EventListFilterCriteria("action:move elapsed<20", EventListTypeFilterKind.All, EventListSmartFilterKind.All))
+                .Select(item => item.SourceIndex),
+            "Structured action search should combine with elapsed-time comparisons.");
 
         return Task.CompletedTask;
     }

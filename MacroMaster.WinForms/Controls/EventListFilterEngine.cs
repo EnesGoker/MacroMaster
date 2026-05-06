@@ -52,6 +52,34 @@ internal static class EventListFilterEngine
             && MatchesSearch(macroEvent, sourceIndex, elapsedMs, criteria.SearchTerm);
     }
 
+    public static EventListRowInsight GetInsight(
+        IReadOnlyList<MacroEvent> events,
+        int sourceIndex)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+
+        if (sourceIndex < 0 || sourceIndex >= events.Count)
+        {
+            return EventListRowInsight.None;
+        }
+
+        MacroEvent macroEvent = events[sourceIndex];
+
+        if (IsInvalidOrIncomplete(macroEvent))
+        {
+            return EventListRowInsight.InvalidOrIncomplete;
+        }
+
+        if (IsOptimizationCandidate(events, sourceIndex))
+        {
+            return EventListRowInsight.OptimizationCandidate;
+        }
+
+        return macroEvent.DelayMs >= LongDelayThresholdMs
+            ? EventListRowInsight.LongDelay
+            : EventListRowInsight.None;
+    }
+
     private static bool MatchesType(
         MacroEvent macroEvent,
         EventListTypeFilterKind typeFilter)
@@ -120,8 +148,247 @@ internal static class EventListFilterEngine
             macroEvent.WheelDelta?.ToString(CultureInfo.InvariantCulture) ?? string.Empty
         ];
 
-        return searchTokens.All(token => searchableValues.Any(value =>
-            value.Contains(token, StringComparison.CurrentCultureIgnoreCase)));
+        return searchTokens.All(token =>
+        {
+            if (TryMatchStructuredSearchToken(
+                    token,
+                    macroEvent,
+                    sourceIndex,
+                    elapsedMs,
+                    out bool structuredMatch))
+            {
+                return structuredMatch;
+            }
+
+            return searchableValues.Any(value =>
+                value.Contains(token, StringComparison.CurrentCultureIgnoreCase));
+        });
+    }
+
+    private static bool TryMatchStructuredSearchToken(
+        string token,
+        MacroEvent macroEvent,
+        int sourceIndex,
+        int elapsedMs,
+        out bool isMatch)
+    {
+        isMatch = false;
+
+        if (TryMatchComparisonSearchToken(token, macroEvent, sourceIndex, elapsedMs, out isMatch))
+        {
+            return true;
+        }
+
+        int separatorIndex = token.IndexOf(':', StringComparison.Ordinal);
+        if (separatorIndex <= 0 || separatorIndex >= token.Length - 1)
+        {
+            return false;
+        }
+
+        string fieldName = token[..separatorIndex].Trim();
+        string fieldValue = token[(separatorIndex + 1)..].Trim();
+
+        if (string.IsNullOrWhiteSpace(fieldName) || string.IsNullOrWhiteSpace(fieldValue))
+        {
+            return false;
+        }
+
+        if (TryGetNumericFieldValue(fieldName, macroEvent, sourceIndex, elapsedMs, out int numericFieldValue))
+        {
+            isMatch = int.TryParse(
+                    fieldValue,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out int expectedValue)
+                && numericFieldValue == expectedValue;
+            return true;
+        }
+
+        if (IsField(fieldName, "type", "tur", "event"))
+        {
+            isMatch = MatchesTypeAlias(macroEvent.EventType, fieldValue);
+            return true;
+        }
+
+        if (IsField(fieldName, "action", "aksiyon"))
+        {
+            isMatch = FormatAction(macroEvent).Contains(
+                fieldValue,
+                StringComparison.CurrentCultureIgnoreCase);
+            return true;
+        }
+
+        if (IsField(fieldName, "detail", "detay", "desc", "aciklama"))
+        {
+            string detail = macroEvent.Description ?? string.Empty;
+            isMatch = detail.Contains(fieldValue, StringComparison.CurrentCultureIgnoreCase);
+            return true;
+        }
+
+        if (IsField(fieldName, "key", "tus"))
+        {
+            string keyName = macroEvent.KeyName ?? string.Empty;
+            isMatch = keyName.Contains(fieldValue, StringComparison.CurrentCultureIgnoreCase);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryMatchComparisonSearchToken(
+        string token,
+        MacroEvent macroEvent,
+        int sourceIndex,
+        int elapsedMs,
+        out bool isMatch)
+    {
+        isMatch = false;
+
+        foreach (string comparisonOperator in new[] { ">=", "<=", ">", "<", "=" })
+        {
+            int operatorIndex = token.IndexOf(comparisonOperator, StringComparison.Ordinal);
+            if (operatorIndex <= 0 || operatorIndex >= token.Length - comparisonOperator.Length)
+            {
+                continue;
+            }
+
+            string fieldName = token[..operatorIndex].Trim();
+            string expectedValueText = token[(operatorIndex + comparisonOperator.Length)..].Trim();
+
+            if (!TryGetNumericFieldValue(fieldName, macroEvent, sourceIndex, elapsedMs, out int actualValue))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(
+                    expectedValueText,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out int expectedValue))
+            {
+                isMatch = false;
+                return true;
+            }
+
+            isMatch = comparisonOperator switch
+            {
+                ">=" => actualValue >= expectedValue,
+                "<=" => actualValue <= expectedValue,
+                ">" => actualValue > expectedValue,
+                "<" => actualValue < expectedValue,
+                "=" => actualValue == expectedValue,
+                _ => false
+            };
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetNumericFieldValue(
+        string fieldName,
+        MacroEvent macroEvent,
+        int sourceIndex,
+        int elapsedMs,
+        out int value)
+    {
+        value = 0;
+
+        if (IsField(fieldName, "row", "no", "#", "sira"))
+        {
+            value = sourceIndex + 1;
+            return true;
+        }
+
+        if (IsField(fieldName, "delay", "ms", "gecikme"))
+        {
+            value = macroEvent.DelayMs;
+            return true;
+        }
+
+        if (IsField(fieldName, "elapsed", "time", "zaman", "sure"))
+        {
+            value = elapsedMs;
+            return true;
+        }
+
+        if (IsField(fieldName, "x"))
+        {
+            if (!macroEvent.X.HasValue)
+            {
+                return false;
+            }
+
+            value = macroEvent.X.Value;
+            return true;
+        }
+
+        if (IsField(fieldName, "y"))
+        {
+            if (!macroEvent.Y.HasValue)
+            {
+                return false;
+            }
+
+            value = macroEvent.Y.Value;
+            return true;
+        }
+
+        if (IsField(fieldName, "wheel", "delta"))
+        {
+            if (!macroEvent.WheelDelta.HasValue)
+            {
+                return false;
+            }
+
+            value = macroEvent.WheelDelta.Value;
+            return true;
+        }
+
+        if (IsField(fieldName, "keycode"))
+        {
+            if (!macroEvent.KeyCode.HasValue)
+            {
+                return false;
+            }
+
+            value = macroEvent.KeyCode.Value;
+            return true;
+        }
+
+        if (IsField(fieldName, "scancode"))
+        {
+            if (!macroEvent.ScanCode.HasValue)
+            {
+                return false;
+            }
+
+            value = macroEvent.ScanCode.Value;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool MatchesTypeAlias(MacroEventType eventType, string value)
+    {
+        return eventType switch
+        {
+            MacroEventType.Keyboard => IsValue(value, "keyboard", "klavye"),
+            MacroEventType.Mouse => IsValue(value, "mouse", "fare"),
+            MacroEventType.System => IsValue(value, "system", "sistem"),
+            _ => eventType.ToString().Equals(value, StringComparison.OrdinalIgnoreCase)
+        };
+    }
+
+    private static bool IsField(string value, params string[] aliases)
+    {
+        return aliases.Any(alias => value.Equals(alias, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsValue(string value, params string[] aliases)
+    {
+        return aliases.Any(alias => value.Equals(alias, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsOptimizationCandidate(

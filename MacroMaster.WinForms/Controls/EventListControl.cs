@@ -123,9 +123,12 @@ internal sealed class EventListControl : UserControl
         _displayedElapsedMs = 0;
     }
 
-    private void RebuildRowsForCurrentSession()
+    private void RebuildRowsForCurrentSession(bool preserveSelection)
     {
         MacroSession? session = _displayedSession;
+        int? selectedSourceIndex = preserveSelection
+            ? GetSelectedSourceIndex()
+            : null;
 
         if (session is null)
         {
@@ -138,7 +141,7 @@ internal sealed class EventListControl : UserControl
         ResetRowsForSession(session);
         AppendRows(session, 0);
         UpdateVisibleState();
-        SelectLastVisibleRow();
+        SelectSourceRowOrFallback(selectedSourceIndex);
         UpdateEventScrollBar();
     }
 
@@ -184,7 +187,12 @@ internal sealed class EventListControl : UserControl
             FormatPosition(macroEvent),
             FormattableString.Invariant($"{macroEvent.DelayMs} ms"),
             FormatDetail(macroEvent));
-        _eventGridView.Rows[rowIndex].Tag = viewItem.SourceIndex;
+        EventListRowInsight insight = _displayedSession is null
+            ? EventListRowInsight.None
+            : EventListFilterEngine.GetInsight(_displayedSession.Events, viewItem.SourceIndex);
+        DataGridViewRow row = _eventGridView.Rows[rowIndex];
+        row.Tag = new EventRowTag(viewItem.SourceIndex, insight);
+        ApplyInsightStyle(row, insight);
     }
 
     private void BuildLayout()
@@ -373,7 +381,7 @@ internal sealed class EventListControl : UserControl
         _selectedTypeFilterKind = GetSelectedTypeFilter();
         _selectedSmartFilterKind = GetSelectedSmartFilter();
         _clearFilterButton.IsActive = HasActiveFilters();
-        RebuildRowsForCurrentSession();
+        RebuildRowsForCurrentSession(preserveSelection: true);
     }
 
     private void ClearFilters()
@@ -398,7 +406,7 @@ internal sealed class EventListControl : UserControl
         }
 
         _clearFilterButton.IsActive = false;
-        RebuildRowsForCurrentSession();
+        RebuildRowsForCurrentSession(preserveSelection: true);
     }
 
     private EventListFilterCriteria BuildFilterCriteria()
@@ -446,7 +454,10 @@ internal sealed class EventListControl : UserControl
             _emptyStateLabel.Text = ResolveEmptyStateText(totalEventCount);
         }
 
-        _filterStatusLabel.Text = FormattableString.Invariant($"{visibleEventCount} / {totalEventCount} olay");
+        _filterStatusLabel.Text = BuildFilterStatusText(visibleEventCount, totalEventCount);
+        _filterStatusLabel.ForeColor = HasActiveFilters()
+            ? DesignTokens.Accent
+            : DesignTokens.TextSecondary;
     }
 
     private string ResolveEmptyStateText(int totalEventCount)
@@ -466,6 +477,32 @@ internal sealed class EventListControl : UserControl
             : "Seçili oturumda gösterilecek olay yok.";
     }
 
+    private void SelectSourceRowOrFallback(int? sourceIndex)
+    {
+        if (sourceIndex.HasValue && SelectSourceRow(sourceIndex.Value))
+        {
+            return;
+        }
+
+        SelectLastVisibleRow();
+    }
+
+    private bool SelectSourceRow(int sourceIndex)
+    {
+        for (int rowIndex = 0; rowIndex < _eventGridView.Rows.Count; rowIndex++)
+        {
+            if (GetSourceIndexForRow(rowIndex) != sourceIndex)
+            {
+                continue;
+            }
+
+            SelectRow(rowIndex);
+            return true;
+        }
+
+        return false;
+    }
+
     private void SelectLastVisibleRow()
     {
         int rowIndex = _eventGridView.Rows.Count - 1;
@@ -475,6 +512,11 @@ internal sealed class EventListControl : UserControl
             return;
         }
 
+        SelectRow(rowIndex);
+    }
+
+    private void SelectRow(int rowIndex)
+    {
         _eventGridView.ClearSelection();
         _eventGridView.Rows[rowIndex].Selected = true;
 
@@ -486,6 +528,70 @@ internal sealed class EventListControl : UserControl
         {
             // DataGridView can reject the scroll while it is rebuilding rows.
         }
+    }
+
+    private int? GetSelectedSourceIndex()
+    {
+        if (_eventGridView.SelectedRows.Count == 0)
+        {
+            return null;
+        }
+
+        return GetSourceIndexForRow(_eventGridView.SelectedRows[0].Index);
+    }
+
+    private int? GetSourceIndexForRow(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _eventGridView.Rows.Count)
+        {
+            return null;
+        }
+
+        object? tag = _eventGridView.Rows[rowIndex].Tag;
+        return tag switch
+        {
+            EventRowTag rowTag => rowTag.SourceIndex,
+            int sourceIndex => sourceIndex,
+            _ => null
+        };
+    }
+
+    private static EventListRowInsight GetInsightForRow(DataGridViewRow row)
+    {
+        return row.Tag is EventRowTag rowTag
+            ? rowTag.Insight
+            : EventListRowInsight.None;
+    }
+
+    private string BuildFilterStatusText(int visibleEventCount, int totalEventCount)
+    {
+        string baseText = FormattableString.Invariant($"{visibleEventCount} / {totalEventCount} olay");
+
+        if (!HasActiveFilters())
+        {
+            return baseText;
+        }
+
+        List<string> segments = [];
+
+        if (!string.IsNullOrWhiteSpace(_filterSearchTextBox.Text))
+        {
+            segments.Add("arama");
+        }
+
+        if (_selectedTypeFilterKind != EventListTypeFilterKind.All)
+        {
+            segments.Add(TypeFilterOptions.First(option => option.Kind == _selectedTypeFilterKind).Label.Replace("Tür: ", string.Empty, StringComparison.Ordinal));
+        }
+
+        if (_selectedSmartFilterKind != EventListSmartFilterKind.All)
+        {
+            segments.Add(SmartFilterOptions.First(option => option.Kind == _selectedSmartFilterKind).Label.Replace("Akıllı: ", string.Empty, StringComparison.Ordinal));
+        }
+
+        return segments.Count == 0
+            ? baseText
+            : baseText + " • " + string.Join(" • ", segments);
     }
 
     private void EventGridView_MouseWheel(object? sender, MouseEventArgs e)
@@ -568,7 +674,18 @@ internal sealed class EventListControl : UserControl
     {
         _ = sender;
 
-        if (e.RowIndex < 0 || e.ColumnIndex != _eventGridView.Columns["Type"].Index)
+        if (e.RowIndex < 0)
+        {
+            return;
+        }
+
+        if (e.ColumnIndex == _eventGridView.Columns["#"].Index)
+        {
+            PaintIndexCell(e);
+            return;
+        }
+
+        if (e.ColumnIndex != _eventGridView.Columns["Type"].Index)
         {
             return;
         }
@@ -640,12 +757,66 @@ internal sealed class EventListControl : UserControl
         e.Handled = true;
     }
 
+    private void PaintIndexCell(DataGridViewCellPaintingEventArgs e)
+    {
+        DataGridViewRow row = _eventGridView.Rows[e.RowIndex];
+        EventListRowInsight insight = GetInsightForRow(row);
+
+        if (insight == EventListRowInsight.None)
+        {
+            return;
+        }
+
+        Graphics? graphics = e.Graphics;
+        if (graphics is null)
+        {
+            return;
+        }
+
+        e.Paint(
+            e.CellBounds,
+            DataGridViewPaintParts.Background |
+            DataGridViewPaintParts.Border |
+            DataGridViewPaintParts.SelectionBackground);
+
+        Color accentColor = GetInsightAccentColor(insight);
+        Rectangle accentBounds = new(
+            e.CellBounds.Left + DesignTokens.Scale(5),
+            e.CellBounds.Top + DesignTokens.Scale(8),
+            Math.Max(DesignTokens.Scale(3), 2),
+            Math.Max(DesignTokens.Scale(18), e.CellBounds.Height - DesignTokens.Scale(16)));
+
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using GraphicsPath accentPath = CreateRoundedRectanglePath(accentBounds, DesignTokens.Scale(2));
+        using var accentBrush = new SolidBrush(accentColor);
+        graphics.FillPath(accentBrush, accentPath);
+
+        Rectangle textBounds = new(
+            e.CellBounds.Left + DesignTokens.Scale(14),
+            e.CellBounds.Top,
+            Math.Max(0, e.CellBounds.Width - DesignTokens.Scale(16)),
+            e.CellBounds.Height);
+
+        TextRenderer.DrawText(
+            graphics,
+            e.Value?.ToString() ?? string.Empty,
+            e.CellStyle?.Font ?? _eventGridView.Font,
+            textBounds,
+            e.CellStyle?.ForeColor ?? DesignTokens.TextPrimary,
+            TextFormatFlags.Left |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis |
+            TextFormatFlags.NoPrefix);
+
+        e.Handled = true;
+    }
+
     private void RequestEditForRow(int rowIndex)
     {
         if (_displayedSession is null
             || rowIndex < 0
             || rowIndex >= _eventGridView.Rows.Count
-            || _eventGridView.Rows[rowIndex].Tag is not int eventIndex
+            || GetSourceIndexForRow(rowIndex) is not int eventIndex
             || eventIndex < 0
             || eventIndex >= _displayedSession.Events.Count)
         {
@@ -655,6 +826,68 @@ internal sealed class EventListControl : UserControl
         EventEditRequested?.Invoke(
             this,
             new EventEditRequestedEventArgs(eventIndex, _displayedSession.Events[eventIndex]));
+    }
+
+    private static void ApplyInsightStyle(
+        DataGridViewRow row,
+        EventListRowInsight insight)
+    {
+        if (insight == EventListRowInsight.None)
+        {
+            return;
+        }
+
+        Color accentColor = GetInsightAccentColor(insight);
+        row.DefaultCellStyle.BackColor = GetInsightBackColor(insight);
+        row.DefaultCellStyle.SelectionBackColor = GetInsightSelectionBackColor(insight);
+        row.DefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
+        row.DefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
+
+        if (row.DataGridView?.Columns["Delay"] is DataGridViewColumn delayColumn)
+        {
+            row.Cells[delayColumn.Index].Style.ForeColor = accentColor;
+            row.Cells[delayColumn.Index].Style.SelectionForeColor = DesignTokens.TextPrimary;
+        }
+
+        if (row.DataGridView?.Columns["Detail"] is DataGridViewColumn detailColumn
+            && insight == EventListRowInsight.InvalidOrIncomplete)
+        {
+            row.Cells[detailColumn.Index].Style.ForeColor = accentColor;
+            row.Cells[detailColumn.Index].Style.SelectionForeColor = DesignTokens.TextPrimary;
+        }
+    }
+
+    private static Color GetInsightAccentColor(EventListRowInsight insight)
+    {
+        return insight switch
+        {
+            EventListRowInsight.LongDelay => DesignTokens.AccentOrange,
+            EventListRowInsight.OptimizationCandidate => DesignTokens.Accent,
+            EventListRowInsight.InvalidOrIncomplete => DesignTokens.AccentRed,
+            _ => DesignTokens.TextSecondary
+        };
+    }
+
+    private static Color GetInsightBackColor(EventListRowInsight insight)
+    {
+        return insight switch
+        {
+            EventListRowInsight.LongDelay => Color.FromArgb(24, 20, 14),
+            EventListRowInsight.OptimizationCandidate => Color.FromArgb(11, 20, 32),
+            EventListRowInsight.InvalidOrIncomplete => Color.FromArgb(28, 17, 24),
+            _ => DesignTokens.SurfaceInset
+        };
+    }
+
+    private static Color GetInsightSelectionBackColor(EventListRowInsight insight)
+    {
+        return insight switch
+        {
+            EventListRowInsight.LongDelay => Color.FromArgb(98, 70, 24),
+            EventListRowInsight.OptimizationCandidate => Color.FromArgb(24, 93, 188),
+            EventListRowInsight.InvalidOrIncomplete => Color.FromArgb(118, 38, 55),
+            _ => Color.FromArgb(24, 93, 188)
+        };
     }
 
     private void ApplyTheme()
@@ -823,6 +1056,10 @@ internal sealed class EventListControl : UserControl
     private sealed record SmartFilterOption(
         EventListSmartFilterKind Kind,
         string Label);
+
+    private sealed record EventRowTag(
+        int SourceIndex,
+        EventListRowInsight Insight);
 
     private sealed class RoundedInputHostPanel : Panel
     {
