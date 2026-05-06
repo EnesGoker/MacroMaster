@@ -113,6 +113,23 @@ internal sealed class EventListControl : UserControl
         UpdateEventScrollBar();
     }
 
+    public bool TrySelectSourceEvent(int sourceIndex)
+    {
+        if (sourceIndex < 0 || _eventGridView.Rows.Count == 0)
+        {
+            return false;
+        }
+
+        bool selected = SelectSourceRow(sourceIndex);
+
+        if (selected)
+        {
+            UpdateEventScrollBar();
+        }
+
+        return selected;
+    }
+
     private void ResetRowsForSession(MacroSession? session)
     {
         _eventGridView.Rows.Clear();

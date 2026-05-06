@@ -37,6 +37,7 @@ public partial class MainForm : Form
     private MacroLibraryUserState _macroLibraryUserState = new();
     private int _playedEventCount;
     private int _playedDurationMs;
+    private int? _activePlaybackSourceIndex;
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
@@ -347,6 +348,7 @@ public partial class MainForm : Form
 
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         RefreshUiState();
         return Task.CompletedTask;
     }
@@ -379,6 +381,7 @@ public partial class MainForm : Form
 
         _playedEventCount = targetLogicalIndex + 1;
         _playedDurationMs = CalculatePlayedDurationMs(session, targetLogicalIndex);
+        _activePlaybackSourceIndex = sourceEventIndex;
         RefreshUiState();
     }
 
@@ -491,6 +494,7 @@ public partial class MainForm : Form
         _lastSessionPath = null;
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         RequestUiRefresh();
     }
 
@@ -512,6 +516,7 @@ public partial class MainForm : Form
     {
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         RequestUiRefresh();
     }
 
@@ -522,16 +527,32 @@ public partial class MainForm : Form
 
     private void OnPlaybackEventPlayed(MacroEvent macroEvent)
     {
-        _ = macroEvent;
+        _activePlaybackSourceIndex = ResolveCurrentPlaybackSourceIndex();
         _playedEventCount++;
         _playedDurationMs += Math.Max(0, macroEvent.DelayMs);
         RequestUiRefresh();
+    }
+
+    private int? ResolveCurrentPlaybackSourceIndex()
+    {
+        MacroSession? session = GetSessionForPlayback();
+
+        if (session is not { Events.Count: > 0 })
+        {
+            return null;
+        }
+
+        return Math.Clamp(
+            _playedEventCount % session.Events.Count,
+            0,
+            session.Events.Count - 1);
     }
 
     private void OnPlaybackStopped()
     {
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         RequestUiRefresh();
     }
 
@@ -902,6 +923,7 @@ public partial class MainForm : Form
         _lastSessionPath = null;
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
@@ -1045,6 +1067,7 @@ public partial class MainForm : Form
         session.ReplaceEvents(preview.OptimizedEvents);
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         RefreshUiState(forceEventListReload: true);
         return Task.CompletedTask;
     }
@@ -1245,6 +1268,7 @@ public partial class MainForm : Form
         _lastSessionPath = filePath;
         _playedEventCount = 0;
         _playedDurationMs = 0;
+        _activePlaybackSourceIndex = null;
         RefreshUiState();
     }
 
@@ -1329,6 +1353,7 @@ public partial class MainForm : Form
         PlaybackSettings playbackSettings = BuildPlaybackSettings();
 
         _eventListControl.SetSession(displayedSession, forceEventListReload);
+        SelectActiveSimulationEvent(displayedSession, playbackSettings);
 
         bool isIdle = _applicationStateService.IsState(AppState.Idle);
         bool canRecord = !_shutdownInProgress
@@ -1374,9 +1399,10 @@ public partial class MainForm : Form
                 canPlayback,
                 canStop,
                 canNavigatePlayback));
+        string statusText = ResolveStatusText(_applicationStateService.CurrentState, playbackSettings);
         _sessionSummaryControl.UpdateState(
             new SessionSummaryState(
-                FormatAppState(_applicationStateService.CurrentState),
+                statusText,
                 displayedSession?.Name ?? "Oturum yok",
                 displayedSession?.Events.Count ?? 0,
                 displayedSession?.TotalDurationMs ?? 0,
@@ -1385,9 +1411,24 @@ public partial class MainForm : Form
                     : Path.GetFileName(_lastSessionPath),
                 isIdle && hasSession && !_shutdownInProgress));
         _titleBarControl.SetStatus(
-            FormatAppState(_applicationStateService.CurrentState),
+            statusText,
             ResolveTitleBarStatusColor(_applicationStateService.CurrentState));
         _titleBarControl.SetMaximized(WindowState == FormWindowState.Maximized);
+    }
+
+    private void SelectActiveSimulationEvent(
+        MacroSession? displayedSession,
+        PlaybackSettings playbackSettings)
+    {
+        if (!playbackSettings.SimulationMode
+            || displayedSession is not { Events.Count: > 0 }
+            || !_applicationStateService.IsAny(AppState.Playing, AppState.Paused)
+            || !_activePlaybackSourceIndex.HasValue)
+        {
+            return;
+        }
+
+        _eventListControl.TrySelectSourceEvent(_activePlaybackSourceIndex.Value);
     }
 
     private void RequestUiRefresh()
@@ -1875,6 +1916,23 @@ public partial class MainForm : Form
         };
     }
 
+    private static string ResolveStatusText(
+        AppState appState,
+        PlaybackSettings playbackSettings)
+    {
+        if (playbackSettings.SimulationMode)
+        {
+            return appState switch
+            {
+                AppState.Playing => "Simülasyon",
+                AppState.Paused => "Simülasyon duraklatıldı",
+                _ => FormatAppState(appState)
+            };
+        }
+
+        return FormatAppState(appState);
+    }
+
     private static string BuildDefaultFileName(string sessionName, string extension)
     {
         char[] invalidCharacters = Path.GetInvalidFileNameChars();
@@ -1942,7 +2000,7 @@ public partial class MainForm : Form
         int playedDurationMs = Math.Clamp(_playedDurationMs, 0, Math.Max(0, totalDurationMs));
 
         return new PlaybackControlState(
-            FormatAppState(_applicationStateService.CurrentState),
+            ResolveStatusText(_applicationStateService.CurrentState, playbackSettings),
             playedEventCount,
             totalEventCount,
             playedDurationMs,
