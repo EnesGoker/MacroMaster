@@ -150,20 +150,17 @@ internal sealed class AppToolStripRenderer : ToolStripProfessionalRenderer
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        Rectangle checkBounds = Rectangle.Inflate(e.ImageRectangle, DesignTokens.Scale(2), DesignTokens.Scale(2));
-        using var path = CreateRoundedRectanglePath(checkBounds, DesignTokens.Scale(4));
-        using var fillBrush = new SolidBrush(Color.FromArgb(40, DesignTokens.Accent));
-        using var borderPen = new Pen(DesignTokens.Accent);
+        int dotSize = DesignTokens.Scale(6);
+        Rectangle dotBounds = new(
+            e.ImageRectangle.Left + (e.ImageRectangle.Width - dotSize) / 2,
+            e.ImageRectangle.Top + (e.ImageRectangle.Height - dotSize) / 2,
+            dotSize,
+            dotSize);
+
+        using var fillBrush = new SolidBrush(DesignTokens.Accent);
 
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        e.Graphics.FillPath(fillBrush, path);
-        e.Graphics.DrawPath(borderPen, path);
-
-        if (e.Image is not null)
-        {
-            e.Graphics.DrawImage(e.Image, e.ImageRectangle);
-        }
-
+        e.Graphics.FillEllipse(fillBrush, dotBounds);
         e.Graphics.SmoothingMode = SmoothingMode.None;
     }
 

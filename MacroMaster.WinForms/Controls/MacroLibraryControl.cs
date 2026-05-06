@@ -709,13 +709,14 @@ internal sealed class MacroLibraryControl : UserControl
             var layoutPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 1,
+                ColumnCount = 2,
                 RowCount = 1,
                 BackColor = Color.Transparent,
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(22)));
 
             var textLayoutPanel = new TableLayoutPanel
             {
@@ -757,6 +758,19 @@ internal sealed class MacroLibraryControl : UserControl
                 1);
 
             layoutPanel.Controls.Add(textLayoutPanel, 0, 0);
+
+            if (_item.IsFavorite)
+            {
+                layoutPanel.Controls.Add(
+                    new FavoriteMarker
+                    {
+                        Dock = DockStyle.Fill,
+                        Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0)
+                    },
+                    1,
+                    0);
+            }
+
             Controls.Add(layoutPanel);
         }
 
@@ -802,6 +816,66 @@ internal sealed class MacroLibraryControl : UserControl
             return lastModifiedUtc
                 .ToLocalTime()
                 .ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR"));
+        }
+
+        private sealed class FavoriteMarker : Control
+        {
+            public FavoriteMarker()
+            {
+                SetStyle(
+                    ControlStyles.AllPaintingInWmPaint |
+                    ControlStyles.OptimizedDoubleBuffer |
+                    ControlStyles.ResizeRedraw |
+                    ControlStyles.UserPaint,
+                    true);
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                e.Graphics.Clear(Parent?.BackColor ?? Color.Transparent);
+
+                int starSize = DesignTokens.Scale(12);
+                Rectangle bounds = new(
+                    ClientRectangle.Left + (ClientRectangle.Width - starSize) / 2,
+                    ClientRectangle.Top + DesignTokens.Scale(9),
+                    starSize,
+                    starSize);
+
+                using GraphicsPath path = CreateStarPath(bounds);
+                using var fillBrush = new SolidBrush(DesignTokens.Accent);
+                e.Graphics.FillPath(fillBrush, path);
+            }
+
+            protected override void OnPaintBackground(PaintEventArgs pevent)
+            {
+                // Parent row handles the rounded background.
+            }
+
+            private static GraphicsPath CreateStarPath(Rectangle bounds)
+            {
+                var path = new GraphicsPath();
+                PointF center = new(
+                    bounds.Left + bounds.Width / 2f,
+                    bounds.Top + bounds.Height / 2f);
+                float outerRadius = bounds.Width / 2f;
+                float innerRadius = outerRadius * 0.46f;
+                var points = new PointF[10];
+
+                for (int index = 0; index < points.Length; index++)
+                {
+                    double angle = -Math.PI / 2 + index * Math.PI / 5;
+                    float radius = index % 2 == 0
+                        ? outerRadius
+                        : innerRadius;
+                    points[index] = new PointF(
+                        center.X + (float)Math.Cos(angle) * radius,
+                        center.Y + (float)Math.Sin(angle) * radius);
+                }
+
+                path.AddPolygon(points);
+                return path;
+            }
         }
     }
 
