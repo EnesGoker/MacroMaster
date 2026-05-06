@@ -9,12 +9,12 @@ internal sealed class MacroLibraryControl : UserControl
 {
     private static readonly MacroLibraryFilterOption[] FilterOptions =
     [
-        new(MacroLibraryFilterKind.All, "Tum makrolar"),
+        new(MacroLibraryFilterKind.All, "Tüm makrolar"),
         new(MacroLibraryFilterKind.Favorites, "Favoriler"),
-        new(MacroLibraryFilterKind.Recent, "Son kullanilanlar"),
-        new(MacroLibraryFilterKind.Json, "JSON dosyalari"),
-        new(MacroLibraryFilterKind.Xml, "XML dosyalari"),
-        new(MacroLibraryFilterKind.Short, "Kisa makrolar"),
+        new(MacroLibraryFilterKind.Recent, "Son kullanılanlar"),
+        new(MacroLibraryFilterKind.Json, "JSON dosyaları"),
+        new(MacroLibraryFilterKind.Xml, "XML dosyaları"),
+        new(MacroLibraryFilterKind.Short, "Kısa makrolar"),
         new(MacroLibraryFilterKind.Long, "Uzun makrolar")
     ];
 
@@ -26,6 +26,7 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _totalEventValueLabel;
     private readonly TextBox _searchTextBox;
     private readonly FilterIconButton _filterButton;
+    private ToolStripDropDown? _filterDropDown;
     private IReadOnlyList<MacroLibraryViewItem> _items = [];
     private MacroLibraryFilterKind _selectedFilterKind = MacroLibraryFilterKind.All;
     private string? _selectedFilePath;
@@ -62,6 +63,25 @@ internal sealed class MacroLibraryControl : UserControl
         SetItems([], null);
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (_filterDropDown is not null)
+            {
+                ToolStripDropDown dropDown = _filterDropDown;
+                _filterDropDown = null;
+
+                if (!dropDown.IsDisposed)
+                {
+                    dropDown.Dispose();
+                }
+            }
+        }
+
+        base.Dispose(disposing);
+    }
+
     public void SetItems(
         IReadOnlyList<MacroLibraryViewItem> items,
         string? selectedFilePath)
@@ -80,28 +100,36 @@ internal sealed class MacroLibraryControl : UserControl
             MacroLibraryFilterEngine.Apply(_items, searchTerm, _selectedFilterKind);
 
         _macroListPanel.SuspendLayout();
-        _macroListPanel.Controls.Clear();
 
-        if (filteredItems.Length == 0)
+        try
         {
-            _emptyStateLabel.Text = _items.Count == 0
-                ? "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin."
-                : "Filtreyle eslesen makro bulunamadi.";
-            _macroListPanel.Controls.Add(_emptyStateLabel);
-        }
-        else
-        {
-            foreach (MacroLibraryViewItem item in filteredItems)
+            ClearMacroListPanel();
+
+            if (filteredItems.Length == 0)
             {
-                bool isSelected = IsSamePath(item.Entry.FilePath, _selectedFilePath);
-                var row = new MacroLibraryRow(item, isSelected);
-                row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                row.FavoriteToggled += (_, _) => FavoriteToggled?.Invoke(this, new MacroLibraryItemEventArgs(item));
-                WireMouseWheelForwarding(row);
-                _macroListPanel.Controls.Add(row);
+                _emptyStateLabel.Text = _items.Count == 0
+                    ? "Kayıtlı makro yok. Kaydet butonu ile kütüphaneye ekleyebilirsin."
+                    : "Filtreyle eşleşen makro bulunamadı.";
+                _macroListPanel.Controls.Add(_emptyStateLabel);
             }
+            else
+            {
+                foreach (MacroLibraryViewItem item in filteredItems)
+                {
+                    bool isSelected = IsSamePath(item.Entry.FilePath, _selectedFilePath);
+                    var row = new MacroLibraryRow(item, isSelected);
+                    row.Activated += (_, _) => LoadRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.FavoriteToggled += (_, _) => FavoriteToggled?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    WireMouseWheelForwarding(row);
+                    _macroListPanel.Controls.Add(row);
+                }
+            }
+        }
+        finally
+        {
+            _macroListPanel.ResumeLayout(performLayout: false);
         }
 
         int totalEventCount = filteredItems.Sum(item => Math.Max(0, item.Entry.EventCount));
@@ -109,7 +137,21 @@ internal sealed class MacroLibraryControl : UserControl
         _totalEventValueLabel.Text = totalEventCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
         ResizeLibraryRows();
         UpdateListScrollLayout();
-        _macroListPanel.ResumeLayout();
+        _macroListPanel.PerformLayout();
+    }
+
+    private void ClearMacroListPanel()
+    {
+        while (_macroListPanel.Controls.Count > 0)
+        {
+            Control control = _macroListPanel.Controls[0];
+            _macroListPanel.Controls.RemoveAt(0);
+
+            if (!ReferenceEquals(control, _emptyStateLabel))
+            {
+                control.Dispose();
+            }
+        }
     }
 
     private void BuildLayout()
@@ -145,7 +187,7 @@ internal sealed class MacroLibraryControl : UserControl
         var titleLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Makro Kutuphanesi",
+            Text = "Makro Kütüphanesi",
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Surface,
@@ -380,7 +422,7 @@ internal sealed class MacroLibraryControl : UserControl
             Font = DesignTokens.FontUiNormal,
             ForeColor = DesignTokens.TextMuted,
             BackColor = Color.Transparent,
-            Text = "Kayitli makro yok. Kaydet butonu ile kutuphaneye ekleyebilirsin.",
+            Text = "Kayıtlı makro yok. Kaydet butonu ile kütüphaneye ekleyebilirsin.",
             TextAlign = ContentAlignment.MiddleCenter,
             AutoEllipsis = true
         };
@@ -405,33 +447,149 @@ internal sealed class MacroLibraryControl : UserControl
 
     private void ShowFilterMenu()
     {
-        var menu = new ContextMenuStrip
+        CloseFilterDropDown();
+
+        Size dropDownSize = CalculateFilterDropDownSize();
+        int rowHeight = DesignTokens.Scale(44);
+        var filterMenu = new FilterDropDownPanel(
+            FilterOptions,
+            _selectedFilterKind,
+            dropDownSize.Width,
+            rowHeight);
+
+        var host = new ToolStripControlHost(filterMenu)
         {
-            ShowCheckMargin = true,
-            ShowImageMargin = false,
-            MinimumSize = new Size(DesignTokens.Scale(184), 0)
+            AutoSize = false,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+            Size = dropDownSize
         };
-        AppToolStripRenderer.ApplyTo(menu, AppToolStripMenuDensity.Comfortable);
+
+        var dropDown = new ToolStripDropDown
+        {
+            AutoClose = true,
+            AutoSize = false,
+            BackColor = DesignTokens.Surface,
+            CanOverflow = false,
+            DropShadowEnabled = false,
+            GripStyle = ToolStripGripStyle.Hidden,
+            Padding = Padding.Empty
+        };
+        dropDown.Items.Add(host);
+        dropDown.Size = dropDownSize;
+
+        filterMenu.FilterSelected += (_, filterKind) =>
+        {
+            SetFilter(filterKind);
+            dropDown.Close(ToolStripDropDownCloseReason.ItemClicked);
+        };
+        filterMenu.CloseRequested += (_, _) => dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
+        dropDown.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_filterDropDown, dropDown))
+            {
+                _filterDropDown = null;
+            }
+
+            DisposeFilterDropDownAfterCurrentMessage(dropDown);
+        };
+
+        _filterDropDown = dropDown;
+        dropDown.Show(this, ResolveFilterDropDownLocation(dropDownSize));
+        filterMenu.Focus();
+    }
+
+    private void CloseFilterDropDown()
+    {
+        if (_filterDropDown is null)
+        {
+            return;
+        }
+
+        ToolStripDropDown dropDown = _filterDropDown;
+        _filterDropDown = null;
+
+        if (!dropDown.IsDisposed)
+        {
+            dropDown.Close(ToolStripDropDownCloseReason.CloseCalled);
+        }
+    }
+
+    private Size CalculateFilterDropDownSize()
+    {
+        int rowHeight = DesignTokens.Scale(44);
+        int verticalPadding = DesignTokens.Scale(2);
+        int horizontalChrome = DesignTokens.Scale(64);
+        int preferredTextWidth = 0;
 
         foreach (MacroLibraryFilterOption option in FilterOptions)
         {
-            var menuItem = new ToolStripMenuItem(option.Label)
-            {
-                Checked = option.Kind == _selectedFilterKind,
-                Tag = option.Kind
-            };
-            menuItem.Click += (_, _) =>
-            {
-                if (menuItem.Tag is MacroLibraryFilterKind filterKind)
-                {
-                    SetFilter(filterKind);
-                }
-            };
-            menu.Items.Add(menuItem);
+            preferredTextWidth = Math.Max(
+                preferredTextWidth,
+                TextRenderer.MeasureText(
+                    option.Label,
+                    DesignTokens.FontUiNormal,
+                    Size.Empty,
+                    TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine).Width);
         }
 
-        menu.Closed += (_, _) => DisposeMenuAfterCurrentMessage(menu);
-        menu.Show(_filterButton, new Point(0, _filterButton.Height + DesignTokens.Scale(4)));
+        int minimumWidth = DesignTokens.Scale(188);
+        int preferredWidth = preferredTextWidth + horizontalChrome;
+        int maximumWidth = Math.Max(minimumWidth, ClientSize.Width - DesignTokens.Scale(28));
+        int width = Math.Min(maximumWidth, Math.Max(minimumWidth, preferredWidth));
+        int height = (FilterOptions.Length * rowHeight) + verticalPadding;
+
+        return new Size(width, height);
+    }
+
+    private Point ResolveFilterDropDownLocation(Size dropDownSize)
+    {
+        int gap = DesignTokens.Scale(8);
+        int outerMargin = DesignTokens.Scale(12);
+        Point buttonLocation = PointToClient(_filterButton.PointToScreen(Point.Empty));
+
+        int preferredX = buttonLocation.X + _filterButton.Width - dropDownSize.Width;
+        int maxX = Math.Max(0, ClientSize.Width - dropDownSize.Width - outerMargin);
+        int x = Math.Min(maxX, Math.Max(0, preferredX));
+        int y = buttonLocation.Y + _filterButton.Height + gap;
+
+        return new Point(x, y);
+    }
+
+    private void DisposeFilterDropDownAfterCurrentMessage(ToolStripDropDown dropDown)
+    {
+        if (dropDown.IsDisposed)
+        {
+            return;
+        }
+
+        if (IsDisposed || Disposing || !IsHandleCreated)
+        {
+            dropDown.Dispose();
+            return;
+        }
+
+        try
+        {
+            BeginInvoke((MethodInvoker)(() =>
+            {
+                if (!dropDown.IsDisposed)
+                {
+                    dropDown.Dispose();
+                }
+            }));
+        }
+        catch (ObjectDisposedException)
+        {
+            // The owner can be torn down while the drop-down is closing.
+        }
+        catch (InvalidOperationException)
+        {
+            if (!dropDown.IsDisposed)
+            {
+                dropDown.Dispose();
+            }
+        }
     }
 
     private void SetFilter(MacroLibraryFilterKind filterKind)
@@ -479,6 +637,250 @@ internal sealed class MacroLibraryControl : UserControl
             {
                 menu.Dispose();
             }
+        }
+    }
+
+    private sealed class FilterDropDownPanel : Control
+    {
+        private readonly IReadOnlyList<MacroLibraryFilterOption> _options;
+        private readonly MacroLibraryFilterKind _selectedKind;
+        private readonly int _rowHeight;
+        private int _hoveredIndex = -1;
+        private int _keyboardIndex;
+
+        public event EventHandler<MacroLibraryFilterKind>? FilterSelected;
+        public event EventHandler? CloseRequested;
+
+        public FilterDropDownPanel(
+            IReadOnlyList<MacroLibraryFilterOption> options,
+            MacroLibraryFilterKind selectedKind,
+            int width,
+            int rowHeight)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+
+            _options = options;
+            _selectedKind = selectedKind;
+            _rowHeight = rowHeight;
+            _keyboardIndex = Math.Max(0, FindSelectedIndex(options, selectedKind));
+
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.Selectable |
+                ControlStyles.UserPaint,
+                true);
+
+            BackColor = DesignTokens.Surface;
+            Cursor = Cursors.Hand;
+            Size = new Size(width, (options.Count * rowHeight) + DesignTokens.Scale(2));
+            TabStop = true;
+            AccessibleName = "Makro filtre seçenekleri";
+            AccessibleRole = AccessibleRole.MenuPopup;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.Clear(BackColor);
+
+            Rectangle outerBounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (outerBounds.Width <= 0 || outerBounds.Height <= 0)
+            {
+                return;
+            }
+
+            using GraphicsPath outerPath = CreateRoundPath(outerBounds, DesignTokens.Scale(8));
+            using var backgroundBrush = new SolidBrush(DesignTokens.Surface);
+            using var borderPen = new Pen(DesignTokens.BorderSoft);
+            e.Graphics.FillPath(backgroundBrush, outerPath);
+            e.Graphics.DrawPath(borderPen, outerPath);
+
+            for (int index = 0; index < _options.Count; index++)
+            {
+                DrawOption(e.Graphics, index);
+            }
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            int nextHoveredIndex = GetOptionIndexAt(e.Location);
+            if (_hoveredIndex != nextHoveredIndex)
+            {
+                _hoveredIndex = nextHoveredIndex;
+                if (nextHoveredIndex >= 0)
+                {
+                    _keyboardIndex = nextHoveredIndex;
+                }
+
+                Invalidate();
+            }
+
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _hoveredIndex = -1;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Focus();
+            }
+
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                int index = GetOptionIndexAt(e.Location);
+                if (index >= 0)
+                {
+                    SelectOption(index);
+                    return;
+                }
+            }
+
+            base.OnMouseUp(e);
+        }
+
+        protected override bool IsInputKey(Keys keyData)
+        {
+            Keys keyCode = keyData & Keys.KeyCode;
+            return keyCode is Keys.Up or Keys.Down or Keys.Enter or Keys.Space or Keys.Escape
+                || base.IsInputKey(keyData);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.Up:
+                    MoveKeyboardSelection(-1);
+                    e.Handled = true;
+                    return;
+
+                case Keys.Down:
+                    MoveKeyboardSelection(1);
+                    e.Handled = true;
+                    return;
+
+                case Keys.Enter:
+                case Keys.Space:
+                    SelectOption(_keyboardIndex);
+                    e.Handled = true;
+                    return;
+
+                case Keys.Escape:
+                    CloseRequested?.Invoke(this, EventArgs.Empty);
+                    e.Handled = true;
+                    return;
+            }
+
+            base.OnKeyDown(e);
+        }
+
+        private void DrawOption(Graphics graphics, int index)
+        {
+            MacroLibraryFilterOption option = _options[index];
+            bool isSelected = option.Kind == _selectedKind;
+            bool isHighlighted = index == _hoveredIndex || (Focused && index == _keyboardIndex);
+            Rectangle rowBounds = new(
+                DesignTokens.Scale(1),
+                DesignTokens.Scale(1) + (index * _rowHeight),
+                Math.Max(0, Width - DesignTokens.Scale(2)),
+                _rowHeight);
+
+            if (isHighlighted)
+            {
+                Rectangle highlightBounds = Rectangle.Inflate(rowBounds, -DesignTokens.Scale(6), -DesignTokens.Scale(4));
+                using GraphicsPath highlightPath = CreateRoundPath(highlightBounds, DesignTokens.Scale(7));
+                using var highlightBrush = new SolidBrush(DesignTokens.SurfaceHover);
+                graphics.FillPath(highlightBrush, highlightPath);
+            }
+
+            if (isSelected)
+            {
+                int dotSize = DesignTokens.Scale(7);
+                Rectangle dotBounds = new(
+                    rowBounds.Left + DesignTokens.Scale(16),
+                    rowBounds.Top + ((rowBounds.Height - dotSize) / 2),
+                    dotSize,
+                    dotSize);
+                using var dotBrush = new SolidBrush(DesignTokens.Accent);
+                graphics.FillEllipse(dotBrush, dotBounds);
+            }
+
+            Rectangle textBounds = new(
+                rowBounds.Left + DesignTokens.Scale(42),
+                rowBounds.Top,
+                Math.Max(0, rowBounds.Width - DesignTokens.Scale(56)),
+                rowBounds.Height);
+
+            TextRenderer.DrawText(
+                graphics,
+                option.Label,
+                DesignTokens.FontUiNormal,
+                textBounds,
+                DesignTokens.TextPrimary,
+                TextFormatFlags.Left |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.SingleLine |
+                TextFormatFlags.NoPrefix);
+        }
+
+        private int GetOptionIndexAt(Point location)
+        {
+            int index = (location.Y - DesignTokens.Scale(1)) / Math.Max(1, _rowHeight);
+            return index >= 0 && index < _options.Count
+                ? index
+                : -1;
+        }
+
+        private void MoveKeyboardSelection(int delta)
+        {
+            if (_options.Count == 0)
+            {
+                return;
+            }
+
+            _keyboardIndex = (_keyboardIndex + delta + _options.Count) % _options.Count;
+            _hoveredIndex = -1;
+            Invalidate();
+        }
+
+        private void SelectOption(int index)
+        {
+            if (index < 0 || index >= _options.Count)
+            {
+                return;
+            }
+
+            FilterSelected?.Invoke(this, _options[index].Kind);
+        }
+
+        private static int FindSelectedIndex(
+            IReadOnlyList<MacroLibraryFilterOption> options,
+            MacroLibraryFilterKind selectedKind)
+        {
+            for (int index = 0; index < options.Count; index++)
+            {
+                if (options[index].Kind == selectedKind)
+                {
+                    return index;
+                }
+            }
+
+            return 0;
         }
     }
 
@@ -778,19 +1180,32 @@ internal sealed class MacroLibraryControl : UserControl
         {
             var contextMenu = new ContextMenuStrip
             {
+                AutoClose = true,
+                DropShadowEnabled = false,
+                MinimumSize = new Size(DesignTokens.Scale(176), 0),
+                ShowCheckMargin = false,
                 ShowImageMargin = false
             };
             AppToolStripRenderer.ApplyTo(
                 contextMenu,
                 AppToolStripMenuDensity.Comfortable);
 
-            var favoriteItem = new ToolStripMenuItem(_item.IsFavorite ? "Favoriden Cikar" : "Favoriye Ekle");
+            var favoriteItem = new ToolStripMenuItem(_item.IsFavorite ? "Favoriden Çıkar" : "Favoriye Ekle")
+            {
+                AccessibleName = _item.IsFavorite ? "Favoriden çıkar" : "Favoriye ekle"
+            };
             favoriteItem.Click += (_, _) => FavoriteToggled?.Invoke(this, EventArgs.Empty);
 
-            var renameItem = new ToolStripMenuItem("Isim Duzenle");
+            var renameItem = new ToolStripMenuItem("İsim Düzenle")
+            {
+                AccessibleName = "Makro ismini düzenle"
+            };
             renameItem.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
 
-            var deleteItem = new ToolStripMenuItem("Sil");
+            var deleteItem = new ToolStripMenuItem("Sil")
+            {
+                AccessibleName = "Makroyu sil"
+            };
             deleteItem.Click += (_, _) => DeleteRequested?.Invoke(this, EventArgs.Empty);
             contextMenu.Items.Add(favoriteItem);
             contextMenu.Items.Add(new ToolStripSeparator());
@@ -798,6 +1213,16 @@ internal sealed class MacroLibraryControl : UserControl
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(deleteItem);
             ContextMenuStrip = contextMenu;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ContextMenuStrip?.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
 
         private void WireActivation(Control control)
@@ -833,7 +1258,7 @@ internal sealed class MacroLibraryControl : UserControl
             protected override void OnPaint(PaintEventArgs e)
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                e.Graphics.Clear(Parent?.BackColor ?? Color.Transparent);
+                e.Graphics.Clear(ResolveEffectiveBackColor());
 
                 int starSize = DesignTokens.Scale(12);
                 Rectangle bounds = new(
@@ -849,7 +1274,21 @@ internal sealed class MacroLibraryControl : UserControl
 
             protected override void OnPaintBackground(PaintEventArgs pevent)
             {
-                // Parent row handles the rounded background.
+                // The marker paints the effective row background itself to avoid
+                // transparent TableLayoutPanel cells rendering as black rectangles.
+            }
+
+            private Color ResolveEffectiveBackColor()
+            {
+                for (Control? current = Parent; current is not null; current = current.Parent)
+                {
+                    if (current.BackColor.A > 0 && current.BackColor != Color.Transparent)
+                    {
+                        return current.BackColor;
+                    }
+                }
+
+                return DesignTokens.SurfaceInset;
             }
 
             private static GraphicsPath CreateStarPath(Rectangle bounds)

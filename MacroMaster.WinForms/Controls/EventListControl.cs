@@ -10,21 +10,21 @@ internal sealed class EventListControl : UserControl
 {
     private static readonly TypeFilterOption[] TypeFilterOptions =
     [
-        new(EventListTypeFilterKind.All, "Tur: Tumu"),
-        new(EventListTypeFilterKind.Keyboard, "Tur: Klavye"),
-        new(EventListTypeFilterKind.Mouse, "Tur: Fare"),
-        new(EventListTypeFilterKind.System, "Tur: Sistem")
+        new(EventListTypeFilterKind.All, "Tür: Tümü"),
+        new(EventListTypeFilterKind.Keyboard, "Tür: Klavye"),
+        new(EventListTypeFilterKind.Mouse, "Tür: Fare"),
+        new(EventListTypeFilterKind.System, "Tür: Sistem")
     ];
 
     private static readonly SmartFilterOption[] SmartFilterOptions =
     [
-        new(EventListSmartFilterKind.All, "Akilli: Tumu"),
+        new(EventListSmartFilterKind.All, "Akıllı: Tümü"),
         new(EventListSmartFilterKind.KeyboardOnly, "Sadece klavye"),
         new(EventListSmartFilterKind.MouseMoves, "Mouse hareketleri"),
-        new(EventListSmartFilterKind.MouseClicks, "Tiklamalar"),
+        new(EventListSmartFilterKind.MouseClicks, "Tıklamalar"),
         new(EventListSmartFilterKind.LongDelays, "Uzun beklemeler"),
-        new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adaylari"),
-        new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatali/eksik")
+        new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adayları"),
+        new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatalı/eksik")
     ];
 
     private readonly DataGridView _eventGridView;
@@ -75,6 +75,16 @@ internal sealed class EventListControl : UserControl
         ConfigureGrid();
         ApplyTheme();
         SetSession(null);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _eventContextMenu.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 
     public void SetSession(MacroSession? session, bool forceReload = false)
@@ -200,7 +210,7 @@ internal sealed class EventListControl : UserControl
 
         _eventGridView.Dock = DockStyle.None;
         _emptyStateLabel.Dock = DockStyle.None;
-        _emptyStateLabel.Text = "Secili bir oturum yok. Yeni bir makro kaydedin veya diskten yukleyin.";
+        _emptyStateLabel.Text = "Seçili bir oturum yok. Yeni bir makro kaydedin veya diskten yükleyin.";
         _emptyStateLabel.TextAlign = ContentAlignment.MiddleCenter;
 
         _eventScrollBar.Dock = DockStyle.None;
@@ -328,7 +338,7 @@ internal sealed class EventListControl : UserControl
 
         _eventGridView.Columns.Add(CreateTextColumn("#", "#", 58, 6));
         _eventGridView.Columns.Add(CreateTextColumn("Time", "Zaman", 126, 15));
-        _eventGridView.Columns.Add(CreateTextColumn("Type", "Tur", 78, 10));
+        _eventGridView.Columns.Add(CreateTextColumn("Type", "Tür", 78, 10));
         _eventGridView.Columns.Add(CreateTextColumn("Action", "Aksiyon", 92, 15));
         _eventGridView.Columns.Add(CreateTextColumn("Position", "Konum", 138, 22));
         _eventGridView.Columns.Add(CreateTextColumn("Delay", "Gecikme", 86, 11));
@@ -443,17 +453,17 @@ internal sealed class EventListControl : UserControl
     {
         if (_displayedSession is null)
         {
-            return "Secili bir oturum yok. Yeni bir makro kaydedin veya diskten yukleyin.";
+            return "Seçili bir oturum yok. Yeni bir makro kaydedin veya diskten yükleyin.";
         }
 
         if (totalEventCount == 0)
         {
-            return "Secili oturumda olay yok.";
+            return "Seçili oturumda olay yok.";
         }
 
         return HasActiveFilters()
-            ? "Filtreyle eslesen olay bulunamadi."
-            : "Secili oturumda gosterilecek olay yok.";
+            ? "Filtreyle eşleşen olay bulunamadı."
+            : "Seçili oturumda gösterilecek olay yok.";
     }
 
     private void SelectLastVisibleRow()
@@ -490,13 +500,20 @@ internal sealed class EventListControl : UserControl
     {
         var contextMenu = new ContextMenuStrip
         {
+            AutoClose = true,
+            DropShadowEnabled = false,
+            MinimumSize = new Size(DesignTokens.Scale(138), 0),
+            ShowCheckMargin = false,
             ShowImageMargin = false
         };
         AppToolStripRenderer.ApplyTo(
             contextMenu,
             AppToolStripMenuDensity.Comfortable);
 
-        var editItem = new ToolStripMenuItem("Duzenle");
+        var editItem = new ToolStripMenuItem("Düzenle")
+        {
+            AccessibleName = "Seçili olayı düzenle"
+        };
         editItem.Click += (_, _) =>
         {
             if (_eventContextMenu.Tag is int rowIndex)
@@ -522,7 +539,29 @@ internal sealed class EventListControl : UserControl
         _eventGridView.Rows[e.RowIndex].Selected = true;
         _eventGridView.CurrentCell = _eventGridView.Rows[e.RowIndex].Cells[Math.Max(0, e.ColumnIndex)];
         _eventContextMenu.Tag = e.RowIndex;
-        _eventContextMenu.Show(_eventGridView, _eventGridView.PointToClient(Cursor.Position));
+        _eventContextMenu.Show(_eventGridView, ResolveContextMenuLocation(e));
+    }
+
+    private Point ResolveContextMenuLocation(DataGridViewCellMouseEventArgs e)
+    {
+        int columnIndex = Math.Max(0, e.ColumnIndex);
+
+        if (columnIndex < _eventGridView.Columns.Count && e.RowIndex < _eventGridView.Rows.Count)
+        {
+            Rectangle cellBounds = _eventGridView.GetCellDisplayRectangle(
+                columnIndex,
+                e.RowIndex,
+                cutOverflow: false);
+
+            if (!cellBounds.IsEmpty)
+            {
+                return new Point(
+                    cellBounds.Left + Math.Max(0, e.X),
+                    cellBounds.Top + Math.Max(0, e.Y));
+            }
+        }
+
+        return _eventGridView.PointToClient(Control.MousePosition);
     }
 
     private void EventGridView_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
