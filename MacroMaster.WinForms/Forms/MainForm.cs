@@ -341,14 +341,18 @@ public partial class MainForm : Form
 
     private Task ResetPlaybackCursorAsync()
     {
-        if (!CanNavigatePlayback(GetSessionForPlayback(), BuildPlaybackSettings()))
+        MacroSession? session = GetSessionForPlayback();
+
+        if (!CanNavigatePlayback(session, BuildPlaybackSettings()))
         {
             return Task.CompletedTask;
         }
 
         _playedEventCount = 0;
         _playedDurationMs = 0;
-        _activePlaybackSourceIndex = null;
+        _activePlaybackSourceIndex = session is { Events.Count: > 0 }
+            ? 0
+            : null;
         RefreshUiState();
         return Task.CompletedTask;
     }
@@ -364,11 +368,16 @@ public partial class MainForm : Form
         }
 
         int totalPlaybackEvents = GetTotalPlaybackEventCount(session, playbackSettings);
-        int targetLogicalIndex = stepDirection > 0
-            ? _playedEventCount
-            : _playedEventCount - 2;
 
-        if (targetLogicalIndex < 0 || targetLogicalIndex >= totalPlaybackEvents)
+        if (stepDirection <= 0)
+        {
+            StepPlaybackCursorBack(session);
+            return;
+        }
+
+        int targetLogicalIndex = _playedEventCount;
+
+        if (targetLogicalIndex >= totalPlaybackEvents)
         {
             return;
         }
@@ -382,6 +391,24 @@ public partial class MainForm : Form
         _playedEventCount = targetLogicalIndex + 1;
         _playedDurationMs = CalculatePlayedDurationMs(session, targetLogicalIndex);
         _activePlaybackSourceIndex = sourceEventIndex;
+        RefreshUiState();
+    }
+
+    private void StepPlaybackCursorBack(MacroSession session)
+    {
+        if (_playedEventCount <= 0)
+        {
+            return;
+        }
+
+        int previousPlayedEventCount = Math.Max(0, _playedEventCount - 1);
+        _playedEventCount = previousPlayedEventCount;
+        _playedDurationMs = previousPlayedEventCount == 0
+            ? 0
+            : CalculatePlayedDurationMs(session, previousPlayedEventCount - 1);
+        _activePlaybackSourceIndex = previousPlayedEventCount == 0
+            ? 0
+            : (previousPlayedEventCount - 1) % session.Events.Count;
         RefreshUiState();
     }
 
@@ -1353,7 +1380,7 @@ public partial class MainForm : Form
         PlaybackSettings playbackSettings = BuildPlaybackSettings();
 
         _eventListControl.SetSession(displayedSession, forceEventListReload);
-        SelectActiveSimulationEvent(displayedSession, playbackSettings);
+        SelectActivePlaybackCursor(displayedSession, playbackSettings);
 
         bool isIdle = _applicationStateService.IsState(AppState.Idle);
         bool canRecord = !_shutdownInProgress
@@ -1416,14 +1443,21 @@ public partial class MainForm : Form
         _titleBarControl.SetMaximized(WindowState == FormWindowState.Maximized);
     }
 
-    private void SelectActiveSimulationEvent(
+    private void SelectActivePlaybackCursor(
         MacroSession? displayedSession,
         PlaybackSettings playbackSettings)
     {
-        if (!playbackSettings.SimulationMode
-            || displayedSession is not { Events.Count: > 0 }
-            || !_applicationStateService.IsAny(AppState.Playing, AppState.Paused)
+        if (displayedSession is not { Events.Count: > 0 }
             || !_activePlaybackSourceIndex.HasValue)
+        {
+            return;
+        }
+
+        bool shouldFollowIdleDebugCursor = _applicationStateService.IsState(AppState.Idle);
+        bool shouldFollowSimulationPlayback = playbackSettings.SimulationMode
+            && _applicationStateService.IsAny(AppState.Playing, AppState.Paused);
+
+        if (!shouldFollowIdleDebugCursor && !shouldFollowSimulationPlayback)
         {
             return;
         }

@@ -120,9 +120,9 @@ internal sealed class PlaybackControl : UserControl
             _ => "Oynat"
         });
         _toolTip.SetToolTip(_stopButton, "Durdur");
-        _toolTip.SetToolTip(_skipBackButton, _skipBackButton.Enabled ? "Basa al" : "Basa almak icin ilerleme gerekli");
-        _toolTip.SetToolTip(_stepBackButton, _stepBackButton.Enabled ? "Bir olay geri" : "Geri adim icin ilerleme gerekli");
-        _toolTip.SetToolTip(_stepForwardButton, _stepForwardButton.Enabled ? "Bir olay ileri" : "Oynatilacak olay yok");
+        _toolTip.SetToolTip(_skipBackButton, _skipBackButton.Enabled ? "Debug imlecini basa al" : "Basa almak icin ilerleme gerekli");
+        _toolTip.SetToolTip(_stepBackButton, _stepBackButton.Enabled ? "Debug imlecini bir olay geri al" : "Geri adim icin ilerleme gerekli");
+        _toolTip.SetToolTip(_stepForwardButton, _stepForwardButton.Enabled ? "Sıradaki olayı çalıştır" : "Oynatilacak olay yok");
     }
 
     protected override void Dispose(bool disposing)
