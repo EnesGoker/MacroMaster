@@ -20,6 +20,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
     private readonly HotkeyMessageWindow _messageWindow;
     private readonly IHotkeyConfiguration _hotkeyConfiguration;
     private readonly IAppLogger _logger;
+    private readonly Dictionary<int, HotkeyBinding> _registeredHotkeys = [];
     private bool _disposed;
 
     public WindowsHotkeyService(
@@ -31,12 +32,18 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         _messageWindow = new HotkeyMessageWindow(this);
     }
 
-    public bool IsRegistered { get; private set; }
+    public bool IsRegistered => _registeredHotkeys.Count > 0;
 
     public event Action? RecordToggleRequested;
     public event Action? PlaybackToggleRequested;
     public event Action? StopRequested;
     public event Action? HotkeySettingsRequested;
+
+    public bool IsHotkeyRegistered(HotkeyBinding hotkeyBinding)
+    {
+        ArgumentNullException.ThrowIfNull(hotkeyBinding);
+        return _registeredHotkeys.ContainsValue(hotkeyBinding);
+    }
 
     public Task RegisterAsync(CancellationToken cancellationToken = default)
     {
@@ -68,26 +75,22 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         {
             RegisterRequiredHotkey(
                 RecordToggleHotkeyId,
-                MapModifiers(_hotkeyConfiguration.RecordToggleHotkey.Modifiers),
-                unchecked((uint)_hotkeyConfiguration.RecordToggleHotkey.VirtualKeyCode));
+                _hotkeyConfiguration.RecordToggleHotkey);
             registeredHotkeyIds.Add(RecordToggleHotkeyId);
 
             RegisterRequiredHotkey(
                 PlaybackToggleHotkeyId,
-                MapModifiers(_hotkeyConfiguration.PlaybackToggleHotkey.Modifiers),
-                unchecked((uint)_hotkeyConfiguration.PlaybackToggleHotkey.VirtualKeyCode));
+                _hotkeyConfiguration.PlaybackToggleHotkey);
             registeredHotkeyIds.Add(PlaybackToggleHotkeyId);
 
             RegisterRequiredHotkey(
                 StopHotkeyId,
-                MapModifiers(_hotkeyConfiguration.StopHotkey.Modifiers),
-                unchecked((uint)_hotkeyConfiguration.StopHotkey.VirtualKeyCode));
+                _hotkeyConfiguration.StopHotkey);
             registeredHotkeyIds.Add(StopHotkeyId);
 
             if (TryRegisterOptionalHotkey(
                 HotkeySettingsHotkeyId,
-                MapModifiers(_hotkeyConfiguration.HotkeySettingsHotkey.Modifiers),
-                unchecked((uint)_hotkeyConfiguration.HotkeySettingsHotkey.VirtualKeyCode)))
+                _hotkeyConfiguration.HotkeySettingsHotkey))
             {
                 registeredHotkeyIds.Add(HotkeySettingsHotkeyId);
             }
@@ -99,11 +102,10 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
                 UnregisterSingleHotkey(registeredHotkeyIds[index]);
             }
 
-            IsRegistered = false;
+            _registeredHotkeys.Clear();
             throw;
         }
 
-        IsRegistered = true;
         _logger.Log(
             AppLogLevel.Information,
             nameof(WindowsHotkeyService),
@@ -120,17 +122,17 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
     private void UnregisterCore()
     {
-        if (!IsRegistered)
+        if (_registeredHotkeys.Count == 0)
         {
             return;
         }
 
-        UnregisterSingleHotkey(RecordToggleHotkeyId);
-        UnregisterSingleHotkey(PlaybackToggleHotkeyId);
-        UnregisterSingleHotkey(StopHotkeyId);
-        UnregisterSingleHotkey(HotkeySettingsHotkeyId);
+        foreach (int hotkeyId in _registeredHotkeys.Keys.ToArray())
+        {
+            UnregisterSingleHotkey(hotkeyId);
+        }
 
-        IsRegistered = false;
+        _registeredHotkeys.Clear();
         _logger.Log(
             AppLogLevel.Information,
             nameof(WindowsHotkeyService),
@@ -159,9 +161,9 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         }
     }
 
-    private void RegisterRequiredHotkey(int id, uint modifiers, uint virtualKey)
+    private void RegisterRequiredHotkey(int id, HotkeyBinding hotkeyBinding)
     {
-        if (!TryRegisterHotkey(id, modifiers, virtualKey, out InvalidOperationException? exception))
+        if (!TryRegisterHotkey(id, hotkeyBinding, out InvalidOperationException? exception))
         {
             InvalidOperationException registrationException = exception
                 ?? new InvalidOperationException($"Kisayol kaydedilemedi. Kimlik: {id}.");
@@ -173,12 +175,15 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
                 registrationException);
             throw registrationException;
         }
+
+        _registeredHotkeys[id] = hotkeyBinding;
     }
 
-    private bool TryRegisterOptionalHotkey(int id, uint modifiers, uint virtualKey)
+    private bool TryRegisterOptionalHotkey(int id, HotkeyBinding hotkeyBinding)
     {
-        if (TryRegisterHotkey(id, modifiers, virtualKey, out InvalidOperationException? exception))
+        if (TryRegisterHotkey(id, hotkeyBinding, out InvalidOperationException? exception))
         {
+            _registeredHotkeys[id] = hotkeyBinding;
             return true;
         }
 
@@ -192,15 +197,14 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
     private bool TryRegisterHotkey(
         int id,
-        uint modifiers,
-        uint virtualKey,
+        HotkeyBinding hotkeyBinding,
         out InvalidOperationException? exception)
     {
         bool result = HotkeyNativeMethods.RegisterHotKey(
             _messageWindow.Handle,
             id,
-            modifiers,
-            virtualKey);
+            MapModifiers(hotkeyBinding.Modifiers),
+            unchecked((uint)hotkeyBinding.VirtualKeyCode));
 
         if (result)
         {
@@ -210,8 +214,37 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
         int errorCode = Marshal.GetLastWin32Error();
         exception = new InvalidOperationException(
-            FormattableString.Invariant($"Kisayol kaydedilemedi. Kimlik: {id}. Win32 hata kodu: {errorCode}"));
+            FormattableString.Invariant(
+                $"Kisayol kaydedilemedi. Kimlik: {id}, kisayol: {FormatHotkey(hotkeyBinding)}. Win32 hata kodu: {errorCode}"));
         return false;
+    }
+
+    private static string FormatHotkey(HotkeyBinding hotkeyBinding)
+    {
+        List<string> parts = [];
+
+        if (hotkeyBinding.Modifiers.HasFlag(HotkeyModifiers.Control))
+        {
+            parts.Add("Ctrl");
+        }
+
+        if (hotkeyBinding.Modifiers.HasFlag(HotkeyModifiers.Shift))
+        {
+            parts.Add("Shift");
+        }
+
+        if (hotkeyBinding.Modifiers.HasFlag(HotkeyModifiers.Alt))
+        {
+            parts.Add("Alt");
+        }
+
+        if (hotkeyBinding.Modifiers.HasFlag(HotkeyModifiers.Windows))
+        {
+            parts.Add("Win");
+        }
+
+        parts.Add(VirtualKeyDisplayNameFormatter.Format(hotkeyBinding.VirtualKeyCode));
+        return string.Join("+", parts);
     }
 
     private void UnregisterSingleHotkey(int id)

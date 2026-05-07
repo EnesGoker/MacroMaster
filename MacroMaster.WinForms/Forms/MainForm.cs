@@ -181,19 +181,19 @@ public partial class MainForm : Form
         {
             await _hotkeyService.RegisterAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            _hotkeyService.RecordToggleRequested -= OnRecordToggleRequested;
-            _hotkeyService.PlaybackToggleRequested -= OnPlaybackToggleRequested;
-            _hotkeyService.StopRequested -= OnStopRequested;
-            _hotkeyService.HotkeySettingsRequested -= OnHotkeySettingsRequested;
-            throw;
+            _logger.Log(
+                AppLogLevel.Warning,
+                nameof(MainForm),
+                "Global kisayollar kaydedilemedi. Uygulama odaktayken yerel kisayol yedegi kullanilacak.",
+                ex);
         }
     }
 
     private void OnRecordToggleRequested()
     {
-        _ = ExecuteUiActionAsync(HandleRecordToggleAsync, "Kayit degistirme");
+        _ = ExecuteUiActionAsync(HandleRecordToggleAsync, "Kaydi baslat/durdur");
     }
 
     private async Task HandleRecordToggleAsync()
@@ -216,7 +216,7 @@ public partial class MainForm : Form
 
     private void OnPlaybackToggleRequested()
     {
-        _ = ExecuteUiActionAsync(HandlePlaybackToggleAsync, "Oynatma degistirme");
+        _ = ExecuteUiActionAsync(HandlePlaybackToggleAsync, "Oynat/duraklat");
     }
 
     private async Task HandlePlaybackToggleAsync()
@@ -251,7 +251,7 @@ public partial class MainForm : Form
 
     private void OnHotkeySettingsRequested()
     {
-        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayol ayarlari");
+        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayollari ac");
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -279,31 +279,28 @@ public partial class MainForm : Form
 
     private bool TryHandleLocalHotkeyFallback(Keys keyData)
     {
-        bool useFocusedWindowFallback = !_hotkeyService.IsRegistered;
-
-        if (useFocusedWindowFallback && MatchesHotkey(keyData, _hotkeyConfiguration.RecordToggleHotkey))
+        if (ShouldUseLocalHotkeyFallback(_hotkeyConfiguration.RecordToggleHotkey)
+            && MatchesHotkey(keyData, _hotkeyConfiguration.RecordToggleHotkey))
         {
             OnRecordToggleRequested();
             return true;
         }
 
-        if (useFocusedWindowFallback && MatchesHotkey(keyData, _hotkeyConfiguration.PlaybackToggleHotkey))
+        if (ShouldUseLocalHotkeyFallback(_hotkeyConfiguration.PlaybackToggleHotkey)
+            && MatchesHotkey(keyData, _hotkeyConfiguration.PlaybackToggleHotkey))
         {
             OnPlaybackToggleRequested();
             return true;
         }
 
-        if (useFocusedWindowFallback && MatchesHotkey(keyData, _hotkeyConfiguration.StopHotkey))
+        if (ShouldUseLocalHotkeyFallback(_hotkeyConfiguration.StopHotkey)
+            && MatchesHotkey(keyData, _hotkeyConfiguration.StopHotkey))
         {
             OnStopRequested();
             return true;
         }
 
-        bool isReservedSettingsFallback =
-            _hotkeyConfiguration.HotkeySettingsHotkey.VirtualKeyCode == (int)Keys.F12
-            && (keyData & Keys.KeyCode) == Keys.F12;
-
-        if ((useFocusedWindowFallback || isReservedSettingsFallback)
+        if (ShouldUseLocalHotkeyFallback(_hotkeyConfiguration.HotkeySettingsHotkey)
             && MatchesHotkey(keyData, _hotkeyConfiguration.HotkeySettingsHotkey))
         {
             OnHotkeySettingsRequested();
@@ -311,6 +308,11 @@ public partial class MainForm : Form
         }
 
         return false;
+    }
+
+    private bool ShouldUseLocalHotkeyFallback(HotkeyBinding hotkeyBinding)
+    {
+        return !_hotkeyService.IsHotkeyRegistered(hotkeyBinding);
     }
 
     private static bool MatchesHotkey(Keys keyData, HotkeyBinding hotkeyBinding)
@@ -1972,17 +1974,18 @@ public partial class MainForm : Form
 
         HotkeySettings previousSettings = _hotkeyConfiguration.Snapshot();
         bool wasRegistered = _hotkeyService.IsRegistered;
+        bool shouldRefreshGlobalRegistration = OperatingSystem.IsWindows();
 
         try
         {
-            if (wasRegistered)
+            if (shouldRefreshGlobalRegistration && _hotkeyService.IsRegistered)
             {
                 await _hotkeyService.UnregisterAsync();
             }
 
             _hotkeyConfiguration.Apply(hotkeySettings);
 
-            if (wasRegistered)
+            if (shouldRefreshGlobalRegistration)
             {
                 await _hotkeyService.RegisterAsync();
             }
@@ -2020,7 +2023,7 @@ public partial class MainForm : Form
                         restoreConfigurationException));
             }
 
-            if (wasRegistered)
+            if (shouldRefreshGlobalRegistration && wasRegistered)
             {
                 try
                 {

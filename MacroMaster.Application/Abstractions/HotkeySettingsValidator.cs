@@ -40,17 +40,17 @@ public static class HotkeySettingsValidator
             ? "Kisayol ayari dogrulamasi"
             : operationDescription;
 
-        ValidateBinding(settings.RecordToggleHotkey, "Kayit degistirme kisayolu", context);
-        ValidateBinding(settings.PlaybackToggleHotkey, "Oynatma degistirme kisayolu", context);
+        ValidateBinding(settings.RecordToggleHotkey, "Kaydi baslat/durdur kisayolu", context);
+        ValidateBinding(settings.PlaybackToggleHotkey, "Oynat/duraklat kisayolu", context);
         ValidateBinding(settings.StopHotkey, "Durdurma kisayolu", context);
-        ValidateBinding(settings.HotkeySettingsHotkey, "Kisayol ayarlari kisayolu", context);
+        ValidateBinding(settings.HotkeySettingsHotkey, "Kisayollari ac kisayolu", context);
 
         EnsureAllDistinct(
             context,
-            ("Kayit degistirme kisayolu", settings.RecordToggleHotkey),
-            ("Oynatma degistirme kisayolu", settings.PlaybackToggleHotkey),
+            ("Kaydi baslat/durdur kisayolu", settings.RecordToggleHotkey),
+            ("Oynat/duraklat kisayolu", settings.PlaybackToggleHotkey),
             ("Durdurma kisayolu", settings.StopHotkey),
-            ("Kisayol ayarlari kisayolu", settings.HotkeySettingsHotkey));
+            ("Kisayollari ac kisayolu", settings.HotkeySettingsHotkey));
     }
 
     private static void ValidateBinding(

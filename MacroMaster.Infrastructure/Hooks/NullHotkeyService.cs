@@ -4,7 +4,7 @@ namespace MacroMaster.Infrastructure.Hooks;
 
 public sealed class NullHotkeyService : IHotkeyService
 {
-    public bool IsRegistered { get; private set; }
+    public bool IsRegistered => false;
 
     public event Action? RecordToggleRequested
     {
@@ -30,15 +30,19 @@ public sealed class NullHotkeyService : IHotkeyService
         remove { }
     }
 
+    public bool IsHotkeyRegistered(HotkeyBinding hotkeyBinding)
+    {
+        ArgumentNullException.ThrowIfNull(hotkeyBinding);
+        return false;
+    }
+
     public Task RegisterAsync(CancellationToken cancellationToken = default)
     {
-        IsRegistered = true;
         return Task.CompletedTask;
     }
 
     public Task UnregisterAsync(CancellationToken cancellationToken = default)
     {
-        IsRegistered = false;
         return Task.CompletedTask;
     }
 }
