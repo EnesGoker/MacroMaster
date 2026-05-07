@@ -1,6 +1,5 @@
 using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
-using System.Drawing.Drawing2D;
 
 namespace MacroMaster.WinForms.Forms;
 
@@ -15,7 +14,7 @@ internal sealed class ThemedMessageDialog : Form
         MessageBoxIcon icon)
     {
         MessageContent content = ResolveContent(text, icon);
-        IReadOnlyList<MessageButtonSpec> buttonSpecs = ResolveButtons(buttons, icon);
+        IReadOnlyList<MessageButtonSpec> buttonSpecs = ResolveButtons(buttons);
 
         Text = string.IsNullOrWhiteSpace(caption)
             ? "MacroMaster"
@@ -34,7 +33,7 @@ internal sealed class ThemedMessageDialog : Form
         ClientSize = clientSize;
         MinimumSize = SizeFromClientSize(clientSize);
 
-        _defaultButton = BuildLayout(content, buttonSpecs, icon);
+        _defaultButton = BuildLayout(content, buttonSpecs);
     }
 
     public static DialogResult Show(
@@ -83,8 +82,7 @@ internal sealed class ThemedMessageDialog : Form
 
     private ThemedDialogButton BuildLayout(
         MessageContent content,
-        IReadOnlyList<MessageButtonSpec> buttonSpecs,
-        MessageBoxIcon icon)
+        IReadOnlyList<MessageButtonSpec> buttonSpecs)
     {
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -99,33 +97,9 @@ internal sealed class ThemedMessageDialog : Form
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(50)));
 
-        var contentLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = Color.Transparent,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        contentLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(54)));
-        contentLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        contentLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-        contentLayoutPanel.Controls.Add(
-            new MessageIconControl(icon)
-            {
-                Dock = DockStyle.Top,
-                Height = DesignTokens.Scale(42),
-                Margin = new Padding(0, DesignTokens.Scale(2), DesignTokens.Scale(12), 0)
-            },
-            0,
-            0);
-        contentLayoutPanel.Controls.Add(CreateTextLayoutPanel(content), 1, 0);
-
         FlowLayoutPanel buttonFooterPanel = CreateButtonFooter(buttonSpecs, out ThemedDialogButton defaultButton);
 
-        rootLayoutPanel.Controls.Add(contentLayoutPanel, 0, 0);
+        rootLayoutPanel.Controls.Add(CreateTextLayoutPanel(content), 0, 0);
         rootLayoutPanel.Controls.Add(buttonFooterPanel, 0, 1);
         Controls.Add(rootLayoutPanel);
 
@@ -213,7 +187,7 @@ internal sealed class ThemedMessageDialog : Form
 
         defaultButton ??= buttonSpecs.Count > 0
             ? (ThemedDialogButton)buttonFooterPanel.Controls[0]
-            : throw new InvalidOperationException("Mesaj penceresi icin en az bir buton gerekir.");
+            : throw new InvalidOperationException("Mesaj penceresi için en az bir buton gerekir.");
 
         return buttonFooterPanel;
     }
@@ -233,10 +207,7 @@ internal sealed class ThemedMessageDialog : Form
     private static Size ResolveClientSize(MessageContent content)
     {
         int width = DesignTokens.Scale(460);
-        int textWidth = width
-            - (DesignTokens.Scale(18) * 2)
-            - DesignTokens.Scale(54)
-            - DesignTokens.Scale(12);
+        int textWidth = width - (DesignTokens.Scale(18) * 2);
 
         Size headingSize = TextRenderer.MeasureText(
             content.Heading,
@@ -267,7 +238,7 @@ internal sealed class ThemedMessageDialog : Form
         Size textSize = TextRenderer.MeasureText(
             heading,
             DesignTokens.FontUiBold,
-            new Size(DesignTokens.Scale(340), int.MaxValue),
+            new Size(DesignTokens.Scale(392), int.MaxValue),
             TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
         return Math.Clamp(textSize.Height + DesignTokens.Scale(6), DesignTokens.Scale(28), DesignTokens.Scale(58));
     }
@@ -292,13 +263,9 @@ internal sealed class ThemedMessageDialog : Form
         return new MessageContent(ResolveDefaultHeading(icon), normalizedText);
     }
 
-    private static IReadOnlyList<MessageButtonSpec> ResolveButtons(
-        MessageBoxButtons buttons,
-        MessageBoxIcon icon)
+    private static IReadOnlyList<MessageButtonSpec> ResolveButtons(MessageBoxButtons buttons)
     {
-        ThemedDialogButtonStyle primaryStyle = icon == MessageBoxIcon.Error
-            ? ThemedDialogButtonStyle.Destructive
-            : ThemedDialogButtonStyle.Primary;
+        ThemedDialogButtonStyle primaryStyle = ThemedDialogButtonStyle.Primary;
 
         return buttons switch
         {
@@ -379,99 +346,4 @@ internal sealed class ThemedMessageDialog : Form
         bool IsDefault,
         bool IsCancel);
 
-    private sealed class MessageIconControl : Control
-    {
-        private readonly MessageBoxIcon _icon;
-
-        public MessageIconControl(MessageBoxIcon icon)
-        {
-            _icon = icon;
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
-
-            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
-            int size = Math.Min(bounds.Width, bounds.Height);
-            if (size <= 0)
-            {
-                return;
-            }
-
-            Rectangle glyphBounds = new(
-                bounds.Left + ((bounds.Width - size) / 2),
-                bounds.Top + ((bounds.Height - size) / 2),
-                size,
-                size);
-            Color accentColor = ResolveIconColor(_icon);
-            using GraphicsPath path = CreateRoundPath(glyphBounds, DesignTokens.Scale(11));
-            using var fillBrush = new SolidBrush(Color.FromArgb(34, accentColor));
-            using var borderPen = new Pen(accentColor, Math.Max(1f, DesignTokens.DensityScale));
-            e.Graphics.FillPath(fillBrush, path);
-            e.Graphics.DrawPath(borderPen, path);
-
-            TextRenderer.DrawText(
-                e.Graphics,
-                ResolveIconGlyph(_icon),
-                DesignTokens.FontUiBold,
-                glyphBounds,
-                accentColor,
-                TextFormatFlags.HorizontalCenter |
-                TextFormatFlags.VerticalCenter |
-                TextFormatFlags.NoPrefix);
-        }
-
-        private static Color ResolveIconColor(MessageBoxIcon icon)
-        {
-            return icon switch
-            {
-                MessageBoxIcon.Error => DesignTokens.AccentRed,
-                MessageBoxIcon.Warning => DesignTokens.AccentOrange,
-                MessageBoxIcon.Information => DesignTokens.Accent,
-                MessageBoxIcon.Question => DesignTokens.AccentPurple,
-                _ => DesignTokens.Accent
-            };
-        }
-
-        private static string ResolveIconGlyph(MessageBoxIcon icon)
-        {
-            return icon switch
-            {
-                MessageBoxIcon.Information => "i",
-                MessageBoxIcon.Question => "?",
-                _ => "!"
-            };
-        }
-
-        private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
-        {
-            var path = new GraphicsPath();
-            int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
-
-            if (diameter <= 1)
-            {
-                path.AddRectangle(bounds);
-                return path;
-            }
-
-            var arc = new Rectangle(bounds.Left, bounds.Top, diameter, diameter);
-            path.AddArc(arc, 180, 90);
-            arc.X = bounds.Right - diameter;
-            path.AddArc(arc, 270, 90);
-            arc.Y = bounds.Bottom - diameter;
-            path.AddArc(arc, 0, 90);
-            arc.X = bounds.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-    }
 }

@@ -8,7 +8,7 @@ namespace MacroMaster.WinForms.Forms;
 
 internal sealed class MacroOptimizationDialog : Form
 {
-    private readonly RoundedDialogButton _secondaryButton;
+    private readonly ThemedDialogButton _secondaryButton;
 
     public MacroOptimizationDialog(MacroOptimizationPreview preview)
     {
@@ -27,7 +27,7 @@ internal sealed class MacroOptimizationDialog : Form
         ClientSize = new Size(DesignTokens.Scale(540), DesignTokens.Scale(330));
         MinimumSize = Size;
 
-        _secondaryButton = CreateDialogButton("Iptal", accent: false);
+        _secondaryButton = CreateDialogButton("İptal", ThemedDialogButtonStyle.Secondary);
         BuildPreviewLayout(preview);
     }
 
@@ -46,7 +46,7 @@ internal sealed class MacroOptimizationDialog : Form
         ClientSize = new Size(DesignTokens.Scale(460), DesignTokens.Scale(210));
         MinimumSize = Size;
 
-        _secondaryButton = CreateDialogButton("Tamam", accent: true);
+        _secondaryButton = CreateDialogButton("Tamam", ThemedDialogButtonStyle.Primary);
         BuildNoChangesLayout();
     }
 
@@ -66,7 +66,7 @@ internal sealed class MacroOptimizationDialog : Form
             enabled: true);
         WindowChromeNative.TryApplyDwmCornerPreference(
             Handle,
-            DwmWindowCornerPreference.RoundSmall);
+            DwmWindowCornerPreference.Round);
         WindowChromeNative.TryApplyDwmColorAttribute(
             Handle,
             DwmWindowAttribute.BorderColor,
@@ -146,7 +146,7 @@ internal sealed class MacroOptimizationDialog : Form
         var messageLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Bu oturumda kaldirilabilecek gereksiz fare hareketi bulunamadi.",
+            Text = "Bu oturumda kaldırılabilecek gereksiz fare hareketi bulunamadı.",
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = Color.Transparent,
@@ -179,7 +179,7 @@ internal sealed class MacroOptimizationDialog : Form
             new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Optimizasyon onizlemesi",
+                Text = "Optimizasyon önizlemesi",
                 Font = DesignTokens.FontUiBold,
                 ForeColor = DesignTokens.TextPrimary,
                 BackColor = DesignTokens.Surface,
@@ -193,7 +193,7 @@ internal sealed class MacroOptimizationDialog : Form
             new Label
             {
                 Dock = DockStyle.Fill,
-                Text = $"{preview.SessionName} icin gereksiz fare hareketleri sadelestirilecek.",
+                Text = $"{preview.SessionName} için gereksiz fare hareketleri sadeleştirilecek.",
                 Font = DesignTokens.FontUiSmall,
                 ForeColor = DesignTokens.TextSecondary,
                 BackColor = DesignTokens.Surface,
@@ -223,7 +223,7 @@ internal sealed class MacroOptimizationDialog : Form
         statsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
         statsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 
-        statsPanel.Controls.Add(CreateStatCard("Once", preview.OriginalEventCount.ToString(CultureInfo.InvariantCulture)), 0, 0);
+        statsPanel.Controls.Add(CreateStatCard("Önce", preview.OriginalEventCount.ToString(CultureInfo.InvariantCulture)), 0, 0);
         statsPanel.Controls.Add(CreateStatCard("Yeni", preview.OptimizedEventCount.ToString(CultureInfo.InvariantCulture)), 1, 0);
         statsPanel.Controls.Add(CreateStatCard("Silinen", preview.RemovedEventCount.ToString(CultureInfo.InvariantCulture)), 2, 0);
         statsPanel.Controls.Add(CreateStatCard("Azalma", preview.ReductionPercent.ToString("0.#", CultureInfo.InvariantCulture) + "%"), 3, 0);
@@ -249,9 +249,9 @@ internal sealed class MacroOptimizationDialog : Form
         };
 
         string durationText = preview.PreservesDuration
-            ? "Toplam sure korunacak."
-            : "Toplam surede fark olustu; uygulamadan once kontrol edin.";
-        string detailText = $"{durationText} Klavye, tiklama ve wheel olaylari korunur; yalnizca kisa ara mouse hareketleri kaldirilir.";
+            ? "Toplam süre korunacak."
+            : "Toplam sürede fark oluştu; uygulamadan önce kontrol edin.";
+        string detailText = $"{durationText} Klavye, tıklama ve wheel olayları korunur; yalnızca kısa ara mouse hareketleri kaldırılır.";
 
         panel.Controls.Add(
             new Label
@@ -338,34 +338,34 @@ internal sealed class MacroOptimizationDialog : Form
             Padding = new Padding(0, DesignTokens.Scale(10), 0, 0)
         };
 
-        _secondaryButton.DialogResult = applyButtonText is null
-            ? DialogResult.OK
-            : DialogResult.Cancel;
-        CancelButton = _secondaryButton;
-        buttonPanel.Controls.Add(_secondaryButton);
-
         if (applyButtonText is not null)
         {
-            RoundedDialogButton applyButton = CreateDialogButton(applyButtonText, accent: true);
+            ThemedDialogButton applyButton = CreateDialogButton(applyButtonText, ThemedDialogButtonStyle.Primary);
             applyButton.DialogResult = DialogResult.OK;
+            _secondaryButton.DialogResult = DialogResult.Cancel;
             AcceptButton = applyButton;
+            CancelButton = _secondaryButton;
             buttonPanel.Controls.Add(applyButton);
+            buttonPanel.Controls.Add(_secondaryButton);
         }
         else
         {
+            _secondaryButton.DialogResult = DialogResult.OK;
             AcceptButton = _secondaryButton;
+            CancelButton = _secondaryButton;
+            buttonPanel.Controls.Add(_secondaryButton);
         }
 
         return buttonPanel;
     }
 
-    private static RoundedDialogButton CreateDialogButton(string text, bool accent)
+    private static ThemedDialogButton CreateDialogButton(string text, ThemedDialogButtonStyle style)
     {
-        return new RoundedDialogButton(accent)
+        return new ThemedDialogButton(style)
         {
             Text = text,
-            Width = DesignTokens.Scale(118),
-            Height = DesignTokens.Scale(36),
+            Width = DesignTokens.Scale(112),
+            Height = DesignTokens.Scale(34),
             Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0)
         };
     }
@@ -403,7 +403,7 @@ internal sealed class MacroOptimizationDialog : Form
                 return;
             }
 
-            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(10));
+            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(8));
             using var fillBrush = new SolidBrush(FillColor);
             using var borderPen = new Pen(BorderColor);
             e.Graphics.FillPath(fillBrush, path);
@@ -417,126 +417,6 @@ internal sealed class MacroOptimizationDialog : Form
             using GraphicsPath accentPath = CreateRoundPath(accentBounds, DesignTokens.Scale(2));
             using var accentBrush = new SolidBrush(AccentColor);
             e.Graphics.FillPath(accentBrush, accentPath);
-        }
-    }
-
-    private sealed class RoundedDialogButton : Button
-    {
-        private readonly bool _accent;
-        private bool _hovered;
-        private bool _pressed;
-
-        public RoundedDialogButton(bool accent)
-        {
-            _accent = accent;
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-
-            FlatStyle = FlatStyle.Flat;
-            FlatAppearance.BorderSize = 0;
-            Font = DesignTokens.FontUiBold;
-            Cursor = Cursors.Hand;
-            UseVisualStyleBackColor = false;
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _hovered = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _hovered = false;
-            _pressed = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-
-        protected override void OnMouseDown(MouseEventArgs mevent)
-        {
-            if (Enabled && mevent.Button == MouseButtons.Left)
-            {
-                _pressed = true;
-                Invalidate();
-            }
-
-            base.OnMouseDown(mevent);
-        }
-
-        protected override void OnMouseUp(MouseEventArgs mevent)
-        {
-            _pressed = false;
-            Invalidate();
-            base.OnMouseUp(mevent);
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
-        }
-
-        protected override void OnPaint(PaintEventArgs pevent)
-        {
-            Graphics graphics = pevent.Graphics;
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
-            if (bounds.Width <= 0 || bounds.Height <= 0)
-            {
-                return;
-            }
-
-            Color fillColor = ResolveFillColor();
-            Color borderColor = _accent
-                ? DesignTokens.Accent
-                : DesignTokens.BorderBright;
-
-            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(6));
-            using var fillBrush = new SolidBrush(fillColor);
-            using var borderPen = new Pen(borderColor, Math.Max(1f, DesignTokens.DensityScale));
-            graphics.FillPath(fillBrush, path);
-            graphics.DrawPath(borderPen, path);
-
-            TextRenderer.DrawText(
-                graphics,
-                Text,
-                Font,
-                bounds,
-                DesignTokens.TextPrimary,
-                TextFormatFlags.HorizontalCenter |
-                TextFormatFlags.VerticalCenter |
-                TextFormatFlags.EndEllipsis |
-                TextFormatFlags.NoPrefix);
-        }
-
-        private Color ResolveFillColor()
-        {
-            if (_accent)
-            {
-                if (_pressed)
-                {
-                    return DesignTokens.AccentDeep;
-                }
-
-                return _hovered
-                    ? Color.FromArgb(37, 117, 232)
-                    : Color.FromArgb(34, 103, 218);
-            }
-
-            if (_pressed)
-            {
-                return DesignTokens.Surface3;
-            }
-
-            return _hovered
-                ? DesignTokens.SurfaceHover
-                : DesignTokens.Surface2;
         }
     }
 
