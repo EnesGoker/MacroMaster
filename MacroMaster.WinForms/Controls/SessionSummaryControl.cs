@@ -21,6 +21,8 @@ internal sealed class SessionSummaryControl : UserControl
     private readonly Label _fileNameValueLabel;
     private readonly MacroPreviewMapControl _previewMapControl;
 
+    public event EventHandler? PreviewMapRequested;
+
     public SessionSummaryControl()
     {
         SetStyle(
@@ -40,6 +42,7 @@ internal sealed class SessionSummaryControl : UserControl
         _sessionNameValueLabel = CreateValueLabel();
         _fileNameValueLabel = CreateValueLabel();
         _previewMapControl = new MacroPreviewMapControl();
+        _previewMapControl.PreviewRequested += (_, _) => PreviewMapRequested?.Invoke(this, EventArgs.Empty);
 
         BuildLayout();
         UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi"));
@@ -47,7 +50,8 @@ internal sealed class SessionSummaryControl : UserControl
 
     public void UpdateState(
         SessionSummaryState state,
-        IReadOnlyList<MacroEvent>? events = null)
+        IReadOnlyList<MacroEvent>? events = null,
+        int? activeSourceEventIndex = null)
     {
         string sessionName = string.IsNullOrWhiteSpace(state.SessionName)
             ? "Oturum yok"
@@ -65,7 +69,8 @@ internal sealed class SessionSummaryControl : UserControl
             state.EventCount,
             state.TotalDurationMs,
             state.StatusText,
-            events);
+            events,
+            activeSourceEventIndex);
         _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
             : DesignTokens.AccentGreen;

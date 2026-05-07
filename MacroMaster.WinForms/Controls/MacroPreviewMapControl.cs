@@ -18,6 +18,7 @@ internal sealed class MacroPreviewMapControl : Control
     private MacroPreviewMapState _state;
     private List<MapPoint> _mousePoints = [];
     private RectangleF _coordinateBounds = RectangleF.Empty;
+    private int? _activeSourceEventIndex;
 
     public event EventHandler? PreviewRequested;
 
@@ -44,17 +45,19 @@ internal sealed class MacroPreviewMapControl : Control
         int eventCount,
         int durationMs,
         string statusText,
-        IReadOnlyList<MacroEvent>? events = null)
+        IReadOnlyList<MacroEvent>? events = null,
+        int? activeSourceEventIndex = null)
     {
         UpdatePreview(new MacroPreviewMapState(
             Math.Max(0, eventCount),
             Math.Max(0, durationMs),
-            statusText), events);
+            statusText), events, activeSourceEventIndex);
     }
 
     public void UpdatePreview(
         MacroPreviewMapState state,
-        IReadOnlyList<MacroEvent>? events = null)
+        IReadOnlyList<MacroEvent>? events = null,
+        int? activeSourceEventIndex = null)
     {
         _state = new MacroPreviewMapState(
             Math.Max(0, state.EventCount),
@@ -62,6 +65,9 @@ internal sealed class MacroPreviewMapControl : Control
             state.StatusText ?? string.Empty);
         _mousePoints = ExtractMousePoints(events);
         _coordinateBounds = CalculateCoordinateBounds(_mousePoints);
+        _activeSourceEventIndex = NormalizeActiveSourceEventIndex(
+            activeSourceEventIndex,
+            events?.Count ?? 0);
         Invalidate();
     }
 
@@ -122,8 +128,11 @@ internal sealed class MacroPreviewMapControl : Control
         }
 
         PointF[] resolvedPath = ResolvePath(plotBounds, _mousePoints, _coordinateBounds);
+        int currentMousePointIndex = ResolveCurrentMousePointIndex(
+            _mousePoints,
+            _activeSourceEventIndex);
         PointF[] routePath = SampleRoute(resolvedPath);
-        using var routePen = new Pen(Color.FromArgb(140, DesignTokens.Accent), Math.Max(2f, DesignTokens.Scale(2)))
+        using var routePen = new Pen(Color.FromArgb(86, DesignTokens.Accent), Math.Max(2f, DesignTokens.Scale(2)))
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
@@ -135,9 +144,25 @@ internal sealed class MacroPreviewMapControl : Control
             graphics.DrawLines(routePen, routePath);
         }
 
+        if (currentMousePointIndex > 0)
+        {
+            PointF[] activePath = SampleRoute(resolvedPath[..(currentMousePointIndex + 1)]);
+            using var activeRoutePen = new Pen(Color.FromArgb(188, DesignTokens.Accent), Math.Max(2f, DesignTokens.Scale(2)))
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+
+            if (activePath.Length > 1)
+            {
+                graphics.DrawLines(activeRoutePen, activePath);
+            }
+        }
+
         DrawActionMarkers(graphics, plotBounds, _mousePoints, resolvedPath);
 
-        PointF currentPoint = resolvedPath[^1];
+        PointF currentPoint = resolvedPath[currentMousePointIndex];
         using var glowBrush = new SolidBrush(Color.FromArgb(42, DesignTokens.Accent));
         float glowRadius = DesignTokens.Scale(18);
         graphics.FillEllipse(
@@ -147,6 +172,11 @@ internal sealed class MacroPreviewMapControl : Control
             glowRadius * 2,
             glowRadius * 2);
         DrawPoint(graphics, resolvedPath[0], DesignTokens.AccentGreen, DesignTokens.Scale(5));
+        if (currentMousePointIndex != resolvedPath.Length - 1)
+        {
+            DrawPoint(graphics, resolvedPath[^1], Color.FromArgb(170, DesignTokens.AccentOrange), DesignTokens.Scale(4));
+        }
+
         DrawPoint(graphics, currentPoint, DesignTokens.AccentOrange, DesignTokens.Scale(6));
     }
 
@@ -211,7 +241,7 @@ internal sealed class MacroPreviewMapControl : Control
             }
 
             points.Add(new MapPoint(
-                index + 1,
+                index,
                 macroEvent.X.Value,
                 macroEvent.Y.Value,
                 macroEvent.MouseActionType));
@@ -375,6 +405,46 @@ internal sealed class MacroPreviewMapControl : Control
         return sampled;
     }
 
+    private static int? NormalizeActiveSourceEventIndex(
+        int? activeSourceEventIndex,
+        int eventCount)
+    {
+        if (!activeSourceEventIndex.HasValue || eventCount <= 0)
+        {
+            return null;
+        }
+
+        return Math.Clamp(activeSourceEventIndex.Value, 0, eventCount - 1);
+    }
+
+    private static int ResolveCurrentMousePointIndex(
+        IReadOnlyList<MapPoint> points,
+        int? activeSourceEventIndex)
+    {
+        if (points.Count == 0)
+        {
+            return 0;
+        }
+
+        if (!activeSourceEventIndex.HasValue)
+        {
+            return points.Count - 1;
+        }
+
+        int currentIndex = 0;
+        for (int index = 0; index < points.Count; index++)
+        {
+            if (points[index].SourceIndex > activeSourceEventIndex.Value)
+            {
+                break;
+            }
+
+            currentIndex = index;
+        }
+
+        return Math.Clamp(currentIndex, 0, points.Count - 1);
+    }
+
     private static void DrawPoint(
         Graphics graphics,
         PointF point,
@@ -416,7 +486,7 @@ internal sealed class MacroPreviewMapControl : Control
     }
 
     private readonly record struct MapPoint(
-        int EventIndex,
+        int SourceIndex,
         int X,
         int Y,
         MouseActionType ActionType);

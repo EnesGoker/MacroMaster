@@ -31,6 +31,7 @@ public partial class MainForm : Form
     private readonly PlaybackControl _playbackControl = new();
     private readonly MacroLibraryControl _macroLibraryControl = new();
     private readonly SessionSummaryControl _sessionSummaryControl = new();
+    private MacroPreviewMapDialog? _macroPreviewMapDialog;
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
@@ -1482,20 +1483,81 @@ public partial class MainForm : Form
                 canStop,
                 canNavigatePlayback));
         string statusText = ResolveStatusText(_applicationStateService.CurrentState, playbackSettings);
+        var summaryState = BuildSessionSummaryState(displayedSession, statusText);
         _sessionSummaryControl.UpdateState(
-            new SessionSummaryState(
-                statusText,
-                displayedSession?.Name ?? "Oturum yok",
-                displayedSession?.Events.Count ?? 0,
-                displayedSession?.TotalDurationMs ?? 0,
-                string.IsNullOrWhiteSpace(_lastSessionPath)
-                    ? "Kaydedilmedi"
-                    : Path.GetFileName(_lastSessionPath)),
-            displayedSession?.Events);
+            summaryState,
+            displayedSession?.Events,
+            _activePlaybackSourceIndex);
+        UpdateMacroPreviewMapDialog(
+            summaryState,
+            displayedSession?.Events,
+            _activePlaybackSourceIndex);
         _titleBarControl.SetStatus(
             statusText,
             ResolveTitleBarStatusColor(_applicationStateService.CurrentState));
         _titleBarControl.SetMaximized(WindowState == FormWindowState.Maximized);
+    }
+
+    private SessionSummaryState BuildSessionSummaryState(
+        MacroSession? displayedSession,
+        string statusText)
+    {
+        return new SessionSummaryState(
+            statusText,
+            displayedSession?.Name ?? "Oturum yok",
+            displayedSession?.Events.Count ?? 0,
+            displayedSession?.TotalDurationMs ?? 0,
+            string.IsNullOrWhiteSpace(_lastSessionPath)
+                ? "Kaydedilmedi"
+                : Path.GetFileName(_lastSessionPath));
+    }
+
+    private void UpdateMacroPreviewMapDialog(
+        SessionSummaryState summaryState,
+        IReadOnlyList<MacroEvent>? events,
+        int? activeSourceEventIndex)
+    {
+        if (_macroPreviewMapDialog is null
+            || _macroPreviewMapDialog.IsDisposed
+            || !_macroPreviewMapDialog.Visible)
+        {
+            return;
+        }
+
+        _macroPreviewMapDialog.UpdatePreview(
+            summaryState,
+            events,
+            activeSourceEventIndex);
+    }
+
+    private void ShowMacroPreviewMapDialog(
+        SessionSummaryState summaryState,
+        IReadOnlyList<MacroEvent>? events,
+        int? activeSourceEventIndex)
+    {
+        if (_macroPreviewMapDialog is null || _macroPreviewMapDialog.IsDisposed)
+        {
+            _macroPreviewMapDialog = new MacroPreviewMapDialog();
+            _macroPreviewMapDialog.FormClosed += (_, _) => _macroPreviewMapDialog = null;
+        }
+
+        _macroPreviewMapDialog.UpdatePreview(
+            summaryState,
+            events,
+            activeSourceEventIndex);
+
+        if (!_macroPreviewMapDialog.Visible)
+        {
+            _macroPreviewMapDialog.Show(this);
+        }
+
+        if (_macroPreviewMapDialog.WindowState == FormWindowState.Minimized)
+        {
+            _macroPreviewMapDialog.WindowState = FormWindowState.Normal;
+        }
+
+        _macroPreviewMapDialog.BringToFront();
+        _macroPreviewMapDialog.Activate();
     }
 
     private void SelectActivePlaybackCursor(
@@ -1634,6 +1696,7 @@ public partial class MainForm : Form
 
         _sessionSummaryControl.Name = "sessionSummaryControl";
         _sessionSummaryControl.Dock = DockStyle.Fill;
+        _sessionSummaryControl.PreviewMapRequested += sessionSummaryControl_PreviewMapRequested;
 
         _playbackControl.Name = "playbackControl";
         _playbackControl.Dock = DockStyle.Fill;
@@ -1642,6 +1705,25 @@ public partial class MainForm : Form
         _playbackControl.PlaybackClicked += playbackToggleButton_Click;
         _playbackControl.StepForwardClicked += playbackStepForwardButton_Click;
         _playbackControl.StopClicked += stopButton_Click;
+    }
+
+    private void sessionSummaryControl_PreviewMapRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (_shutdownInProgress)
+        {
+            return;
+        }
+
+        MacroSession? displayedSession = GetSessionForPlayback();
+        PlaybackSettings playbackSettings = BuildPlaybackSettings();
+        string statusText = ResolveStatusText(_applicationStateService.CurrentState, playbackSettings);
+        ShowMacroPreviewMapDialog(
+            BuildSessionSummaryState(displayedSession, statusText),
+            displayedSession?.Events,
+            _activePlaybackSourceIndex);
     }
 
     private void titleBarControl_MinimizeRequested(object? sender, EventArgs e)
