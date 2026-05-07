@@ -28,15 +28,14 @@ internal sealed class EventListControl : UserControl
     private readonly RoundedGridHostPanel _gridHostPanel;
     private readonly ContextMenuStrip _eventContextMenu;
     private readonly Label _emptyStateLabel;
+    private readonly Label _headerTitleLabel;
     private readonly TextBox _filterSearchTextBox;
     private readonly ModernSelect _typeFilterSelect;
     private readonly ModernSelect _smartFilterSelect;
-    private readonly Label _toolbarTitleLabel;
     private MacroSession? _displayedSession;
     private Guid? _displayedSessionId;
     private int _displayedEventCount;
     private int _displayedElapsedMs;
-    private bool _updatingFilterControls;
     private EventListTypeFilterKind _selectedTypeFilterKind = EventListTypeFilterKind.All;
     private EventListSmartFilterKind _selectedSmartFilterKind = EventListSmartFilterKind.All;
 
@@ -60,10 +59,10 @@ internal sealed class EventListControl : UserControl
         _gridHostPanel = new RoundedGridHostPanel();
         _eventContextMenu = BuildEventContextMenu();
         _emptyStateLabel = new Label();
+        _headerTitleLabel = CreateHeaderTitleLabel();
         _filterSearchTextBox = CreateFilterSearchTextBox();
         _typeFilterSelect = new ModernSelect();
         _smartFilterSelect = new ModernSelect();
-        _toolbarTitleLabel = new Label();
 
         BuildLayout();
         ConfigureGrid();
@@ -218,7 +217,7 @@ internal sealed class EventListControl : UserControl
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(46)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _gridHostPanel.Dock = DockStyle.Fill;
@@ -239,36 +238,28 @@ internal sealed class EventListControl : UserControl
         _gridHostPanel.Controls.Add(_eventGridView);
         _gridHostPanel.Controls.Add(_eventScrollBar);
         _gridHostPanel.Controls.Add(_emptyStateLabel);
-        rootLayoutPanel.Controls.Add(CreateFilterToolbar(), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateHeaderToolbar(), 0, 0);
         rootLayoutPanel.Controls.Add(_gridHostPanel, 0, 1);
 
         Controls.Add(rootLayoutPanel);
     }
 
-    private TableLayoutPanel CreateFilterToolbar()
+    private TableLayoutPanel CreateHeaderToolbar()
     {
         var toolbarPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 5,
+            ColumnCount = 4,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = new Padding(0, 0, 0, DesignTokens.Scale(8))
         };
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220)));
         toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(260)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(124)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(168)));
+        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220)));
+        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(118)));
+        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(156)));
         toolbarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-        _toolbarTitleLabel.Dock = DockStyle.Fill;
-        _toolbarTitleLabel.Text = "Olay / Oturum Onizleme";
-        _toolbarTitleLabel.TextAlign = ContentAlignment.MiddleLeft;
-        _toolbarTitleLabel.BackColor = DesignTokens.Surface;
-        _toolbarTitleLabel.ForeColor = DesignTokens.TextPrimary;
-        _toolbarTitleLabel.Font = DesignTokens.FontUiBold;
 
         var searchPanel = new RoundedInputHostPanel
         {
@@ -291,16 +282,31 @@ internal sealed class EventListControl : UserControl
         _typeFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
         _smartFilterSelect.Dock = DockStyle.Fill;
-        _smartFilterSelect.Margin = new Padding(0, 0, DesignTokens.Scale(8), 0);
+        _smartFilterSelect.Margin = Padding.Empty;
         _smartFilterSelect.SetItems(SmartFilterOptions.Select(option => option.Label));
         _smartFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
-        toolbarPanel.Controls.Add(_toolbarTitleLabel, 0, 0);
-        toolbarPanel.Controls.Add(searchPanel, 2, 0);
-        toolbarPanel.Controls.Add(_typeFilterSelect, 3, 0);
-        toolbarPanel.Controls.Add(_smartFilterSelect, 4, 0);
+        toolbarPanel.Controls.Add(_headerTitleLabel, 0, 0);
+        toolbarPanel.Controls.Add(searchPanel, 1, 0);
+        toolbarPanel.Controls.Add(_typeFilterSelect, 2, 0);
+        toolbarPanel.Controls.Add(_smartFilterSelect, 3, 0);
 
         return toolbarPanel;
+    }
+
+    private static Label CreateHeaderTitleLabel()
+    {
+        return new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "Olay / Oturum Onizleme",
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            BackColor = DesignTokens.Surface,
+            ForeColor = DesignTokens.TextPrimary,
+            Font = DesignTokens.FontUiBold,
+            Padding = new Padding(2, 0, DesignTokens.Scale(12), 2)
+        };
     }
 
     private void LayoutGridViewport()
@@ -378,11 +384,6 @@ internal sealed class EventListControl : UserControl
 
     private void UpdateFiltersFromControls()
     {
-        if (_updatingFilterControls)
-        {
-            return;
-        }
-
         _selectedTypeFilterKind = GetSelectedTypeFilter();
         _selectedSmartFilterKind = GetSelectedSmartFilter();
         RebuildRowsForCurrentSession(preserveSelection: true);
@@ -843,10 +844,6 @@ internal sealed class EventListControl : UserControl
         _filterSearchTextBox.BackColor = DesignTokens.SurfaceInset;
         _filterSearchTextBox.ForeColor = DesignTokens.TextPrimary;
         _filterSearchTextBox.Font = DesignTokens.FontUiNormal;
-
-        _toolbarTitleLabel.BackColor = DesignTokens.Surface;
-        _toolbarTitleLabel.ForeColor = DesignTokens.TextPrimary;
-        _toolbarTitleLabel.Font = DesignTokens.FontUiBold;
 
         _eventGridView.DefaultCellStyle.BackColor = DesignTokens.SurfaceInset;
         _eventGridView.DefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
