@@ -10,6 +10,25 @@ internal readonly record struct MacroPreviewMapState(
     int TotalDurationMs,
     string StatusText);
 
+internal readonly record struct MacroPreviewMapPointInfo(
+    int SourceEventIndex,
+    int EventNumber,
+    string ActionText,
+    string DetailText,
+    int X,
+    int Y,
+    int DelayMs);
+
+internal sealed class MacroPreviewMapPointEventArgs : EventArgs
+{
+    public MacroPreviewMapPointEventArgs(MacroPreviewMapPointInfo? pointInfo)
+    {
+        PointInfo = pointInfo;
+    }
+
+    public MacroPreviewMapPointInfo? PointInfo { get; }
+}
+
 internal sealed class MacroPreviewMapControl : Control
 {
     private const int MaxRoutePointCount = 260;
@@ -19,10 +38,14 @@ internal sealed class MacroPreviewMapControl : Control
     private List<MapPoint> _mousePoints = [];
     private RectangleF _coordinateBounds = RectangleF.Empty;
     private int? _activeSourceEventIndex;
+    private int? _hoveredMousePointIndex;
     private readonly System.Windows.Forms.Timer _pulseTimer;
     private float _pulsePhase;
 
+    public bool InspectionEnabled { get; set; }
+
     public event EventHandler? PreviewRequested;
+    public event EventHandler<MacroPreviewMapPointEventArgs>? PointInspected;
 
     public MacroPreviewMapControl()
     {
@@ -77,12 +100,59 @@ internal sealed class MacroPreviewMapControl : Control
         _activeSourceEventIndex = NormalizeActiveSourceEventIndex(
             activeSourceEventIndex,
             events?.Count ?? 0);
+        if (_hoveredMousePointIndex.HasValue
+            && _hoveredMousePointIndex.Value >= _mousePoints.Count)
+        {
+            _hoveredMousePointIndex = null;
+        }
+
         Invalidate();
+    }
+
+    public MacroPreviewMapPointInfo? GetActivePointInfo()
+    {
+        if (_mousePoints.Count == 0)
+        {
+            return null;
+        }
+
+        int currentMousePointIndex = ResolveCurrentMousePointIndex(
+            _mousePoints,
+            _activeSourceEventIndex);
+        return CreatePointInfo(_mousePoints[currentMousePointIndex]);
+    }
+
+    public MacroPreviewMapPointInfo? GetInspectedPointInfo()
+    {
+        if (_hoveredMousePointIndex.HasValue
+            && _hoveredMousePointIndex.Value >= 0
+            && _hoveredMousePointIndex.Value < _mousePoints.Count)
+        {
+            return CreatePointInfo(_mousePoints[_hoveredMousePointIndex.Value]);
+        }
+
+        return GetActivePointInfo();
     }
 
     protected override void OnClick(EventArgs e)
     {
         base.OnClick(e);
+
+        if (InspectionEnabled)
+        {
+            if (e is MouseEventArgs mouseEventArgs)
+            {
+                int? hitIndex = HitTestMousePoint(mouseEventArgs.Location);
+                if (hitIndex.HasValue)
+                {
+                    SetHoveredMousePointIndex(hitIndex);
+                    RaisePointInspected(hitIndex);
+                }
+            }
+
+            return;
+        }
+
         PreviewRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -90,10 +160,48 @@ internal sealed class MacroPreviewMapControl : Control
     {
         base.OnKeyDown(e);
 
+        if (InspectionEnabled)
+        {
+            return;
+        }
+
         if (e.KeyCode is Keys.Enter or Keys.Space)
         {
             e.Handled = true;
             PreviewRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+
+        if (!InspectionEnabled)
+        {
+            return;
+        }
+
+        int? hitIndex = HitTestMousePoint(e.Location);
+        if (hitIndex != _hoveredMousePointIndex)
+        {
+            SetHoveredMousePointIndex(hitIndex);
+            RaisePointInspected(hitIndex);
+        }
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+
+        if (!InspectionEnabled)
+        {
+            return;
+        }
+
+        if (_hoveredMousePointIndex.HasValue)
+        {
+            SetHoveredMousePointIndex(null);
+            PointInspected?.Invoke(this, new MacroPreviewMapPointEventArgs(null));
         }
     }
 
@@ -109,7 +217,7 @@ internal sealed class MacroPreviewMapControl : Control
         Graphics graphics = e.Graphics;
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+        Rectangle bounds = GetInnerBounds(ClientRectangle);
         if (bounds.Width <= 0 || bounds.Height <= 0)
         {
             return;
@@ -121,7 +229,7 @@ internal sealed class MacroPreviewMapControl : Control
         graphics.FillPath(fillBrush, path);
         graphics.DrawPath(borderPen, path);
 
-        Rectangle plotBounds = Rectangle.Inflate(bounds, -DesignTokens.Scale(10), -DesignTokens.Scale(10));
+        Rectangle plotBounds = GetPlotBounds(ClientRectangle);
         DrawGrid(graphics, plotBounds);
 
         if (_state.EventCount <= 0)
@@ -177,6 +285,7 @@ internal sealed class MacroPreviewMapControl : Control
         }
 
         DrawActionMarkers(graphics, plotBounds, _mousePoints, resolvedPath);
+        DrawHoveredPoint(graphics, resolvedPath);
 
         PointF currentPoint = resolvedPath[currentMousePointIndex];
         DrawActivePointHalo(graphics, currentPoint);
@@ -281,7 +390,9 @@ internal sealed class MacroPreviewMapControl : Control
                 index,
                 macroEvent.X.Value,
                 macroEvent.Y.Value,
-                macroEvent.MouseActionType));
+                macroEvent.MouseActionType,
+                Math.Max(0, macroEvent.DelayMs),
+                macroEvent.Description ?? string.Empty));
         }
 
         return points;
@@ -411,6 +522,37 @@ internal sealed class MacroPreviewMapControl : Control
         }
     }
 
+    private void DrawHoveredPoint(
+        Graphics graphics,
+        PointF[] resolvedPath)
+    {
+        if (!_hoveredMousePointIndex.HasValue
+            || _hoveredMousePointIndex.Value < 0
+            || _hoveredMousePointIndex.Value >= resolvedPath.Length)
+        {
+            return;
+        }
+
+        PointF point = resolvedPath[_hoveredMousePointIndex.Value];
+        float outerRadius = DesignTokens.Scale(12);
+        float innerRadius = DesignTokens.Scale(7);
+
+        using var outerPen = new Pen(Color.FromArgb(210, DesignTokens.TextPrimary), Math.Max(1.4f, DesignTokens.DensityScale));
+        using var glowBrush = new SolidBrush(Color.FromArgb(42, DesignTokens.Accent));
+        graphics.FillEllipse(
+            glowBrush,
+            point.X - outerRadius,
+            point.Y - outerRadius,
+            outerRadius * 2f,
+            outerRadius * 2f);
+        graphics.DrawEllipse(
+            outerPen,
+            point.X - innerRadius,
+            point.Y - innerRadius,
+            innerRadius * 2f,
+            innerRadius * 2f);
+    }
+
     private static Color? ResolveMarkerColor(MouseActionType actionType)
     {
         return actionType switch
@@ -422,6 +564,127 @@ internal sealed class MacroPreviewMapControl : Control
             MouseActionType.Wheel => DesignTokens.AccentPurple,
             _ => null
         };
+    }
+
+    private int? HitTestMousePoint(Point location)
+    {
+        if (_mousePoints.Count == 0 || _coordinateBounds.IsEmpty)
+        {
+            return null;
+        }
+
+        Rectangle plotBounds = GetPlotBounds(ClientRectangle);
+        if (plotBounds.Width <= 0 || plotBounds.Height <= 0)
+        {
+            return null;
+        }
+
+        PointF[] resolvedPath = ResolvePath(plotBounds, _mousePoints, _coordinateBounds);
+        float hitRadius = Math.Max(DesignTokens.Scale(12), 10);
+        float bestDistanceSquared = hitRadius * hitRadius;
+        int? bestIndex = null;
+
+        for (int index = 0; index < resolvedPath.Length; index++)
+        {
+            float deltaX = resolvedPath[index].X - location.X;
+            float deltaY = resolvedPath[index].Y - location.Y;
+            float distanceSquared = deltaX * deltaX + deltaY * deltaY;
+            if (distanceSquared <= bestDistanceSquared)
+            {
+                bestDistanceSquared = distanceSquared;
+                bestIndex = index;
+            }
+        }
+
+        return bestIndex;
+    }
+
+    private void SetHoveredMousePointIndex(int? mousePointIndex)
+    {
+        if (_hoveredMousePointIndex == mousePointIndex)
+        {
+            return;
+        }
+
+        _hoveredMousePointIndex = mousePointIndex;
+        Cursor = InspectionEnabled && mousePointIndex.HasValue
+            ? Cursors.Hand
+            : Cursors.Default;
+        Invalidate();
+    }
+
+    private void RaisePointInspected(int? mousePointIndex)
+    {
+        MacroPreviewMapPointInfo? pointInfo = null;
+        if (mousePointIndex.HasValue
+            && mousePointIndex.Value >= 0
+            && mousePointIndex.Value < _mousePoints.Count)
+        {
+            pointInfo = CreatePointInfo(_mousePoints[mousePointIndex.Value]);
+        }
+
+        PointInspected?.Invoke(this, new MacroPreviewMapPointEventArgs(pointInfo));
+    }
+
+    private static MacroPreviewMapPointInfo CreatePointInfo(MapPoint point)
+    {
+        return new MacroPreviewMapPointInfo(
+            point.SourceIndex,
+            point.SourceIndex + 1,
+            FormatMouseAction(point.ActionType),
+            string.IsNullOrWhiteSpace(point.Description)
+                ? FormatMouseDetail(point.ActionType)
+                : point.Description,
+            point.X,
+            point.Y,
+            point.DelayMs);
+    }
+
+    private static string FormatMouseAction(MouseActionType actionType)
+    {
+        return actionType switch
+        {
+            MouseActionType.Move => "Move",
+            MouseActionType.LeftDown => "LeftDown",
+            MouseActionType.LeftUp => "LeftUp",
+            MouseActionType.RightDown => "RightDown",
+            MouseActionType.RightUp => "RightUp",
+            MouseActionType.MiddleDown => "MiddleDown",
+            MouseActionType.MiddleUp => "MiddleUp",
+            MouseActionType.Wheel => "Wheel",
+            MouseActionType.DoubleClick => "DoubleClick",
+            _ => "Fare"
+        };
+    }
+
+    private static string FormatMouseDetail(MouseActionType actionType)
+    {
+        return actionType switch
+        {
+            MouseActionType.Move => "Fare hareketi",
+            MouseActionType.LeftDown => "Sol tus basildi",
+            MouseActionType.LeftUp => "Sol tus birakildi",
+            MouseActionType.RightDown => "Sag tus basildi",
+            MouseActionType.RightUp => "Sag tus birakildi",
+            MouseActionType.MiddleDown => "Orta tus basildi",
+            MouseActionType.MiddleUp => "Orta tus birakildi",
+            MouseActionType.Wheel => "Tekerlek hareketi",
+            MouseActionType.DoubleClick => "Cift tiklama",
+            _ => "Fare olayi"
+        };
+    }
+
+    private static Rectangle GetInnerBounds(Rectangle clientRectangle)
+    {
+        return Rectangle.Inflate(clientRectangle, -1, -1);
+    }
+
+    private static Rectangle GetPlotBounds(Rectangle clientRectangle)
+    {
+        return Rectangle.Inflate(
+            GetInnerBounds(clientRectangle),
+            -DesignTokens.Scale(10),
+            -DesignTokens.Scale(10));
     }
 
     private static IReadOnlyList<(PointF Point, Color Color)> SampleMarkers(
@@ -550,5 +813,7 @@ internal sealed class MacroPreviewMapControl : Control
         int SourceIndex,
         int X,
         int Y,
-        MouseActionType ActionType);
+        MouseActionType ActionType,
+        int DelayMs,
+        string Description);
 }

@@ -14,6 +14,10 @@ internal sealed class MacroPreviewMapDialog : Form
     private readonly Label _eventCountValueLabel;
     private readonly Label _durationValueLabel;
     private readonly Label _fileNameValueLabel;
+    private readonly Label _inspectedEventValueLabel;
+    private readonly Label _inspectedActionValueLabel;
+    private readonly Label _inspectedPositionValueLabel;
+    private readonly Label _inspectedDelayValueLabel;
     private readonly MacroPreviewMapControl _mapControl;
 
     public MacroPreviewMapDialog()
@@ -29,7 +33,7 @@ internal sealed class MacroPreviewMapDialog : Form
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        ClientSize = new Size(DesignTokens.Scale(780), DesignTokens.Scale(540));
+        ClientSize = new Size(DesignTokens.Scale(780), DesignTokens.Scale(580));
         MinimumSize = Size;
 
         _sessionNameLabel = CreateHeaderTitleLabel();
@@ -37,14 +41,21 @@ internal sealed class MacroPreviewMapDialog : Form
         _eventCountValueLabel = CreateMetricValueLabel();
         _durationValueLabel = CreateMetricValueLabel();
         _fileNameValueLabel = CreateMetricValueLabel();
+        _inspectedEventValueLabel = CreateInspectionValueLabel();
+        _inspectedActionValueLabel = CreateInspectionValueLabel();
+        _inspectedPositionValueLabel = CreateInspectionValueLabel();
+        _inspectedDelayValueLabel = CreateInspectionValueLabel();
         _mapControl = new MacroPreviewMapControl
         {
             AccessibleName = "Buyuk makro onizleme haritasi",
             AccessibleDescription = "Secili makronun fare rotasini genis harita olarak gosterir.",
+            InspectionEnabled = true,
             Cursor = Cursors.Default
         };
+        _mapControl.PointInspected += mapControl_PointInspected;
 
         BuildLayout();
+        UpdateInspectedPoint(null);
     }
 
     public void PositionNear(
@@ -99,6 +110,7 @@ internal sealed class MacroPreviewMapDialog : Form
             state.StatusText,
             events,
             activeSourceEventIndex);
+        UpdateInspectedPoint(_mapControl.GetInspectedPointInfo());
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -174,7 +186,7 @@ internal sealed class MacroPreviewMapDialog : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 5,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = new Padding(
@@ -186,13 +198,15 @@ internal sealed class MacroPreviewMapDialog : Form
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(70)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(86)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
 
         rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(CreateMetricsPanel(), 0, 1);
-        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 2);
-        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 3);
+        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 3);
+        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 4);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -257,6 +271,45 @@ internal sealed class MacroPreviewMapDialog : Form
         panel.Controls.Add(new MetricCard("Olay", _eventCountValueLabel), 1, 0);
         panel.Controls.Add(new MetricCard("Sure", _durationValueLabel), 2, 0);
         panel.Controls.Add(new MetricCard("Dosya", _fileNameValueLabel), 3, 0);
+        return panel;
+    }
+
+    private RoundedPanel CreateInspectionPanel()
+    {
+        var panel = new RoundedPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = DesignTokens.SurfaceInset,
+            FillColor = DesignTokens.SurfaceInset,
+            BorderColor = DesignTokens.BorderSoft,
+            Margin = new Padding(0, 0, 0, DesignTokens.Scale(12)),
+            Padding = new Padding(
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(7),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(7))
+        };
+
+        var layoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 4,
+            RowCount = 1,
+            BackColor = DesignTokens.SurfaceInset,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18f));
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 27f));
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17f));
+
+        layoutPanel.Controls.Add(CreateInspectionCell("Olay", _inspectedEventValueLabel), 0, 0);
+        layoutPanel.Controls.Add(CreateInspectionCell("Aksiyon", _inspectedActionValueLabel), 1, 0);
+        layoutPanel.Controls.Add(CreateInspectionCell("Konum", _inspectedPositionValueLabel), 2, 0);
+        layoutPanel.Controls.Add(CreateInspectionCell("Gecikme", _inspectedDelayValueLabel), 3, 0);
+
+        panel.Controls.Add(layoutPanel);
         return panel;
     }
 
@@ -335,6 +388,81 @@ internal sealed class MacroPreviewMapDialog : Form
             AutoEllipsis = true,
             UseMnemonic = false
         };
+    }
+
+    private static Label CreateInspectionValueLabel()
+    {
+        return new Label
+        {
+            Dock = DockStyle.Fill,
+            Font = DesignTokens.FontUiBold,
+            ForeColor = DesignTokens.TextPrimary,
+            BackColor = DesignTokens.SurfaceInset,
+            TextAlign = ContentAlignment.TopLeft,
+            AutoEllipsis = true,
+            UseMnemonic = false
+        };
+    }
+
+    private static TableLayoutPanel CreateInspectionCell(
+        string caption,
+        Label valueLabel)
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = DesignTokens.SurfaceInset,
+            Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
+            Padding = Padding.Empty
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 43f));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 57f));
+        panel.Controls.Add(CreateInspectionCaptionLabel(caption), 0, 0);
+        panel.Controls.Add(valueLabel, 0, 1);
+        return panel;
+    }
+
+    private static Label CreateInspectionCaptionLabel(string text)
+    {
+        return new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = text,
+            Font = DesignTokens.FontUiSmall,
+            ForeColor = DesignTokens.TextSecondary,
+            BackColor = DesignTokens.SurfaceInset,
+            TextAlign = ContentAlignment.BottomLeft,
+            AutoEllipsis = true,
+            UseMnemonic = false
+        };
+    }
+
+    private void mapControl_PointInspected(object? sender, MacroPreviewMapPointEventArgs e)
+    {
+        _ = sender;
+        UpdateInspectedPoint(e.PointInfo ?? _mapControl.GetInspectedPointInfo());
+    }
+
+    private void UpdateInspectedPoint(MacroPreviewMapPointInfo? pointInfo)
+    {
+        if (!pointInfo.HasValue)
+        {
+            _inspectedEventValueLabel.Text = "-";
+            _inspectedActionValueLabel.Text = "Olay secilmedi";
+            _inspectedPositionValueLabel.Text = "-";
+            _inspectedDelayValueLabel.Text = "-";
+            return;
+        }
+
+        MacroPreviewMapPointInfo info = pointInfo.Value;
+        _inspectedEventValueLabel.Text = FormattableString.Invariant($"#{info.EventNumber:000}");
+        _inspectedActionValueLabel.Text = string.IsNullOrWhiteSpace(info.DetailText)
+            ? info.ActionText
+            : FormattableString.Invariant($"{info.ActionText} - {info.DetailText}");
+        _inspectedPositionValueLabel.Text = FormattableString.Invariant($"X: {info.X}, Y: {info.Y}");
+        _inspectedDelayValueLabel.Text = FormattableString.Invariant($"{info.DelayMs} ms");
     }
 
     private static Color ResolveStatusColor(string statusText)
