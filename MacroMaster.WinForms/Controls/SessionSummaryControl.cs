@@ -9,18 +9,15 @@ public readonly record struct SessionSummaryState(
     string SessionName,
     int EventCount,
     int TotalDurationMs,
-    string FileName,
-    bool CanOptimize);
+    string FileName);
 
 internal sealed class SessionSummaryControl : UserControl
 {
-    private readonly Label _heroTitleLabel;
     private readonly Label _statusValueLabel;
     private readonly Label _eventCountValueLabel;
     private readonly Label _durationValueLabel;
     private readonly Label _sessionNameValueLabel;
     private readonly Label _fileNameValueLabel;
-    private readonly StatusBadge _statusBadge;
     private readonly PreviewMapPanel _previewMapPanel;
 
     public SessionSummaryControl()
@@ -36,17 +33,15 @@ internal sealed class SessionSummaryControl : UserControl
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
 
-        _heroTitleLabel = CreateValueLabel();
         _statusValueLabel = CreateValueLabel();
         _eventCountValueLabel = CreateValueLabel();
         _durationValueLabel = CreateValueLabel();
         _sessionNameValueLabel = CreateValueLabel();
         _fileNameValueLabel = CreateValueLabel();
-        _statusBadge = new StatusBadge();
         _previewMapPanel = new PreviewMapPanel();
 
         BuildLayout();
-        UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi", false));
+        UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi"));
     }
 
     public void UpdateState(SessionSummaryState state)
@@ -58,14 +53,11 @@ internal sealed class SessionSummaryControl : UserControl
             ? "Kaydedilmedi"
             : state.FileName;
 
-        _heroTitleLabel.Text = sessionName;
         _statusValueLabel.Text = state.StatusText;
         _eventCountValueLabel.Text = state.EventCount.ToString(CultureInfo.InvariantCulture);
         _durationValueLabel.Text = FormattableString.Invariant($"{Math.Max(0, state.TotalDurationMs)} ms");
         _sessionNameValueLabel.Text = sessionName;
         _fileNameValueLabel.Text = fileName;
-        _statusBadge.Text = state.EventCount > 0 ? "Gecerli" : "Bos";
-        _statusBadge.IsActive = state.EventCount > 0;
         _previewMapPanel.UpdatePreview(state.EventCount, state.TotalDurationMs, state.StatusText);
         _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
@@ -78,50 +70,19 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 2,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(68)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(146)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(168)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        rootLayoutPanel.Controls.Add(CreateHeroPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateCompactDetailsPanel(), 0, 1);
-        rootLayoutPanel.Controls.Add(CreateMapSection(), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateCompactDetailsPanel(), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateMapSection(), 0, 1);
 
         Controls.Add(rootLayoutPanel);
-    }
-
-    private TableLayoutPanel CreateHeroPanel()
-    {
-        var heroLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 3,
-            RowCount = 1,
-            BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 0, 0, DesignTokens.Scale(8)),
-            Padding = Padding.Empty
-        };
-        heroLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(54)));
-        heroLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        heroLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(74)));
-        heroLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-        _heroTitleLabel.Font = DesignTokens.FontUiBold;
-        _heroTitleLabel.Margin = new Padding(DesignTokens.Scale(10), 0, DesignTokens.Scale(8), 0);
-        _heroTitleLabel.TextAlign = ContentAlignment.MiddleLeft;
-
-        _statusBadge.Dock = DockStyle.Fill;
-        _statusBadge.Margin = Padding.Empty;
-
-        heroLayoutPanel.Controls.Add(new EventGlyphPanel(), 0, 0);
-        heroLayoutPanel.Controls.Add(_heroTitleLabel, 1, 0);
-        heroLayoutPanel.Controls.Add(_statusBadge, 2, 0);
-        return heroLayoutPanel;
     }
 
     private SoftPanel CreateCompactDetailsPanel()
@@ -131,12 +92,12 @@ internal sealed class SessionSummaryControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
-            Margin = new Padding(0, 0, 0, DesignTokens.Scale(10)),
+            Margin = new Padding(0, 0, 0, DesignTokens.Scale(14)),
             Padding = new Padding(
+                DesignTokens.Scale(14),
                 DesignTokens.Scale(12),
-                DesignTokens.Scale(8),
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(8))
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(12))
         };
 
         var layoutPanel = new TableLayoutPanel
@@ -148,7 +109,7 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(68)));
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(76)));
         layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
         for (int index = 0; index < 5; index++)
@@ -178,7 +139,7 @@ internal sealed class SessionSummaryControl : UserControl
             Padding = Padding.Empty
         };
         mapLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(24)));
+        mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28)));
         mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         mapLayoutPanel.Controls.Add(CreateSectionCaptionLabel("Ekran Onizleme"), 0, 0);
         mapLayoutPanel.Controls.Add(_previewMapPanel, 0, 1);
@@ -193,7 +154,7 @@ internal sealed class SessionSummaryControl : UserControl
     {
         valueLabel.Font = DesignTokens.FontUiBold;
         valueLabel.ForeColor = DesignTokens.TextPrimary;
-        valueLabel.Margin = Padding.Empty;
+        valueLabel.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
         valueLabel.TextAlign = ContentAlignment.MiddleLeft;
 
         layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, rowIndex);
@@ -239,129 +200,6 @@ internal sealed class SessionSummaryControl : UserControl
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
-    }
-
-    private sealed class EventGlyphPanel : Control
-    {
-        public EventGlyphPanel()
-        {
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-
-            Dock = DockStyle.Fill;
-            Margin = Padding.Empty;
-            BackColor = DesignTokens.Surface;
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Graphics graphics = e.Graphics;
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            int boxSize = Math.Min(DesignTokens.Scale(46), Math.Min(Width, Height));
-            var box = new Rectangle(
-                (Width - boxSize) / 2,
-                (Height - boxSize) / 2,
-                boxSize,
-                boxSize);
-
-            using GraphicsPath boxPath = CreateRoundPath(Rectangle.Inflate(box, -1, -1), DesignTokens.Scale(8));
-            using var fillBrush = new SolidBrush(Color.FromArgb(36, 62, 121));
-            using var borderPen = new Pen(Color.FromArgb(76, 114, 188));
-            graphics.FillPath(fillBrush, boxPath);
-            graphics.DrawPath(borderPen, boxPath);
-
-            float scale = boxSize / 46f;
-            PointF[] cursor =
-            [
-                new(box.Left + 15f * scale, box.Top + 12f * scale),
-                new(box.Left + 15f * scale, box.Top + 32f * scale),
-                new(box.Left + 21f * scale, box.Top + 27f * scale),
-                new(box.Left + 25f * scale, box.Top + 36f * scale),
-                new(box.Left + 29f * scale, box.Top + 34f * scale),
-                new(box.Left + 25f * scale, box.Top + 25f * scale),
-                new(box.Left + 33f * scale, box.Top + 25f * scale)
-            ];
-
-            using var cursorBrush = new SolidBrush(Color.FromArgb(176, 208, 255));
-            using var cursorPen = new Pen(DesignTokens.Accent, Math.Max(1f, DesignTokens.DensityScale));
-            graphics.FillPolygon(cursorBrush, cursor);
-            graphics.DrawPolygon(cursorPen, cursor);
-        }
-    }
-
-    private sealed class StatusBadge : Control
-    {
-        public bool IsActive { get; set; }
-
-        public StatusBadge()
-        {
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-
-            Font = DesignTokens.FontUiSmall;
-            ForeColor = DesignTokens.TextSecondary;
-            BackColor = DesignTokens.Surface;
-            Text = "Bos";
-        }
-
-        protected override void OnTextChanged(EventArgs e)
-        {
-            Invalidate();
-            base.OnTextChanged(e);
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Graphics graphics = e.Graphics;
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            Color dotColor = IsActive
-                ? DesignTokens.AccentGreen
-                : DesignTokens.TextMuted;
-            int dotSize = DesignTokens.Scale(6);
-            int dotTop = (Height - dotSize) / 2;
-            var dotBounds = new Rectangle(0, dotTop, dotSize, dotSize);
-
-            using var dotBrush = new SolidBrush(dotColor);
-            graphics.FillEllipse(dotBrush, dotBounds);
-
-            var textBounds = new Rectangle(
-                dotSize + DesignTokens.Scale(6),
-                0,
-                Math.Max(0, Width - dotSize - DesignTokens.Scale(6)),
-                Height);
-            TextRenderer.DrawText(
-                graphics,
-                Text,
-                Font,
-                textBounds,
-                IsActive ? DesignTokens.TextSecondary : DesignTokens.TextMuted,
-                TextFormatFlags.Left |
-                TextFormatFlags.VerticalCenter |
-                TextFormatFlags.EndEllipsis |
-                TextFormatFlags.NoPrefix);
-        }
     }
 
     private sealed class PreviewMapPanel : Control
