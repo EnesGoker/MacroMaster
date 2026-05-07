@@ -1,25 +1,27 @@
 using MacroMaster.Application.Abstractions;
+using MacroMaster.WinForms.Controls;
 using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
+using System.Drawing.Drawing2D;
 
 namespace MacroMaster.WinForms.Forms;
 
 public sealed class HotkeySettingsDialog : Form
 {
-    private const int ComboBoxWidth = 190;
     private static readonly Size MinimumClientSize = new(DesignTokens.Scale(720), DesignTokens.Scale(392));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
     private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
 
-    private readonly ComboBox _recordModifierComboBox = CreateComboBox();
-    private readonly ComboBox _recordKeyComboBox = CreateComboBox();
-    private readonly ComboBox _playbackModifierComboBox = CreateComboBox();
-    private readonly ComboBox _playbackKeyComboBox = CreateComboBox();
-    private readonly ComboBox _stopModifierComboBox = CreateComboBox();
-    private readonly ComboBox _stopKeyComboBox = CreateComboBox();
-    private readonly ComboBox _hotkeySettingsModifierComboBox = CreateComboBox();
-    private readonly ComboBox _hotkeySettingsKeyComboBox = CreateComboBox();
+    private readonly ModernSelect _recordModifierSelect = CreateSelect();
+    private readonly ModernSelect _recordKeySelect = CreateSelect();
+    private readonly ModernSelect _playbackModifierSelect = CreateSelect();
+    private readonly ModernSelect _playbackKeySelect = CreateSelect();
+    private readonly ModernSelect _stopModifierSelect = CreateSelect();
+    private readonly ModernSelect _stopKeySelect = CreateSelect();
+    private readonly ModernSelect _hotkeySettingsModifierSelect = CreateSelect();
+    private readonly ModernSelect _hotkeySettingsKeySelect = CreateSelect();
+    private readonly ThemedDialogButton _cancelButton;
 
     public HotkeySettingsDialog(HotkeySettings currentSettings)
     {
@@ -41,71 +43,25 @@ public sealed class HotkeySettingsDialog : Form
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
         Padding = new Padding(DesignTokens.Scale(18));
+        ClientSize = MinimumClientSize;
+        MinimumSize = SizeFromClientSize(ClientSize);
 
-        Button applyButton = CreateButton("Kaydet", isPrimary: true);
-        Button cancelButton = CreateButton("Iptal", isPrimary: false);
-        Button resetDefaultsButton = CreateButton("Varsayilan", isPrimary: false);
-        cancelButton.DialogResult = DialogResult.Cancel;
+        _cancelButton = CreateDialogButton("Iptal", ThemedDialogButtonStyle.Secondary);
 
-        applyButton.Click += applyButton_Click;
-        resetDefaultsButton.Click += resetDefaultsButton_Click;
+        PopulateSelect(_recordModifierSelect, ModifierOptions.Select(option => option.DisplayText));
+        PopulateSelect(_playbackModifierSelect, ModifierOptions.Select(option => option.DisplayText));
+        PopulateSelect(_stopModifierSelect, ModifierOptions.Select(option => option.DisplayText));
+        PopulateSelect(_hotkeySettingsModifierSelect, ModifierOptions.Select(option => option.DisplayText));
+        PopulateSelect(_recordKeySelect, KeyOptions.Select(option => option.DisplayText));
+        PopulateSelect(_playbackKeySelect, KeyOptions.Select(option => option.DisplayText));
+        PopulateSelect(_stopKeySelect, KeyOptions.Select(option => option.DisplayText));
+        PopulateSelect(_hotkeySettingsKeySelect, KeyOptions.Select(option => option.DisplayText));
 
-        AcceptButton = applyButton;
-        CancelButton = cancelButton;
-
-        PopulateComboBox(_recordModifierComboBox, ModifierOptions);
-        PopulateComboBox(_playbackModifierComboBox, ModifierOptions);
-        PopulateComboBox(_stopModifierComboBox, ModifierOptions);
-        PopulateComboBox(_hotkeySettingsModifierComboBox, ModifierOptions);
-        PopulateComboBox(_recordKeyComboBox, KeyOptions);
-        PopulateComboBox(_playbackKeyComboBox, KeyOptions);
-        PopulateComboBox(_stopKeyComboBox, KeyOptions);
-        PopulateComboBox(_hotkeySettingsKeyComboBox, KeyOptions);
-
-        TableLayoutPanel settingsTableLayoutPanel = CreateSettingsTableLayoutPanel();
-        AddHeaderRow(settingsTableLayoutPanel);
-        AddHotkeyRow(
-            settingsTableLayoutPanel,
-            1,
-            "Kayit Degistir",
-            _recordModifierComboBox,
-            _recordKeyComboBox);
-        AddHotkeyRow(
-            settingsTableLayoutPanel,
-            2,
-            "Oynatma Degistir",
-            _playbackModifierComboBox,
-            _playbackKeyComboBox);
-        AddHotkeyRow(
-            settingsTableLayoutPanel,
-            3,
-            "Durdur",
-            _stopModifierComboBox,
-            _stopKeyComboBox);
-        AddHotkeyRow(
-            settingsTableLayoutPanel,
-            4,
-            "Kisayol Ayarlari",
-            _hotkeySettingsModifierComboBox,
-            _hotkeySettingsKeyComboBox);
-
-        TableLayoutPanel buttonFooterPanel = CreateButtonFooterPanel(
-            resetDefaultsButton,
-            cancelButton,
-            applyButton);
-
-        TableLayoutPanel rootLayoutPanel = CreateRootLayoutPanel(
-            settingsTableLayoutPanel,
-            buttonFooterPanel);
-
-        Controls.Add(rootLayoutPanel);
+        Controls.Add(CreateRootLayoutPanel());
 
         ApplyHotkeySettings(currentSettings);
 
         ResumeLayout(performLayout: true);
-
-        ClientSize = MinimumClientSize;
-        MinimumSize = SizeFromClientSize(ClientSize);
         PerformLayout();
     }
 
@@ -121,7 +77,7 @@ public sealed class HotkeySettingsDialog : Form
             enabled: true);
         WindowChromeNative.TryApplyDwmCornerPreference(
             Handle,
-            DwmWindowCornerPreference.RoundSmall);
+            DwmWindowCornerPreference.Round);
         WindowChromeNative.TryApplyDwmColorAttribute(
             Handle,
             DwmWindowAttribute.BorderColor,
@@ -134,6 +90,230 @@ public sealed class HotkeySettingsDialog : Form
             Handle,
             DwmWindowAttribute.TextColor,
             DesignTokens.TextPrimary);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _recordModifierSelect.Focus();
+    }
+
+    private TableLayoutPanel CreateRootLayoutPanel()
+    {
+        var rootLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 3,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+            BackColor = DesignTokens.Surface,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
+        };
+
+        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(64)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(56)));
+
+        rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateSettingsSurfacePanel(), 0, 1);
+        rootLayoutPanel.Controls.Add(CreateButtonFooterPanel(), 0, 2);
+
+        return rootLayoutPanel;
+    }
+
+    private static TableLayoutPanel CreateHeaderPanel()
+    {
+        var headerLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
+        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
+
+        headerLayoutPanel.Controls.Add(
+            new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "Kisayol Ayarlari",
+                Font = DesignTokens.FontUiBold,
+                ForeColor = DesignTokens.TextPrimary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
+            },
+            0,
+            0);
+        headerLayoutPanel.Controls.Add(
+            new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "Global kisayollari secin ve kaydedin.",
+                Font = DesignTokens.FontUiSmall,
+                ForeColor = DesignTokens.TextSecondary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true
+            },
+            0,
+            1);
+
+        return headerLayoutPanel;
+    }
+
+    private RoundedSurfacePanel CreateSettingsSurfacePanel()
+    {
+        var surfacePanel = new RoundedSurfacePanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = DesignTokens.SurfaceInset,
+            BorderColor = DesignTokens.BorderSoft,
+            Margin = Padding.Empty,
+            Padding = new Padding(
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(12))
+        };
+
+        surfacePanel.Controls.Add(CreateSettingsTableLayoutPanel());
+        return surfacePanel;
+    }
+
+    private TableLayoutPanel CreateSettingsTableLayoutPanel()
+    {
+        var settingsTableLayoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 5,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+            BackColor = DesignTokens.SurfaceInset,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
+        };
+
+        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
+        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
+
+        AddHeaderRow(settingsTableLayoutPanel);
+        AddHotkeyRow(
+            settingsTableLayoutPanel,
+            1,
+            "Kayit Degistir",
+            _recordModifierSelect,
+            _recordKeySelect);
+        AddHotkeyRow(
+            settingsTableLayoutPanel,
+            2,
+            "Oynatma Degistir",
+            _playbackModifierSelect,
+            _playbackKeySelect);
+        AddHotkeyRow(
+            settingsTableLayoutPanel,
+            3,
+            "Durdur",
+            _stopModifierSelect,
+            _stopKeySelect);
+        AddHotkeyRow(
+            settingsTableLayoutPanel,
+            4,
+            "Kisayol Ayarlari",
+            _hotkeySettingsModifierSelect,
+            _hotkeySettingsKeySelect);
+
+        return settingsTableLayoutPanel;
+    }
+
+    private TableLayoutPanel CreateButtonFooterPanel()
+    {
+        var resetDefaultsButton = CreateDialogButton("Varsayilan", ThemedDialogButtonStyle.Secondary);
+        var applyButton = CreateDialogButton("Kaydet", ThemedDialogButtonStyle.Primary);
+
+        _cancelButton.DialogResult = DialogResult.Cancel;
+        applyButton.Click += applyButton_Click;
+        resetDefaultsButton.Click += resetDefaultsButton_Click;
+
+        AcceptButton = applyButton;
+        CancelButton = _cancelButton;
+
+        var buttonFooterPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 4,
+            RowCount = 1,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = new Padding(0, DesignTokens.Scale(12), 0, 0),
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
+        };
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(126)));
+        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(126)));
+        buttonFooterPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+        resetDefaultsButton.Dock = DockStyle.Left;
+        resetDefaultsButton.Margin = Padding.Empty;
+        _cancelButton.Dock = DockStyle.Fill;
+        _cancelButton.Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0);
+        applyButton.Dock = DockStyle.Fill;
+        applyButton.Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0);
+
+        buttonFooterPanel.Controls.Add(resetDefaultsButton, 0, 0);
+        buttonFooterPanel.Controls.Add(_cancelButton, 2, 0);
+        buttonFooterPanel.Controls.Add(applyButton, 3, 0);
+
+        return buttonFooterPanel;
+    }
+
+    private static void AddHeaderRow(TableLayoutPanel tableLayoutPanel)
+    {
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(32)));
+
+        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Islem"), 0, 0);
+        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Degistirici"), 1, 0);
+        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Tus"), 2, 0);
+    }
+
+    private static void AddHotkeyRow(
+        TableLayoutPanel tableLayoutPanel,
+        int rowIndex,
+        string actionLabel,
+        ModernSelect modifierSelect,
+        ModernSelect keySelect)
+    {
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
+
+        modifierSelect.Dock = DockStyle.Fill;
+        modifierSelect.Margin = new Padding(0, DesignTokens.Scale(5), DesignTokens.Scale(10), DesignTokens.Scale(5));
+        keySelect.Dock = DockStyle.Fill;
+        keySelect.Margin = new Padding(0, DesignTokens.Scale(5), 0, DesignTokens.Scale(5));
+
+        tableLayoutPanel.Controls.Add(
+            new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = actionLabel,
+                Font = DesignTokens.FontUiBold,
+                ForeColor = DesignTokens.TextPrimary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
+                AutoEllipsis = true
+            },
+            0,
+            rowIndex);
+        tableLayoutPanel.Controls.Add(modifierSelect, 1, rowIndex);
+        tableLayoutPanel.Controls.Add(keySelect, 2, rowIndex);
     }
 
     private void applyButton_Click(object? sender, EventArgs e)
@@ -169,14 +349,14 @@ public sealed class HotkeySettingsDialog : Form
 
     private void ApplyHotkeySettings(HotkeySettings hotkeySettings)
     {
-        SelectModifier(_recordModifierComboBox, hotkeySettings.RecordToggleHotkey.Modifiers);
-        SelectModifier(_playbackModifierComboBox, hotkeySettings.PlaybackToggleHotkey.Modifiers);
-        SelectModifier(_stopModifierComboBox, hotkeySettings.StopHotkey.Modifiers);
-        SelectModifier(_hotkeySettingsModifierComboBox, hotkeySettings.HotkeySettingsHotkey.Modifiers);
-        SelectKey(_recordKeyComboBox, hotkeySettings.RecordToggleHotkey.VirtualKeyCode);
-        SelectKey(_playbackKeyComboBox, hotkeySettings.PlaybackToggleHotkey.VirtualKeyCode);
-        SelectKey(_stopKeyComboBox, hotkeySettings.StopHotkey.VirtualKeyCode);
-        SelectKey(_hotkeySettingsKeyComboBox, hotkeySettings.HotkeySettingsHotkey.VirtualKeyCode);
+        SelectModifier(_recordModifierSelect, hotkeySettings.RecordToggleHotkey.Modifiers);
+        SelectModifier(_playbackModifierSelect, hotkeySettings.PlaybackToggleHotkey.Modifiers);
+        SelectModifier(_stopModifierSelect, hotkeySettings.StopHotkey.Modifiers);
+        SelectModifier(_hotkeySettingsModifierSelect, hotkeySettings.HotkeySettingsHotkey.Modifiers);
+        SelectKey(_recordKeySelect, hotkeySettings.RecordToggleHotkey.VirtualKeyCode);
+        SelectKey(_playbackKeySelect, hotkeySettings.PlaybackToggleHotkey.VirtualKeyCode);
+        SelectKey(_stopKeySelect, hotkeySettings.StopHotkey.VirtualKeyCode);
+        SelectKey(_hotkeySettingsKeySelect, hotkeySettings.HotkeySettingsHotkey.VirtualKeyCode);
     }
 
     private HotkeySettings BuildHotkeySettings()
@@ -184,235 +364,47 @@ public sealed class HotkeySettingsDialog : Form
         return new HotkeySettings
         {
             RecordToggleHotkey = new HotkeyBinding(
-                GetSelectedKey(_recordKeyComboBox),
-                GetSelectedModifiers(_recordModifierComboBox)),
+                GetSelectedKey(_recordKeySelect),
+                GetSelectedModifiers(_recordModifierSelect)),
             PlaybackToggleHotkey = new HotkeyBinding(
-                GetSelectedKey(_playbackKeyComboBox),
-                GetSelectedModifiers(_playbackModifierComboBox)),
+                GetSelectedKey(_playbackKeySelect),
+                GetSelectedModifiers(_playbackModifierSelect)),
             StopHotkey = new HotkeyBinding(
-                GetSelectedKey(_stopKeyComboBox),
-                GetSelectedModifiers(_stopModifierComboBox)),
+                GetSelectedKey(_stopKeySelect),
+                GetSelectedModifiers(_stopModifierSelect)),
             HotkeySettingsHotkey = new HotkeyBinding(
-                GetSelectedKey(_hotkeySettingsKeyComboBox),
-                GetSelectedModifiers(_hotkeySettingsModifierComboBox))
+                GetSelectedKey(_hotkeySettingsKeySelect),
+                GetSelectedModifiers(_hotkeySettingsModifierSelect))
         };
     }
 
-    private static TableLayoutPanel CreateRootLayoutPanel(
-        TableLayoutPanel settingsTableLayoutPanel,
-        TableLayoutPanel buttonFooterPanel)
+    private static ThemedDialogButton CreateDialogButton(string text, ThemedDialogButtonStyle style)
     {
-        TableLayoutPanel rootLayoutPanel = new()
+        return new ThemedDialogButton(style)
         {
-            AutoSize = false,
-            ColumnCount = 1,
-            RowCount = 3,
-            Dock = DockStyle.Fill,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty,
-            BackColor = DesignTokens.Surface,
-            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
-        };
-
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(64)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(56)));
-        rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(settingsTableLayoutPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(buttonFooterPanel, 0, 2);
-
-        return rootLayoutPanel;
-    }
-
-    private static TableLayoutPanel CreateHeaderPanel()
-    {
-        var headerLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
-        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
-
-        headerLayoutPanel.Controls.Add(
-            new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = "Kisayol Ayarlari",
-                Font = DesignTokens.FontUiBold,
-                ForeColor = DesignTokens.TextPrimary,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleLeft
-            },
-            0,
-            0);
-        headerLayoutPanel.Controls.Add(
-            new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = "Global kisayollari secin ve kaydedin.",
-                Font = DesignTokens.FontUiSmall,
-                ForeColor = DesignTokens.TextSecondary,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleLeft
-            },
-            0,
-            1);
-
-        return headerLayoutPanel;
-    }
-
-    private static TableLayoutPanel CreateSettingsTableLayoutPanel()
-    {
-        TableLayoutPanel settingsTableLayoutPanel = new()
-        {
-            AutoSize = false,
-            ColumnCount = 3,
-            RowCount = 5,
-            Dock = DockStyle.Fill,
-            Margin = Padding.Empty,
-            Padding = new Padding(DesignTokens.Scale(14), DesignTokens.Scale(12), DesignTokens.Scale(14), DesignTokens.Scale(12)),
-            BackColor = DesignTokens.SurfaceInset,
-            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
-        };
-
-        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
-        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
-        settingsTableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
-
-        return settingsTableLayoutPanel;
-    }
-
-    private static TableLayoutPanel CreateButtonFooterPanel(
-        Button resetDefaultsButton,
-        Button cancelButton,
-        Button applyButton)
-    {
-        var buttonFooterPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 4,
-            RowCount = 1,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = new Padding(0, DesignTokens.Scale(12), 0, 0),
-            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
-        };
-        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
-        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(126)));
-        buttonFooterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(126)));
-        buttonFooterPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-        resetDefaultsButton.Dock = DockStyle.Left;
-        resetDefaultsButton.Margin = Padding.Empty;
-        cancelButton.Dock = DockStyle.Fill;
-        cancelButton.Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0);
-        applyButton.Dock = DockStyle.Fill;
-        applyButton.Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0);
-
-        buttonFooterPanel.Controls.Add(resetDefaultsButton, 0, 0);
-        buttonFooterPanel.Controls.Add(cancelButton, 2, 0);
-        buttonFooterPanel.Controls.Add(applyButton, 3, 0);
-
-        return buttonFooterPanel;
-    }
-
-    private static Button CreateButton(string text, bool isPrimary)
-    {
-        var button = new Button
-        {
+            Text = text,
             Width = DesignTokens.Scale(118),
             Height = DesignTokens.Scale(34),
-            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0),
-            Text = text,
-            FlatStyle = FlatStyle.Flat,
-            UseVisualStyleBackColor = false,
-            Font = DesignTokens.FontUiBold,
-            BackColor = isPrimary ? DesignTokens.AccentDeep : DesignTokens.Surface2,
-            ForeColor = DesignTokens.TextPrimary
+            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0)
         };
-
-        button.FlatAppearance.BorderColor = isPrimary
-            ? DesignTokens.Accent
-            : DesignTokens.BorderBright;
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.MouseOverBackColor = isPrimary
-            ? Color.FromArgb(210, DesignTokens.AccentDeep)
-            : DesignTokens.SurfaceHover;
-        button.FlatAppearance.MouseDownBackColor = isPrimary
-            ? Color.FromArgb(180, DesignTokens.AccentDeep)
-            : DesignTokens.Surface3;
-        return button;
     }
 
-    private static ComboBox CreateComboBox()
+    private static ModernSelect CreateSelect()
     {
-        return new ComboBox
+        return new ModernSelect
         {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            DropDownWidth = DesignTokens.Scale(ComboBoxWidth),
-            Dock = DockStyle.Fill,
-            Width = DesignTokens.Scale(ComboBoxWidth),
-            Margin = new Padding(0, DesignTokens.Scale(4), DesignTokens.Scale(10), DesignTokens.Scale(4)),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = DesignTokens.Surface,
+            BackColor = DesignTokens.SurfaceInset,
             ForeColor = DesignTokens.TextPrimary,
-            Font = DesignTokens.FontUiNormal
+            Font = DesignTokens.FontUiNormal,
+            MinimumSize = new Size(0, DesignTokens.Scale(32))
         };
     }
 
-    private static void PopulateComboBox<TOption>(
-        ComboBox comboBox,
-        IReadOnlyList<TOption> options)
+    private static void PopulateSelect(
+        ModernSelect select,
+        IEnumerable<string> options)
     {
-        comboBox.DisplayMember = nameof(HotkeyModifierOption.DisplayText);
-        comboBox.DataSource = options.ToList();
-    }
-
-    private static void AddHeaderRow(TableLayoutPanel tableLayoutPanel)
-    {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(30)));
-
-        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Islem"), 0, 0);
-        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Degistirici"), 1, 0);
-        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Tus"), 2, 0);
-    }
-
-    private static void AddHotkeyRow(
-        TableLayoutPanel tableLayoutPanel,
-        int rowIndex,
-        string actionLabel,
-        ComboBox modifierComboBox,
-        ComboBox keyComboBox)
-    {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
-
-        modifierComboBox.Dock = DockStyle.Fill;
-        keyComboBox.Dock = DockStyle.Fill;
-        keyComboBox.Margin = new Padding(0, DesignTokens.Scale(4), 0, DesignTokens.Scale(4));
-
-        tableLayoutPanel.Controls.Add(
-            new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = actionLabel,
-                Font = DesignTokens.FontUiBold,
-                ForeColor = DesignTokens.TextPrimary,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 0, DesignTokens.Scale(12), 0)
-            },
-            0,
-            rowIndex);
-        tableLayoutPanel.Controls.Add(modifierComboBox, 1, rowIndex);
-        tableLayoutPanel.Controls.Add(keyComboBox, 2, rowIndex);
+        select.SetItems(options);
     }
 
     private static Label CreateHeaderLabel(string text)
@@ -425,45 +417,47 @@ public sealed class HotkeySettingsDialog : Form
             BackColor = Color.Transparent,
             Margin = new Padding(0, 0, DesignTokens.Scale(12), DesignTokens.Scale(4)),
             Text = text,
-            TextAlign = ContentAlignment.MiddleLeft
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true
         };
     }
 
     private static void SelectModifier(
-        ComboBox comboBox,
+        ModernSelect select,
         HotkeyModifiers modifiers)
     {
-        comboBox.SelectedItem = ModifierOptions.First(
-            option => option.Modifiers == modifiers);
+        int selectedIndex = ModifierOptions
+            .Select((option, index) => new { option, index })
+            .FirstOrDefault(pair => pair.option.Modifiers == modifiers)?.index
+            ?? throw new InvalidOperationException("Kisayol degistiricisi desteklenmiyor.");
+
+        select.SelectedIndex = selectedIndex;
     }
 
     private static void SelectKey(
-        ComboBox comboBox,
+        ModernSelect select,
         int virtualKeyCode)
     {
-        HotkeyKeyOption? keyOption = KeyOptions.FirstOrDefault(
-            option => option.VirtualKeyCode == virtualKeyCode);
-
-        if (keyOption is null)
-        {
-            throw new InvalidOperationException(
+        int selectedIndex = KeyOptions
+            .Select((option, index) => new { option, index })
+            .FirstOrDefault(pair => pair.option.VirtualKeyCode == virtualKeyCode)?.index
+            ?? throw new InvalidOperationException(
                 $"Kisayol duzenleyici {virtualKeyCode} sanal tus kodunu desteklemiyor.");
-        }
 
-        comboBox.SelectedItem = keyOption;
+        select.SelectedIndex = selectedIndex;
     }
 
-    private static HotkeyModifiers GetSelectedModifiers(ComboBox comboBox)
+    private static HotkeyModifiers GetSelectedModifiers(ModernSelect select)
     {
-        return comboBox.SelectedItem is HotkeyModifierOption modifierOption
-            ? modifierOption.Modifiers
+        return select.SelectedIndex >= 0 && select.SelectedIndex < ModifierOptions.Count
+            ? ModifierOptions[select.SelectedIndex].Modifiers
             : throw new InvalidOperationException("Bir kisayol degistiricisi secilmelidir.");
     }
 
-    private static int GetSelectedKey(ComboBox comboBox)
+    private static int GetSelectedKey(ModernSelect select)
     {
-        return comboBox.SelectedItem is HotkeyKeyOption keyOption
-            ? keyOption.VirtualKeyCode
+        return select.SelectedIndex >= 0 && select.SelectedIndex < KeyOptions.Count
+            ? KeyOptions[select.SelectedIndex].VirtualKeyCode
             : throw new InvalidOperationException("Bir kisayol tusu secilmelidir.");
     }
 
@@ -511,26 +505,13 @@ public sealed class HotkeySettingsDialog : Form
                 continue;
             }
 
-            string displayText = GetKeyDisplayText(keyCode);
+            string displayText = VirtualKeyDisplayNameFormatter.Format(keyCode);
             options.Add(new HotkeyKeyOption(displayText, keyCode));
         }
 
         return options
             .OrderBy(option => option.DisplayText, StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
-
-    private static string GetKeyDisplayText(int virtualKeyCode)
-    {
-        return VirtualKeyDisplayNameFormatter.Format(virtualKeyCode);
-    }
-
-    private static string FormatEnumKeyName(int virtualKeyCode)
-    {
-        string keyName = ((Keys)virtualKeyCode).ToString();
-        return int.TryParse(keyName, out _)
-            ? $"VK {virtualKeyCode}"
-            : keyName;
     }
 
     private sealed record HotkeyModifierOption(
@@ -540,4 +521,60 @@ public sealed class HotkeySettingsDialog : Form
     private sealed record HotkeyKeyOption(
         string DisplayText,
         int VirtualKeyCode);
+
+    private sealed class RoundedSurfacePanel : Panel
+    {
+        public RoundedSurfacePanel()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+        }
+
+        public Color BorderColor { get; set; } = DesignTokens.BorderSoft;
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
+
+            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(8));
+            using var fillBrush = new SolidBrush(BackColor);
+            using var borderPen = new Pen(BorderColor, Math.Max(1f, DesignTokens.DensityScale));
+            e.Graphics.FillPath(fillBrush, path);
+            e.Graphics.DrawPath(borderPen, path);
+        }
+
+        private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
+        {
+            var path = new GraphicsPath();
+            int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
+
+            if (diameter <= 1)
+            {
+                path.AddRectangle(bounds);
+                return path;
+            }
+
+            var arc = new Rectangle(bounds.Left, bounds.Top, diameter, diameter);
+            path.AddArc(arc, 180, 90);
+            arc.X = bounds.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            arc.Y = bounds.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            arc.X = bounds.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+    }
 }
