@@ -1,14 +1,17 @@
 using MacroMaster.Domain.Enums;
 using MacroMaster.Domain.Models;
+using MacroMaster.WinForms.Controls;
+using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
 
 namespace MacroMaster.WinForms.Forms;
 
 internal sealed class EventEditDialog : Form
 {
-    private readonly NumericUpDown _delayNumericUpDown = new();
-    private readonly NumericUpDown _xNumericUpDown = new();
-    private readonly NumericUpDown _yNumericUpDown = new();
+    private readonly ModernNumericInput _delayNumericInput = new();
+    private readonly ModernNumericInput _xNumericInput = new();
+    private readonly ModernNumericInput _yNumericInput = new();
+    private readonly ThemedDialogButton _cancelButton;
     private readonly bool _coordinatesEditable;
 
     public EventEditDialog(int eventIndex, MacroEvent macroEvent)
@@ -29,9 +32,10 @@ internal sealed class EventEditDialog : Form
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        ClientSize = new Size(DesignTokens.Scale(420), DesignTokens.Scale(250));
+        ClientSize = new Size(DesignTokens.Scale(420), DesignTokens.Scale(238));
         MinimumSize = Size;
 
+        _cancelButton = CreateDialogButton("Iptal", ThemedDialogButtonStyle.Secondary);
         BuildLayout(macroEvent);
     }
 
@@ -48,9 +52,9 @@ internal sealed class EventEditDialog : Form
             Padding = new Padding(DesignTokens.Scale(18)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(120)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(46)));
 
         var titleLabel = new Label
         {
@@ -59,7 +63,8 @@ internal sealed class EventEditDialog : Form
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.MiddleLeft
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true
         };
 
         var fieldsLayoutPanel = new TableLayoutPanel
@@ -71,24 +76,24 @@ internal sealed class EventEditDialog : Form
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        fieldsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(142)));
+        fieldsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(136)));
         fieldsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
-        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
-        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
+        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
+        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
+        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
 
-        ConfigureNumericInput(_delayNumericUpDown, 0, 600000, macroEvent.DelayMs);
-        ConfigureNumericInput(_xNumericUpDown, -100000, 100000, macroEvent.X ?? 0);
-        ConfigureNumericInput(_yNumericUpDown, -100000, 100000, macroEvent.Y ?? 0);
-        _xNumericUpDown.Enabled = _coordinatesEditable;
-        _yNumericUpDown.Enabled = _coordinatesEditable;
+        ConfigureNumericInput(_delayNumericInput, 0, 600000, macroEvent.DelayMs);
+        ConfigureNumericInput(_xNumericInput, -100000, 100000, macroEvent.X ?? 0);
+        ConfigureNumericInput(_yNumericInput, -100000, 100000, macroEvent.Y ?? 0);
+        _xNumericInput.Enabled = _coordinatesEditable;
+        _yNumericInput.Enabled = _coordinatesEditable;
 
         fieldsLayoutPanel.Controls.Add(CreateFieldLabel("Gecikme (ms)"), 0, 0);
-        fieldsLayoutPanel.Controls.Add(_delayNumericUpDown, 1, 0);
+        fieldsLayoutPanel.Controls.Add(_delayNumericInput, 1, 0);
         fieldsLayoutPanel.Controls.Add(CreateFieldLabel("X koordinati"), 0, 1);
-        fieldsLayoutPanel.Controls.Add(_xNumericUpDown, 1, 1);
+        fieldsLayoutPanel.Controls.Add(_xNumericInput, 1, 1);
         fieldsLayoutPanel.Controls.Add(CreateFieldLabel("Y koordinati"), 0, 2);
-        fieldsLayoutPanel.Controls.Add(_yNumericUpDown, 1, 2);
+        fieldsLayoutPanel.Controls.Add(_yNumericInput, 1, 2);
 
         var buttonLayoutPanel = new FlowLayoutPanel
         {
@@ -99,20 +104,19 @@ internal sealed class EventEditDialog : Form
             Padding = new Padding(0, DesignTokens.Scale(10), 0, 0)
         };
 
-        var saveButton = CreateDialogButton("Kaydet", isPrimary: true);
-        var cancelButton = CreateDialogButton("Iptal", isPrimary: false);
+        var saveButton = CreateDialogButton("Kaydet", ThemedDialogButtonStyle.Primary);
 
         saveButton.Click += (_, _) => SaveAndClose();
-        cancelButton.Click += (_, _) =>
+        _cancelButton.Click += (_, _) =>
         {
             DialogResult = DialogResult.Cancel;
             Close();
         };
 
         AcceptButton = saveButton;
-        CancelButton = cancelButton;
+        CancelButton = _cancelButton;
         buttonLayoutPanel.Controls.Add(saveButton);
-        buttonLayoutPanel.Controls.Add(cancelButton);
+        buttonLayoutPanel.Controls.Add(_cancelButton);
 
         rootLayoutPanel.Controls.Add(titleLabel, 0, 0);
         rootLayoutPanel.Controls.Add(fieldsLayoutPanel, 0, 1);
@@ -121,33 +125,65 @@ internal sealed class EventEditDialog : Form
         Controls.Add(rootLayoutPanel);
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+
+        WindowChromeNative.TryApplyDwmBoolAttribute(
+            Handle,
+            DwmWindowAttribute.UseImmersiveDarkMode,
+            enabled: true);
+        WindowChromeNative.TryApplyDwmCornerPreference(
+            Handle,
+            DwmWindowCornerPreference.Round);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.BorderColor,
+            DesignTokens.Border);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.CaptionColor,
+            DesignTokens.Surface);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.TextColor,
+            DesignTokens.TextPrimary);
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _delayNumericInput.Focus();
+    }
+
     private void SaveAndClose()
     {
         EditResult = new EventEditResult(
-            Decimal.ToInt32(_delayNumericUpDown.Value),
-            _coordinatesEditable ? Decimal.ToInt32(_xNumericUpDown.Value) : null,
-            _coordinatesEditable ? Decimal.ToInt32(_yNumericUpDown.Value) : null);
+            Decimal.ToInt32(_delayNumericInput.Value),
+            _coordinatesEditable ? Decimal.ToInt32(_xNumericInput.Value) : null,
+            _coordinatesEditable ? Decimal.ToInt32(_yNumericInput.Value) : null);
 
         DialogResult = DialogResult.OK;
         Close();
     }
 
     private static void ConfigureNumericInput(
-        NumericUpDown numericUpDown,
+        ModernNumericInput numericInput,
         decimal minimum,
         decimal maximum,
         decimal value)
     {
-        numericUpDown.Dock = DockStyle.Fill;
-        numericUpDown.Minimum = minimum;
-        numericUpDown.Maximum = maximum;
-        numericUpDown.Value = Math.Min(Math.Max(value, minimum), maximum);
-        numericUpDown.BorderStyle = BorderStyle.FixedSingle;
-        numericUpDown.BackColor = DesignTokens.SurfaceInset;
-        numericUpDown.ForeColor = DesignTokens.TextPrimary;
-        numericUpDown.Font = DesignTokens.FontUiNormal;
-        numericUpDown.TextAlign = HorizontalAlignment.Right;
-        numericUpDown.Margin = new Padding(0, DesignTokens.Scale(4), 0, DesignTokens.Scale(4));
+        numericInput.Dock = DockStyle.Fill;
+        numericInput.Minimum = minimum;
+        numericInput.Maximum = maximum;
+        numericInput.Increment = 1;
+        numericInput.Value = Math.Min(Math.Max(value, minimum), maximum);
+        numericInput.BackColor = DesignTokens.SurfaceInset;
+        numericInput.ForeColor = DesignTokens.TextPrimary;
+        numericInput.Font = DesignTokens.FontUiNormal;
+        numericInput.TextAlign = HorizontalAlignment.Left;
+        numericInput.Margin = new Padding(0, DesignTokens.Scale(4), 0, DesignTokens.Scale(4));
+        numericInput.MinimumSize = new Size(0, DesignTokens.Scale(32));
     }
 
     private static Label CreateFieldLabel(string text)
@@ -159,30 +195,20 @@ internal sealed class EventEditDialog : Form
             Font = DesignTokens.FontUiNormal,
             ForeColor = DesignTokens.TextSecondary,
             BackColor = Color.Transparent,
-            TextAlign = ContentAlignment.MiddleLeft
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true
         };
     }
 
-    private static Button CreateDialogButton(string text, bool isPrimary)
+    private static ThemedDialogButton CreateDialogButton(string text, ThemedDialogButtonStyle style)
     {
-        var button = new Button
+        return new ThemedDialogButton(style)
         {
             Text = text,
             Width = DesignTokens.Scale(112),
             Height = DesignTokens.Scale(34),
-            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0),
-            FlatStyle = FlatStyle.Flat,
-            UseVisualStyleBackColor = false,
-            Font = DesignTokens.FontUiBold,
-            BackColor = isPrimary ? DesignTokens.AccentDeep : DesignTokens.Surface2,
-            ForeColor = DesignTokens.TextPrimary
+            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0)
         };
-
-        button.FlatAppearance.BorderColor = isPrimary
-            ? DesignTokens.Accent
-            : DesignTokens.BorderBright;
-        button.FlatAppearance.BorderSize = 1;
-        return button;
     }
 }
 
