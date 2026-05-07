@@ -1,3 +1,4 @@
+using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
 
 namespace MacroMaster.WinForms.Forms;
@@ -5,6 +6,7 @@ namespace MacroMaster.WinForms.Forms;
 internal sealed class MacroNameEditDialog : Form
 {
     private readonly TextBox _nameTextBox = new();
+    private readonly ThemedDialogButton _cancelButton;
 
     public MacroNameEditDialog(string currentName)
     {
@@ -25,6 +27,7 @@ internal sealed class MacroNameEditDialog : Form
         ClientSize = new Size(DesignTokens.Scale(420), DesignTokens.Scale(206));
         MinimumSize = Size;
 
+        _cancelButton = CreateDialogButton("Iptal", ThemedDialogButtonStyle.Secondary);
         BuildLayout();
     }
 
@@ -83,20 +86,19 @@ internal sealed class MacroNameEditDialog : Form
             Padding = new Padding(0, DesignTokens.Scale(10), 0, 0)
         };
 
-        var saveButton = CreateDialogButton("Kaydet", isPrimary: true);
-        var cancelButton = CreateDialogButton("Iptal", isPrimary: false);
+        var saveButton = CreateDialogButton("Kaydet", ThemedDialogButtonStyle.Primary);
 
         saveButton.Click += (_, _) => SaveAndClose();
-        cancelButton.Click += (_, _) =>
+        _cancelButton.Click += (_, _) =>
         {
             DialogResult = DialogResult.Cancel;
             Close();
         };
 
         AcceptButton = saveButton;
-        CancelButton = cancelButton;
+        CancelButton = _cancelButton;
         buttonLayoutPanel.Controls.Add(saveButton);
-        buttonLayoutPanel.Controls.Add(cancelButton);
+        buttonLayoutPanel.Controls.Add(_cancelButton);
 
         rootLayoutPanel.Controls.Add(titleLabel, 0, 0);
         rootLayoutPanel.Controls.Add(fieldLabel, 0, 1);
@@ -104,6 +106,31 @@ internal sealed class MacroNameEditDialog : Form
         rootLayoutPanel.Controls.Add(buttonLayoutPanel, 0, 3);
 
         Controls.Add(rootLayoutPanel);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+
+        WindowChromeNative.TryApplyDwmBoolAttribute(
+            Handle,
+            DwmWindowAttribute.UseImmersiveDarkMode,
+            enabled: true);
+        WindowChromeNative.TryApplyDwmCornerPreference(
+            Handle,
+            DwmWindowCornerPreference.Round);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.BorderColor,
+            DesignTokens.Border);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.CaptionColor,
+            DesignTokens.Surface);
+        WindowChromeNative.TryApplyDwmColorAttribute(
+            Handle,
+            DwmWindowAttribute.TextColor,
+            DesignTokens.TextPrimary);
     }
 
     protected override void OnShown(EventArgs e)
@@ -133,25 +160,14 @@ internal sealed class MacroNameEditDialog : Form
         Close();
     }
 
-    private static Button CreateDialogButton(string text, bool isPrimary)
+    private static ThemedDialogButton CreateDialogButton(string text, ThemedDialogButtonStyle style)
     {
-        var button = new Button
+        return new ThemedDialogButton(style)
         {
             Text = text,
             Width = DesignTokens.Scale(112),
             Height = DesignTokens.Scale(34),
-            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0),
-            FlatStyle = FlatStyle.Flat,
-            UseVisualStyleBackColor = false,
-            Font = DesignTokens.FontUiBold,
-            BackColor = isPrimary ? DesignTokens.AccentDeep : DesignTokens.Surface2,
-            ForeColor = DesignTokens.TextPrimary
+            Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0)
         };
-
-        button.FlatAppearance.BorderColor = isPrimary
-            ? DesignTokens.Accent
-            : DesignTokens.BorderBright;
-        button.FlatAppearance.BorderSize = 1;
-        return button;
     }
 }
