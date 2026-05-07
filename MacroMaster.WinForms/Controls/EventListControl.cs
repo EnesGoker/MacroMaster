@@ -10,17 +10,17 @@ internal sealed class EventListControl : UserControl
 {
     private static readonly TypeFilterOption[] TypeFilterOptions =
     [
-        new(EventListTypeFilterKind.All, "Tümü"),
-        new(EventListTypeFilterKind.Keyboard, "Klavye"),
-        new(EventListTypeFilterKind.Mouse, "Fare")
+        new(EventListTypeFilterKind.All, "Tür: Tümü", "Tümü"),
+        new(EventListTypeFilterKind.Keyboard, "Tür: Klavye", "Klavye"),
+        new(EventListTypeFilterKind.Mouse, "Tür: Fare", "Fare")
     ];
 
     private static readonly SmartFilterOption[] SmartFilterOptions =
     [
-        new(EventListSmartFilterKind.All, "Tümü"),
-        new(EventListSmartFilterKind.LongDelays, "Uzun beklemeler"),
-        new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adayları"),
-        new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatalı/eksik")
+        new(EventListSmartFilterKind.All, "Analiz: Tümü", "Tümü"),
+        new(EventListSmartFilterKind.LongDelays, "Analiz: Uzun beklemeler", "Uzun beklemeler"),
+        new(EventListSmartFilterKind.OptimizationCandidates, "Analiz: Optimize adayları", "Optimize adayları"),
+        new(EventListSmartFilterKind.InvalidOrIncomplete, "Analiz: Hatalı/eksik", "Hatalı/eksik")
     ];
 
     private readonly DataGridView _eventGridView;
@@ -281,13 +281,17 @@ internal sealed class EventListControl : UserControl
         _typeFilterSelect.Dock = DockStyle.Fill;
         _typeFilterSelect.Margin = Padding.Empty;
         _typeFilterSelect.ShowSelectedItemIndicator = true;
-        _typeFilterSelect.SetItems(TypeFilterOptions.Select(option => option.Label));
+        _typeFilterSelect.SetItems(
+            TypeFilterOptions.Select(option => option.SelectedLabel),
+            TypeFilterOptions.Select(option => option.MenuLabel));
         _typeFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
         _smartFilterSelect.Dock = DockStyle.Fill;
         _smartFilterSelect.Margin = Padding.Empty;
         _smartFilterSelect.ShowSelectedItemIndicator = true;
-        _smartFilterSelect.SetItems(SmartFilterOptions.Select(option => option.Label));
+        _smartFilterSelect.SetItems(
+            SmartFilterOptions.Select(option => option.SelectedLabel),
+            SmartFilterOptions.Select(option => option.MenuLabel));
         _smartFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
         toolbarPanel.Controls.Add(_headerTitleLabel, 0, 0);
@@ -996,11 +1000,13 @@ internal sealed class EventListControl : UserControl
 
     private sealed record TypeFilterOption(
         EventListTypeFilterKind Kind,
-        string Label);
+        string SelectedLabel,
+        string MenuLabel);
 
     private sealed record SmartFilterOption(
         EventListSmartFilterKind Kind,
-        string Label);
+        string SelectedLabel,
+        string MenuLabel);
 
     private sealed record EventRowTag(
         int SourceIndex,

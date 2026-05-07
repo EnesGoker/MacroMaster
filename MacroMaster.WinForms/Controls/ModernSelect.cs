@@ -6,6 +6,7 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class ModernSelect : Control
 {
     private readonly List<string> _items = [];
+    private readonly List<string> _dropDownItems = [];
     private bool _isHovered;
     private bool _isPressed;
     private bool _isDropDownOpen;
@@ -69,7 +70,7 @@ internal sealed class ModernSelect : Control
         }
     }
 
-    public void SetItems(IEnumerable<string> items)
+    public void SetItems(IEnumerable<string> items, IEnumerable<string>? dropDownItems = null)
     {
         ArgumentNullException.ThrowIfNull(items);
 
@@ -77,6 +78,18 @@ internal sealed class ModernSelect : Control
 
         _items.Clear();
         _items.AddRange(items);
+        _dropDownItems.Clear();
+        _dropDownItems.AddRange(dropDownItems ?? _items);
+
+        while (_dropDownItems.Count < _items.Count)
+        {
+            _dropDownItems.Add(_items[_dropDownItems.Count]);
+        }
+
+        if (_dropDownItems.Count > _items.Count)
+        {
+            _dropDownItems.RemoveRange(_items.Count, _dropDownItems.Count - _items.Count);
+        }
 
         int selectedIndex = selectedValue is null
             ? -1
@@ -257,7 +270,7 @@ internal sealed class ModernSelect : Control
 
         for (int index = 0; index < _items.Count; index++)
         {
-            var item = new ToolStripMenuItem(_items[index])
+            var item = new ToolStripMenuItem(GetDropDownItemText(index))
             {
                 Checked = index == _selectedIndex,
                 Tag = index
@@ -299,7 +312,7 @@ internal sealed class ModernSelect : Control
         int rowHeight = DesignTokens.Scale(44);
         Size dropDownSize = CalculateIndicatorDropDownSize(rowHeight);
         var dropDownPanel = new IndicatorDropDownPanel(
-            _items.ToArray(),
+            _dropDownItems.ToArray(),
             _selectedIndex,
             dropDownSize.Width,
             rowHeight);
@@ -407,7 +420,7 @@ internal sealed class ModernSelect : Control
     {
         int preferredTextWidth = 0;
 
-        foreach (string item in _items)
+        foreach (string item in _dropDownItems)
         {
             preferredTextWidth = Math.Max(
                 preferredTextWidth,
@@ -424,6 +437,13 @@ internal sealed class ModernSelect : Control
         int height = (_items.Count * rowHeight) + DesignTokens.Scale(2);
 
         return new Size(width, height);
+    }
+
+    private string GetDropDownItemText(int index)
+    {
+        return index >= 0 && index < _dropDownItems.Count
+            ? _dropDownItems[index]
+            : string.Empty;
     }
 
     private void SetSelectedIndex(int value, bool raiseEvent = true)
