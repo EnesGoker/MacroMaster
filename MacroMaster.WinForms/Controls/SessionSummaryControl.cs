@@ -23,6 +23,10 @@ internal sealed class SessionSummaryControl : UserControl
 
     public event EventHandler? PreviewMapRequested;
 
+    public Rectangle PreviewMapScreenBounds => _previewMapControl.IsHandleCreated
+        ? _previewMapControl.RectangleToScreen(_previewMapControl.ClientRectangle)
+        : Rectangle.Empty;
+
     public SessionSummaryControl()
     {
         SetStyle(

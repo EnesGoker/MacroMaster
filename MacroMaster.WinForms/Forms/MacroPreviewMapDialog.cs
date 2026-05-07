@@ -19,17 +19,18 @@ internal sealed class MacroPreviewMapDialog : Form
     public MacroPreviewMapDialog()
     {
         Text = "Makro Onizleme Haritasi";
-        StartPosition = FormStartPosition.CenterParent;
-        FormBorderStyle = FormBorderStyle.Sizable;
-        MaximizeBox = true;
+        StartPosition = FormStartPosition.Manual;
+        FormBorderStyle = FormBorderStyle.None;
+        MaximizeBox = false;
         MinimizeBox = false;
         ShowInTaskbar = false;
+        KeyPreview = true;
         AutoScaleMode = AutoScaleMode.None;
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        ClientSize = new Size(DesignTokens.Scale(820), DesignTokens.Scale(600));
-        MinimumSize = new Size(DesignTokens.Scale(620), DesignTokens.Scale(440));
+        ClientSize = new Size(DesignTokens.Scale(780), DesignTokens.Scale(540));
+        MinimumSize = Size;
 
         _sessionNameLabel = CreateHeaderTitleLabel();
         _statusValueLabel = CreateMetricValueLabel();
@@ -39,10 +40,39 @@ internal sealed class MacroPreviewMapDialog : Form
         _mapControl = new MacroPreviewMapControl
         {
             AccessibleName = "Buyuk makro onizleme haritasi",
-            AccessibleDescription = "Secili makronun fare rotasini genis harita olarak gosterir."
+            AccessibleDescription = "Secili makronun fare rotasini genis harita olarak gosterir.",
+            Cursor = Cursors.Default
         };
 
         BuildLayout();
+    }
+
+    public void PositionNear(
+        Rectangle anchorScreenBounds,
+        Rectangle ownerScreenBounds)
+    {
+        Rectangle referenceBounds = anchorScreenBounds.IsEmpty
+            ? ownerScreenBounds
+            : anchorScreenBounds;
+        Rectangle workingArea = Screen.FromRectangle(referenceBounds).WorkingArea;
+        int margin = DesignTokens.Scale(12);
+
+        int preferredX = anchorScreenBounds.IsEmpty
+            ? ownerScreenBounds.Left + (ownerScreenBounds.Width - Width) / 2
+            : anchorScreenBounds.Left - Width - DesignTokens.Scale(16);
+
+        if (preferredX < ownerScreenBounds.Left + margin)
+        {
+            preferredX = ownerScreenBounds.Left + (ownerScreenBounds.Width - Width) / 2;
+        }
+
+        int preferredY = anchorScreenBounds.IsEmpty
+            ? ownerScreenBounds.Top + (ownerScreenBounds.Height - Height) / 2
+            : anchorScreenBounds.Top + (anchorScreenBounds.Height - Height) / 2;
+
+        Location = new Point(
+            ClampScreenCoordinate(preferredX, workingArea.Left + margin, workingArea.Right - Width - margin),
+            ClampScreenCoordinate(preferredY, workingArea.Top + margin, workingArea.Bottom - Height - margin));
     }
 
     public void UpdatePreview(
@@ -81,7 +111,7 @@ internal sealed class MacroPreviewMapDialog : Form
             enabled: true);
         WindowChromeNative.TryApplyDwmCornerPreference(
             Handle,
-            DwmWindowCornerPreference.RoundSmall);
+            DwmWindowCornerPreference.Round);
         WindowChromeNative.TryApplyDwmColorAttribute(
             Handle,
             DwmWindowAttribute.BorderColor,
@@ -94,6 +124,48 @@ internal sealed class MacroPreviewMapDialog : Form
             Handle,
             DwmWindowAttribute.TextColor,
             DesignTokens.TextPrimary);
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+
+        if (!IsDisposed && Visible)
+        {
+            Close();
+        }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        if (e.KeyCode == Keys.Escape)
+        {
+            e.Handled = true;
+            Close();
+        }
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        UpdateRoundedRegion();
+    }
+
+    private void UpdateRoundedRegion()
+    {
+        if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+        {
+            return;
+        }
+
+        using GraphicsPath path = CreateRoundPath(
+            new Rectangle(Point.Empty, ClientSize),
+            DesignTokens.Scale(14));
+        Region? previousRegion = Region;
+        Region = new Region(path);
+        previousRegion?.Dispose();
     }
 
     private void BuildLayout()
@@ -270,6 +342,16 @@ internal sealed class MacroPreviewMapDialog : Form
         return statusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
             : DesignTokens.AccentGreen;
+    }
+
+    private static int ClampScreenCoordinate(
+        int value,
+        int minimum,
+        int maximum)
+    {
+        return minimum > maximum
+            ? minimum
+            : Math.Clamp(value, minimum, maximum);
     }
 
     private sealed class MetricCard : UserControl

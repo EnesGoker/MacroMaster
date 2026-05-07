@@ -19,6 +19,8 @@ internal sealed class MacroPreviewMapControl : Control
     private List<MapPoint> _mousePoints = [];
     private RectangleF _coordinateBounds = RectangleF.Empty;
     private int? _activeSourceEventIndex;
+    private readonly System.Windows.Forms.Timer _pulseTimer;
+    private float _pulsePhase;
 
     public event EventHandler? PreviewRequested;
 
@@ -39,6 +41,13 @@ internal sealed class MacroPreviewMapControl : Control
         TabStop = true;
         AccessibleName = "Makro onizleme haritasi";
         AccessibleDescription = "Secili makronun fare rotasini kucuk harita olarak gosterir.";
+
+        _pulseTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 80
+        };
+        _pulseTimer.Tick += PulseTimer_Tick;
+        _pulseTimer.Start();
     }
 
     public void UpdatePreview(
@@ -132,7 +141,7 @@ internal sealed class MacroPreviewMapControl : Control
             _mousePoints,
             _activeSourceEventIndex);
         PointF[] routePath = SampleRoute(resolvedPath);
-        using var routePen = new Pen(Color.FromArgb(86, DesignTokens.Accent), Math.Max(2f, DesignTokens.Scale(2)))
+        using var routePen = new Pen(Color.FromArgb(46, DesignTokens.Accent), Math.Max(1.5f, DesignTokens.Scale(2)))
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
@@ -147,7 +156,13 @@ internal sealed class MacroPreviewMapControl : Control
         if (currentMousePointIndex > 0)
         {
             PointF[] activePath = SampleRoute(resolvedPath[..(currentMousePointIndex + 1)]);
-            using var activeRoutePen = new Pen(Color.FromArgb(188, DesignTokens.Accent), Math.Max(2f, DesignTokens.Scale(2)))
+            using var activeRouteGlowPen = new Pen(Color.FromArgb(42, DesignTokens.Accent), Math.Max(5f, DesignTokens.Scale(5)))
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+            using var activeRoutePen = new Pen(Color.FromArgb(224, DesignTokens.Accent), Math.Max(2.25f, DesignTokens.Scale(2)))
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round,
@@ -156,6 +171,7 @@ internal sealed class MacroPreviewMapControl : Control
 
             if (activePath.Length > 1)
             {
+                graphics.DrawLines(activeRouteGlowPen, activePath);
                 graphics.DrawLines(activeRoutePen, activePath);
             }
         }
@@ -163,14 +179,7 @@ internal sealed class MacroPreviewMapControl : Control
         DrawActionMarkers(graphics, plotBounds, _mousePoints, resolvedPath);
 
         PointF currentPoint = resolvedPath[currentMousePointIndex];
-        using var glowBrush = new SolidBrush(Color.FromArgb(42, DesignTokens.Accent));
-        float glowRadius = DesignTokens.Scale(18);
-        graphics.FillEllipse(
-            glowBrush,
-            currentPoint.X - glowRadius,
-            currentPoint.Y - glowRadius,
-            glowRadius * 2,
-            glowRadius * 2);
+        DrawActivePointHalo(graphics, currentPoint);
         DrawPoint(graphics, resolvedPath[0], DesignTokens.AccentGreen, DesignTokens.Scale(5));
         if (currentMousePointIndex != resolvedPath.Length - 1)
         {
@@ -178,6 +187,34 @@ internal sealed class MacroPreviewMapControl : Control
         }
 
         DrawPoint(graphics, currentPoint, DesignTokens.AccentOrange, DesignTokens.Scale(6));
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _pulseTimer.Tick -= PulseTimer_Tick;
+            _pulseTimer.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void PulseTimer_Tick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _pulsePhase += 0.28f;
+        if (_pulsePhase > MathF.PI * 2f)
+        {
+            _pulsePhase -= MathF.PI * 2f;
+        }
+
+        if (_mousePoints.Count > 0 && IsHandleCreated && !IsDisposed)
+        {
+            Invalidate();
+        }
     }
 
     private static void DrawGrid(Graphics graphics, Rectangle bounds)
@@ -460,6 +497,30 @@ internal sealed class MacroPreviewMapControl : Control
             radius * 2f);
         graphics.FillEllipse(brush, bounds);
         graphics.DrawEllipse(borderPen, bounds);
+    }
+
+    private void DrawActivePointHalo(
+        Graphics graphics,
+        PointF point)
+    {
+        float pulse = (MathF.Sin(_pulsePhase) + 1f) / 2f;
+        float outerRadius = DesignTokens.Scale(16) + DesignTokens.Scale(7) * pulse;
+        float innerRadius = DesignTokens.Scale(10);
+
+        using var outerBrush = new SolidBrush(Color.FromArgb(18 + (int)(pulse * 34), DesignTokens.Accent));
+        using var innerBrush = new SolidBrush(Color.FromArgb(48, DesignTokens.Accent));
+        graphics.FillEllipse(
+            outerBrush,
+            point.X - outerRadius,
+            point.Y - outerRadius,
+            outerRadius * 2f,
+            outerRadius * 2f);
+        graphics.FillEllipse(
+            innerBrush,
+            point.X - innerRadius,
+            point.Y - innerRadius,
+            innerRadius * 2f,
+            innerRadius * 2f);
     }
 
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)

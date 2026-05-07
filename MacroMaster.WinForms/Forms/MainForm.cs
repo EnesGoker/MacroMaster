@@ -1533,7 +1533,8 @@ public partial class MainForm : Form
     private void ShowMacroPreviewMapDialog(
         SessionSummaryState summaryState,
         IReadOnlyList<MacroEvent>? events,
-        int? activeSourceEventIndex)
+        int? activeSourceEventIndex,
+        Rectangle anchorScreenBounds)
     {
         if (_macroPreviewMapDialog is null || _macroPreviewMapDialog.IsDisposed)
         {
@@ -1548,12 +1549,10 @@ public partial class MainForm : Form
 
         if (!_macroPreviewMapDialog.Visible)
         {
+            _macroPreviewMapDialog.PositionNear(
+                anchorScreenBounds,
+                RectangleToScreen(ClientRectangle));
             _macroPreviewMapDialog.Show(this);
-        }
-
-        if (_macroPreviewMapDialog.WindowState == FormWindowState.Minimized)
-        {
-            _macroPreviewMapDialog.WindowState = FormWindowState.Normal;
         }
 
         _macroPreviewMapDialog.BringToFront();
@@ -1723,7 +1722,8 @@ public partial class MainForm : Form
         ShowMacroPreviewMapDialog(
             BuildSessionSummaryState(displayedSession, statusText),
             displayedSession?.Events,
-            _activePlaybackSourceIndex);
+            _activePlaybackSourceIndex,
+            _sessionSummaryControl.PreviewMapScreenBounds);
     }
 
     private void titleBarControl_MinimizeRequested(object? sender, EventArgs e)
