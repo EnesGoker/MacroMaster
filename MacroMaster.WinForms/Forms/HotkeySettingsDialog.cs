@@ -8,7 +8,7 @@ namespace MacroMaster.WinForms.Forms;
 
 public sealed class HotkeySettingsDialog : Form
 {
-    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(720), DesignTokens.Scale(400));
+    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(600), DesignTokens.Scale(344));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
     private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
@@ -42,7 +42,7 @@ public sealed class HotkeySettingsDialog : Form
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        Padding = new Padding(DesignTokens.Scale(18));
+        Padding = new Padding(DesignTokens.Scale(16));
         ClientSize = MinimumClientSize;
         MinimumSize = SizeFromClientSize(ClientSize);
 
@@ -112,9 +112,9 @@ public sealed class HotkeySettingsDialog : Form
         };
 
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(60)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(54)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(48)));
 
         rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(CreateSettingsSurfacePanel(), 0, 1);
@@ -178,9 +178,9 @@ public sealed class HotkeySettingsDialog : Form
             Margin = Padding.Empty,
             Padding = new Padding(
                 DesignTokens.Scale(14),
-                DesignTokens.Scale(10),
+                DesignTokens.Scale(8),
                 DesignTokens.Scale(14),
-                DesignTokens.Scale(10))
+                DesignTokens.Scale(8))
         };
 
         surfacePanel.Controls.Add(CreateSettingsTableLayoutPanel());
@@ -291,7 +291,7 @@ public sealed class HotkeySettingsDialog : Form
         ModernSelect modifierSelect,
         ModernSelect keySelect)
     {
-        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
 
         modifierSelect.Dock = DockStyle.Fill;
         modifierSelect.Margin = new Padding(0, DesignTokens.Scale(4), DesignTokens.Scale(10), DesignTokens.Scale(4));
@@ -383,8 +383,8 @@ public sealed class HotkeySettingsDialog : Form
         return new ThemedDialogButton(style)
         {
             Text = text,
-            Width = DesignTokens.Scale(118),
-            Height = DesignTokens.Scale(34),
+            Width = DesignTokens.Scale(108),
+            Height = DesignTokens.Scale(32),
             Margin = new Padding(DesignTokens.Scale(8), 0, 0, 0)
         };
     }
@@ -396,7 +396,7 @@ public sealed class HotkeySettingsDialog : Form
             BackColor = DesignTokens.SurfaceInset,
             ForeColor = DesignTokens.TextPrimary,
             Font = DesignTokens.FontUiNormal,
-            MinimumSize = new Size(0, DesignTokens.Scale(32))
+            MinimumSize = new Size(0, DesignTokens.Scale(30))
         };
     }
 
