@@ -33,10 +33,8 @@ internal static class ModalDialogOverlay
     {
         return ShowWithOptionalOverlay(
             owner,
-            ownerForm => MessageBox.Show(ownerForm, text, caption, buttons, icon),
-            () => owner is null
-                ? MessageBox.Show(text, caption, buttons, icon)
-                : MessageBox.Show(owner, text, caption, buttons, icon));
+            ownerForm => ThemedMessageDialog.Show(ownerForm, text, caption, buttons, icon),
+            () => ThemedMessageDialog.Show(owner, text, caption, buttons, icon));
     }
 
     private static DialogResult ShowWithOptionalOverlay(
