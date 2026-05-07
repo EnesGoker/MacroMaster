@@ -9,7 +9,6 @@ namespace MacroMaster.WinForms.Forms;
 
 internal sealed class MacroPreviewMapDialog : Form
 {
-    private readonly Label _sessionNameLabel;
     private readonly Label _statusValueLabel;
     private readonly Label _eventCountValueLabel;
     private readonly Label _durationValueLabel;
@@ -36,7 +35,6 @@ internal sealed class MacroPreviewMapDialog : Form
         ClientSize = new Size(DesignTokens.Scale(780), DesignTokens.Scale(580));
         MinimumSize = Size;
 
-        _sessionNameLabel = CreateHeaderTitleLabel();
         _statusValueLabel = CreateMetricValueLabel();
         _eventCountValueLabel = CreateMetricValueLabel();
         _durationValueLabel = CreateMetricValueLabel();
@@ -91,14 +89,10 @@ internal sealed class MacroPreviewMapDialog : Form
         IReadOnlyList<MacroEvent>? events,
         int? activeSourceEventIndex)
     {
-        string sessionName = string.IsNullOrWhiteSpace(state.SessionName)
-            ? "Oturum yok"
-            : state.SessionName;
         string fileName = string.IsNullOrWhiteSpace(state.FileName)
             ? "Kaydedilmedi"
             : state.FileName;
 
-        _sessionNameLabel.Text = sessionName;
         _statusValueLabel.Text = state.StatusText;
         _statusValueLabel.ForeColor = ResolveStatusColor(state.StatusText);
         _eventCountValueLabel.Text = Math.Max(0, state.EventCount).ToString(CultureInfo.InvariantCulture);
@@ -186,7 +180,7 @@ internal sealed class MacroPreviewMapDialog : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 4,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = new Padding(
@@ -196,58 +190,17 @@ internal sealed class MacroPreviewMapDialog : Form
                 DesignTokens.Scale(18))
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(70)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(86)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(58)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(72)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
 
-        rootLayoutPanel.Controls.Add(CreateHeaderPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateMetricsPanel(), 0, 1);
-        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 2);
-        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 3);
-        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 4);
+        rootLayoutPanel.Controls.Add(CreateMetricsPanel(), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 1);
+        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 3);
 
         Controls.Add(rootLayoutPanel);
-    }
-
-    private TableLayoutPanel CreateHeaderPanel()
-    {
-        var panel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(70)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-
-        var iconPanel = new PreviewIconPanel
-        {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, DesignTokens.Scale(14), DesignTokens.Scale(12))
-        };
-
-        var textPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        textPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60f));
-        textPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40f));
-        textPanel.Controls.Add(_sessionNameLabel, 0, 0);
-        textPanel.Controls.Add(CreateSubtitleLabel(), 0, 1);
-
-        panel.Controls.Add(iconPanel, 0, 0);
-        panel.Controls.Add(textPanel, 1, 0);
-        return panel;
     }
 
     private TableLayoutPanel CreateMetricsPanel()
@@ -344,36 +297,6 @@ internal sealed class MacroPreviewMapDialog : Form
         panel.Controls.Add(new LegendItem("Tiklama", DesignTokens.AccentRed));
         panel.Controls.Add(new LegendItem("Wheel", DesignTokens.AccentPurple));
         return panel;
-    }
-
-    private static Label CreateHeaderTitleLabel()
-    {
-        return new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "Oturum yok",
-            Font = DesignTokens.FontUiLarge,
-            ForeColor = DesignTokens.TextPrimary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.BottomLeft,
-            AutoEllipsis = true,
-            UseMnemonic = false
-        };
-    }
-
-    private static Label CreateSubtitleLabel()
-    {
-        return new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = "Makro fare rotasi ve aktif olay onizlemesi",
-            Font = DesignTokens.FontUiSmall,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.TopLeft,
-            AutoEllipsis = true,
-            UseMnemonic = false
-        };
     }
 
     private static Label CreateMetricValueLabel()
@@ -604,53 +527,6 @@ internal sealed class MacroPreviewMapDialog : Form
                 TextFormatFlags.Left |
                 TextFormatFlags.EndEllipsis |
                 TextFormatFlags.NoPrefix);
-        }
-    }
-
-    private sealed class PreviewIconPanel : Control
-    {
-        public PreviewIconPanel()
-        {
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
-            if (bounds.Width <= 0 || bounds.Height <= 0)
-            {
-                return;
-            }
-
-            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(12));
-            using var fillBrush = new SolidBrush(DesignTokens.AccentDeep);
-            using var borderPen = new Pen(Color.FromArgb(150, DesignTokens.Accent));
-            e.Graphics.FillPath(fillBrush, path);
-            e.Graphics.DrawPath(borderPen, path);
-
-            PointF[] cursor =
-            [
-                new(bounds.Left + bounds.Width * 0.33f, bounds.Top + bounds.Height * 0.28f),
-                new(bounds.Left + bounds.Width * 0.70f, bounds.Top + bounds.Height * 0.56f),
-                new(bounds.Left + bounds.Width * 0.52f, bounds.Top + bounds.Height * 0.60f),
-                new(bounds.Left + bounds.Width * 0.62f, bounds.Top + bounds.Height * 0.80f),
-                new(bounds.Left + bounds.Width * 0.50f, bounds.Top + bounds.Height * 0.84f),
-                new(bounds.Left + bounds.Width * 0.40f, bounds.Top + bounds.Height * 0.62f),
-                new(bounds.Left + bounds.Width * 0.33f, bounds.Top + bounds.Height * 0.70f)
-            ];
-
-            using var cursorBrush = new SolidBrush(Color.FromArgb(235, Color.White));
-            using var cursorPen = new Pen(DesignTokens.Accent, Math.Max(1.5f, DesignTokens.DensityScale));
-            e.Graphics.FillPolygon(cursorBrush, cursor);
-            e.Graphics.DrawPolygon(cursorPen, cursor);
         }
     }
 
