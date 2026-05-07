@@ -14,6 +14,7 @@ public readonly record struct ToolbarButtonState(
     bool CanRecord,
     bool CanStop,
     bool CanPlayback,
+    bool CanOptimize,
     bool CanSaveLibrary,
     bool CanSaveJson,
     bool CanSaveXml,
@@ -42,6 +43,7 @@ public partial class ToolbarControl : UserControl
     public event EventHandler? RecordToggleClicked;
     public event EventHandler? StopClicked;
     public event EventHandler? PlaybackToggleClicked;
+    public event EventHandler? OptimizeClicked;
     public event EventHandler? SaveLibraryClicked;
     public event EventHandler? SaveJsonClicked;
     public event EventHandler? SaveXmlClicked;
@@ -85,6 +87,7 @@ public partial class ToolbarControl : UserControl
         recordButton.Enabled = state.CanRecord;
         stopButton.Enabled = state.CanStop;
         playbackButton.Enabled = state.CanPlayback;
+        optimizeButton.Enabled = state.CanOptimize;
         saveButton.Enabled = state.CanSaveLibrary || state.CanSaveJson || state.CanSaveXml;
         loadButton.Enabled = state.CanLoadJson || state.CanLoadXml;
         hotkeysButton.Enabled = state.CanEditHotkeys;
@@ -116,6 +119,7 @@ public partial class ToolbarControl : UserControl
         recordButton.Click += (_, _) => RecordToggleClicked?.Invoke(this, EventArgs.Empty);
         stopButton.Click += (_, _) => StopClicked?.Invoke(this, EventArgs.Empty);
         playbackButton.Click += (_, _) => PlaybackToggleClicked?.Invoke(this, EventArgs.Empty);
+        optimizeButton.Click += (_, _) => OptimizeClicked?.Invoke(this, EventArgs.Empty);
         saveButton.Click += (_, _) => ShowMenu(saveButton, _saveMenu);
         loadButton.Click += (_, _) => ShowMenu(loadButton, _loadMenu);
         hotkeysButton.Click += (_, _) => HotkeysClicked?.Invoke(this, EventArgs.Empty);
@@ -190,6 +194,7 @@ public partial class ToolbarControl : UserControl
         ApplyButtonAccent(recordButton, DesignTokens.AccentRed, DesignTokens.AccentRedSoft);
         ApplyButtonAccent(playbackButton, DesignTokens.Accent, DesignTokens.AccentSoft);
         ApplyButtonAccent(stopButton, DesignTokens.BorderBright, DesignTokens.Surface2);
+        ApplyButtonAccent(optimizeButton, DesignTokens.AccentOrange, Color.FromArgb(34, 28, 19));
     }
 
     private static void ApplyToolbarButtonStyle(ToolbarButton button)

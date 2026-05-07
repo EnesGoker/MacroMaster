@@ -22,9 +22,6 @@ internal sealed class SessionSummaryControl : UserControl
     private readonly Label _fileNameValueLabel;
     private readonly StatusBadge _statusBadge;
     private readonly PreviewMapPanel _previewMapPanel;
-    private readonly SummaryActionButton _optimizeButton;
-
-    public event EventHandler? OptimizeRequested;
 
     public SessionSummaryControl()
     {
@@ -47,7 +44,6 @@ internal sealed class SessionSummaryControl : UserControl
         _fileNameValueLabel = CreateValueLabel();
         _statusBadge = new StatusBadge();
         _previewMapPanel = new PreviewMapPanel();
-        _optimizeButton = new SummaryActionButton();
 
         BuildLayout();
         UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi", false));
@@ -71,7 +67,6 @@ internal sealed class SessionSummaryControl : UserControl
         _statusBadge.Text = state.EventCount > 0 ? "Gecerli" : "Bos";
         _statusBadge.IsActive = state.EventCount > 0;
         _previewMapPanel.UpdatePreview(state.EventCount, state.TotalDurationMs, state.StatusText);
-        _optimizeButton.Enabled = state.CanOptimize;
         _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
             : DesignTokens.AccentGreen;
@@ -83,21 +78,19 @@ internal sealed class SessionSummaryControl : UserControl
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 3,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(66)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(142)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(68)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(146)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
 
         rootLayoutPanel.Controls.Add(CreateHeroPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(CreateCompactDetailsPanel(), 0, 1);
         rootLayoutPanel.Controls.Add(CreateMapSection(), 0, 2);
-        rootLayoutPanel.Controls.Add(CreateOptimizeButtonHost(), 0, 3);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -192,23 +185,6 @@ internal sealed class SessionSummaryControl : UserControl
         return mapLayoutPanel;
     }
 
-    private Panel CreateOptimizeButtonHost()
-    {
-        var hostPanel = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-
-        _optimizeButton.Dock = DockStyle.Fill;
-        _optimizeButton.Text = "Optimize Et";
-        _optimizeButton.Click += (_, _) => OptimizeRequested?.Invoke(this, EventArgs.Empty);
-        hostPanel.Controls.Add(_optimizeButton);
-        return hostPanel;
-    }
-
     private static void AddDetailRow(
         TableLayoutPanel layoutPanel,
         int rowIndex,
@@ -278,7 +254,7 @@ internal sealed class SessionSummaryControl : UserControl
 
             Dock = DockStyle.Fill;
             Margin = Padding.Empty;
-            BackColor = Color.Transparent;
+            BackColor = DesignTokens.Surface;
         }
 
         protected override void OnPaintBackground(PaintEventArgs pevent)
@@ -339,7 +315,7 @@ internal sealed class SessionSummaryControl : UserControl
 
             Font = DesignTokens.FontUiSmall;
             ForeColor = DesignTokens.TextSecondary;
-            BackColor = Color.Transparent;
+            BackColor = DesignTokens.Surface;
             Text = "Bos";
         }
 
@@ -601,132 +577,6 @@ internal sealed class SessionSummaryControl : UserControl
             using var borderPen = new Pen(BorderColor);
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
-        }
-    }
-
-    private sealed class SummaryActionButton : Button
-    {
-        private bool _isHovered;
-        private bool _isPressed;
-
-        public SummaryActionButton()
-        {
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-
-            FlatStyle = FlatStyle.Flat;
-            FlatAppearance.BorderSize = 0;
-            Font = DesignTokens.FontUiBold;
-            ForeColor = DesignTokens.TextPrimary;
-            BackColor = DesignTokens.Surface;
-            Cursor = Cursors.Hand;
-            UseVisualStyleBackColor = false;
-        }
-
-        protected override void OnMouseEnter(EventArgs e)
-        {
-            _isHovered = true;
-            Invalidate();
-            base.OnMouseEnter(e);
-        }
-
-        protected override void OnMouseLeave(EventArgs e)
-        {
-            _isHovered = false;
-            _isPressed = false;
-            Invalidate();
-            base.OnMouseLeave(e);
-        }
-
-        protected override void OnMouseDown(MouseEventArgs mevent)
-        {
-            if (Enabled && mevent.Button == MouseButtons.Left)
-            {
-                _isPressed = true;
-                Invalidate();
-            }
-
-            base.OnMouseDown(mevent);
-        }
-
-        protected override void OnMouseUp(MouseEventArgs mevent)
-        {
-            _isPressed = false;
-            Invalidate();
-            base.OnMouseUp(mevent);
-        }
-
-        protected override void OnEnabledChanged(EventArgs e)
-        {
-            Cursor = Enabled ? Cursors.Hand : Cursors.Default;
-            Invalidate();
-            base.OnEnabledChanged(e);
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs pevent)
-        {
-            pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
-        }
-
-        protected override void OnPaint(PaintEventArgs pevent)
-        {
-            Graphics graphics = pevent.Graphics;
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
-            if (bounds.Width <= 0 || bounds.Height <= 0)
-            {
-                return;
-            }
-
-            Color fillColor = ResolveFillColor();
-            Color borderColor = Enabled
-                ? DesignTokens.Accent
-                : DesignTokens.BorderSoft;
-            Color textColor = Enabled
-                ? DesignTokens.TextPrimary
-                : DesignTokens.TextMuted;
-
-            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(8));
-            using var fillBrush = new SolidBrush(fillColor);
-            using var borderPen = new Pen(borderColor, Math.Max(1f, DesignTokens.DensityScale));
-            graphics.FillPath(fillBrush, path);
-            graphics.DrawPath(borderPen, path);
-
-            TextRenderer.DrawText(
-                graphics,
-                Text,
-                Font,
-                bounds,
-                textColor,
-                TextFormatFlags.HorizontalCenter |
-                TextFormatFlags.VerticalCenter |
-                TextFormatFlags.EndEllipsis |
-                TextFormatFlags.NoPrefix);
-        }
-
-        private Color ResolveFillColor()
-        {
-            if (!Enabled)
-            {
-                return Color.FromArgb(16, 20, 31);
-            }
-
-            if (_isPressed)
-            {
-                return DesignTokens.AccentDeep;
-            }
-
-            if (_isHovered || Focused)
-            {
-                return Color.FromArgb(20, DesignTokens.Accent);
-            }
-
-            return DesignTokens.Surface2;
         }
     }
 

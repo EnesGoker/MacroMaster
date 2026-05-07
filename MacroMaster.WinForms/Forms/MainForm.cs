@@ -778,7 +778,7 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(() => EditEventAsync(e), "Olay duzenleme");
     }
 
-    private void sessionSummaryControl_OptimizeRequested(object? sender, EventArgs e)
+    private void optimizeButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
@@ -1448,6 +1448,7 @@ public partial class MainForm : Form
         bool canSaveSession = !_shutdownInProgress && isIdle && hasSession;
         bool canLoadSession = !_shutdownInProgress && isIdle;
         bool canEditHotkeys = !_shutdownInProgress && isIdle;
+        bool canOptimizeSession = canSaveSession;
         bool playbackSettingsEnabled = !_shutdownInProgress
             && !_macroRecorderService.IsRecording
             && !_macroPlaybackService.IsPlaying
@@ -1466,6 +1467,7 @@ public partial class MainForm : Form
                 canRecord,
                 canStop,
                 canPlayback,
+                canOptimizeSession,
                 canSaveSession,
                 canSaveSession,
                 canSaveSession,
@@ -1601,6 +1603,7 @@ public partial class MainForm : Form
         _toolbarControl.SaveXmlClicked += saveXmlButton_Click;
         _toolbarControl.SaveHtmlReportClicked += saveHtmlReportButton_Click;
         _toolbarControl.SaveTextReportClicked += saveTextReportButton_Click;
+        _toolbarControl.OptimizeClicked += optimizeButton_Click;
         _toolbarControl.LoadJsonClicked += loadJsonButton_Click;
         _toolbarControl.LoadXmlClicked += loadXmlButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;
@@ -1631,7 +1634,6 @@ public partial class MainForm : Form
 
         _sessionSummaryControl.Name = "sessionSummaryControl";
         _sessionSummaryControl.Dock = DockStyle.Fill;
-        _sessionSummaryControl.OptimizeRequested += sessionSummaryControl_OptimizeRequested;
 
         _playbackControl.Name = "playbackControl";
         _playbackControl.Dock = DockStyle.Fill;
