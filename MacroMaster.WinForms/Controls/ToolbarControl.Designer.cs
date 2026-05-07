@@ -9,7 +9,6 @@ partial class ToolbarControl
     private ToolbarButton recordButton = null!;
     private ToolbarButton stopButton = null!;
     private ToolbarButton playbackButton = null!;
-    private ToolbarButton optimizeButton = null!;
     private ToolbarButton saveButton = null!;
     private ToolbarButton loadButton = null!;
     private ToolbarButton hotkeysButton = null!;
@@ -30,7 +29,6 @@ partial class ToolbarControl
         recordButton = new ToolbarButton();
         stopButton = new ToolbarButton();
         playbackButton = new ToolbarButton();
-        optimizeButton = new ToolbarButton();
         saveButton = new ToolbarButton();
         loadButton = new ToolbarButton();
         hotkeysButton = new ToolbarButton();
@@ -39,21 +37,19 @@ partial class ToolbarControl
         // 
         // toolbarLayoutPanel
         // 
-        toolbarLayoutPanel.ColumnCount = 7;
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
-        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14.285714F));
+        toolbarLayoutPanel.ColumnCount = 6;
+        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.666666F));
+        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.666666F));
+        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.666666F));
+        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.666666F));
+        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.666666F));
+        toolbarLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.666666F));
         toolbarLayoutPanel.Controls.Add(recordButton, 0, 0);
         toolbarLayoutPanel.Controls.Add(stopButton, 1, 0);
         toolbarLayoutPanel.Controls.Add(playbackButton, 2, 0);
-        toolbarLayoutPanel.Controls.Add(optimizeButton, 3, 0);
-        toolbarLayoutPanel.Controls.Add(saveButton, 4, 0);
-        toolbarLayoutPanel.Controls.Add(loadButton, 5, 0);
-        toolbarLayoutPanel.Controls.Add(hotkeysButton, 6, 0);
+        toolbarLayoutPanel.Controls.Add(saveButton, 3, 0);
+        toolbarLayoutPanel.Controls.Add(loadButton, 4, 0);
+        toolbarLayoutPanel.Controls.Add(hotkeysButton, 5, 0);
         toolbarLayoutPanel.Dock = DockStyle.Fill;
         toolbarLayoutPanel.Location = new Point(0, 0);
         toolbarLayoutPanel.Margin = Padding.Empty;
@@ -95,40 +91,31 @@ partial class ToolbarControl
         playbackButton.TabIndex = 2;
         playbackButton.Text = "Oynat   F10";
         // 
-        // optimizeButton
-        // 
-        optimizeButton.Dock = DockStyle.Fill;
-        optimizeButton.Location = new Point(603, 13);
-        optimizeButton.Name = "optimizeButton";
-        optimizeButton.Size = new Size(162, 36);
-        optimizeButton.TabIndex = 3;
-        optimizeButton.Text = "Optimize Et";
-        // 
         // saveButton
         // 
         saveButton.Dock = DockStyle.Fill;
-        saveButton.Location = new Point(771, 13);
+        saveButton.Location = new Point(603, 13);
         saveButton.Name = "saveButton";
-        saveButton.Size = new Size(162, 36);
-        saveButton.TabIndex = 4;
+        saveButton.Size = new Size(190, 36);
+        saveButton.TabIndex = 3;
         saveButton.Text = "Kaydet";
         // 
         // loadButton
         // 
         loadButton.Dock = DockStyle.Fill;
-        loadButton.Location = new Point(939, 13);
+        loadButton.Location = new Point(799, 13);
         loadButton.Name = "loadButton";
-        loadButton.Size = new Size(162, 36);
-        loadButton.TabIndex = 5;
+        loadButton.Size = new Size(190, 36);
+        loadButton.TabIndex = 4;
         loadButton.Text = "Yukle";
         // 
         // hotkeysButton
         // 
         hotkeysButton.Dock = DockStyle.Fill;
-        hotkeysButton.Location = new Point(1107, 13);
+        hotkeysButton.Location = new Point(995, 13);
         hotkeysButton.Name = "hotkeysButton";
-        hotkeysButton.Size = new Size(162, 36);
-        hotkeysButton.TabIndex = 6;
+        hotkeysButton.Size = new Size(190, 36);
+        hotkeysButton.TabIndex = 5;
         hotkeysButton.Text = "Kisayollar   F12";
         // 
         // ToolbarControl

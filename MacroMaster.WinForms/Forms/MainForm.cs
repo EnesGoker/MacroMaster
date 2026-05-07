@@ -773,17 +773,16 @@ public partial class MainForm : Form
         _ = ExecuteUiActionAsync(() => ToggleLibraryFavoriteAsync(e.Item), "Makro favori degistirme");
     }
 
+    private void macroLibraryControl_OptimizeRequested(object? sender, MacroLibraryItemEventArgs e)
+    {
+        _ = sender;
+        _ = ExecuteUiActionAsync(() => OptimizeLibraryMacroAsync(e.Item), "Makro kutuphanesi optimizasyonu");
+    }
+
     private void eventListControl_EventEditRequested(object? sender, EventEditRequestedEventArgs e)
     {
         _ = sender;
         _ = ExecuteUiActionAsync(() => EditEventAsync(e), "Olay duzenleme");
-    }
-
-    private void optimizeButton_Click(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        _ = ExecuteUiActionAsync(OptimizeMacroAsync, "Makro optimizasyonu");
     }
 
     private void preserveTimingCheckBox_CheckedChanged(object? sender, EventArgs e)
@@ -1125,32 +1124,54 @@ public partial class MainForm : Form
         return Task.CompletedTask;
     }
 
-    private Task OptimizeMacroAsync()
+    private async Task OptimizeLibraryMacroAsync(MacroLibraryEntry item)
     {
+        ArgumentNullException.ThrowIfNull(item);
         EnsureSessionMutationAllowed();
 
-        MacroSession session = GetRequiredSession();
+        MacroSession session = await _macroLibraryService.LoadAsync(item.FilePath);
         MacroOptimizationPreview preview = _macroOptimizationService.Preview(session);
 
         if (!preview.HasChanges)
         {
             MacroOptimizationDialog.ShowNoChanges(this);
-            return Task.CompletedTask;
+            return;
         }
 
         using var dialog = new MacroOptimizationDialog(preview);
 
         if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         session.ReplaceEvents(preview.OptimizedEvents);
-        _playedEventCount = 0;
-        _playedDurationMs = 0;
-        _activePlaybackSourceIndex = null;
-        RefreshUiState(forceEventListReload: true);
-        return Task.CompletedTask;
+        await SaveOptimizedLibraryMacroAsync(session, item);
+
+        bool optimizedActiveSession = IsSamePath(_lastSessionPath, item.FilePath);
+
+        if (optimizedActiveSession)
+        {
+            _activeSession = session;
+            _playedEventCount = 0;
+            _playedDurationMs = 0;
+            _activePlaybackSourceIndex = null;
+        }
+
+        MarkLibraryFileUsed(item.FilePath);
+        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi optimizasyon son kullanilan kaydetme");
+        await RefreshMacroLibraryAsync();
+        RefreshUiState(forceEventListReload: optimizedActiveSession);
+    }
+
+    private Task SaveOptimizedLibraryMacroAsync(MacroSession session, MacroLibraryEntry item)
+    {
+        return item.Format switch
+        {
+            MacroLibraryFileFormat.Json => _macroStorageService.SaveAsJsonAsync(session, item.FilePath),
+            MacroLibraryFileFormat.Xml => _macroStorageService.SaveAsXmlAsync(session, item.FilePath),
+            _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formati: {item.FilePath}")
+        };
     }
 
     private async Task RefreshMacroLibraryAsync()
@@ -1449,7 +1470,6 @@ public partial class MainForm : Form
         bool canSaveSession = !_shutdownInProgress && isIdle && hasSession;
         bool canLoadSession = !_shutdownInProgress && isIdle;
         bool canEditHotkeys = !_shutdownInProgress && isIdle;
-        bool canOptimizeSession = canSaveSession;
         bool playbackSettingsEnabled = !_shutdownInProgress
             && !_macroRecorderService.IsRecording
             && !_macroPlaybackService.IsPlaying
@@ -1468,7 +1488,6 @@ public partial class MainForm : Form
                 canRecord,
                 canStop,
                 canPlayback,
-                canOptimizeSession,
                 canSaveSession,
                 canSaveSession,
                 canSaveSession,
@@ -1664,7 +1683,6 @@ public partial class MainForm : Form
         _toolbarControl.SaveXmlClicked += saveXmlButton_Click;
         _toolbarControl.SaveHtmlReportClicked += saveHtmlReportButton_Click;
         _toolbarControl.SaveTextReportClicked += saveTextReportButton_Click;
-        _toolbarControl.OptimizeClicked += optimizeButton_Click;
         _toolbarControl.LoadJsonClicked += loadJsonButton_Click;
         _toolbarControl.LoadXmlClicked += loadXmlButton_Click;
         _toolbarControl.HotkeysClicked += editHotkeysButton_Click;
@@ -1692,6 +1710,7 @@ public partial class MainForm : Form
         _macroLibraryControl.RenameRequested += macroLibraryControl_RenameRequested;
         _macroLibraryControl.DeleteRequested += macroLibraryControl_DeleteRequested;
         _macroLibraryControl.FavoriteToggled += macroLibraryControl_FavoriteToggled;
+        _macroLibraryControl.OptimizeRequested += macroLibraryControl_OptimizeRequested;
 
         _sessionSummaryControl.Name = "sessionSummaryControl";
         _sessionSummaryControl.Dock = DockStyle.Fill;

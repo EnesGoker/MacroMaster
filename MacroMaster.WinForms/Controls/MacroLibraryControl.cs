@@ -36,6 +36,7 @@ internal sealed class MacroLibraryControl : UserControl
     public event EventHandler<MacroLibraryItemEventArgs>? RenameRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? DeleteRequested;
     public event EventHandler<MacroLibraryItemEventArgs>? FavoriteToggled;
+    public event EventHandler<MacroLibraryItemEventArgs>? OptimizeRequested;
 
     public MacroLibraryControl()
     {
@@ -122,6 +123,7 @@ internal sealed class MacroLibraryControl : UserControl
                     row.RenameRequested += (_, _) => RenameRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                     row.DeleteRequested += (_, _) => DeleteRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                     row.FavoriteToggled += (_, _) => FavoriteToggled?.Invoke(this, new MacroLibraryItemEventArgs(item));
+                    row.OptimizeRequested += (_, _) => OptimizeRequested?.Invoke(this, new MacroLibraryItemEventArgs(item));
                     WireMouseWheelForwarding(row);
                     _macroListPanel.Controls.Add(row);
                 }
@@ -1059,6 +1061,7 @@ internal sealed class MacroLibraryControl : UserControl
         public event EventHandler? RenameRequested;
         public event EventHandler? DeleteRequested;
         public event EventHandler? FavoriteToggled;
+        public event EventHandler? OptimizeRequested;
 
         public MacroLibraryRow(MacroLibraryViewItem item, bool isSelected)
         {
@@ -1196,6 +1199,13 @@ internal sealed class MacroLibraryControl : UserControl
             };
             favoriteItem.Click += (_, _) => FavoriteToggled?.Invoke(this, EventArgs.Empty);
 
+            var optimizeItem = new ToolStripMenuItem("Optimize Et")
+            {
+                AccessibleName = "Makroyu optimize et",
+                Enabled = _item.Entry.EventCount > 0
+            };
+            optimizeItem.Click += (_, _) => OptimizeRequested?.Invoke(this, EventArgs.Empty);
+
             var renameItem = new ToolStripMenuItem("İsim Düzenle")
             {
                 AccessibleName = "Makro ismini düzenle"
@@ -1208,6 +1218,8 @@ internal sealed class MacroLibraryControl : UserControl
             };
             deleteItem.Click += (_, _) => DeleteRequested?.Invoke(this, EventArgs.Empty);
             contextMenu.Items.Add(favoriteItem);
+            contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(optimizeItem);
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(renameItem);
             contextMenu.Items.Add(new ToolStripSeparator());
