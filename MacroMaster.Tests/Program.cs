@@ -1345,16 +1345,25 @@ public sealed class MacroMasterTests
             dialog.PerformLayout();
 
             Assert.True(
-                dialog.ClientSize.Width >= 720,
+                dialog.ClientSize.Width >= 600,
                 $"Hotkey settings dialog should allocate enough width to show all selector columns. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
+            Assert.True(
+                dialog.ClientSize.Height >= 344,
+                $"Hotkey settings dialog should allocate enough height to show all settings rows. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
 
-            List<ComboBox> comboBoxes = GetDescendants<ComboBox>(dialog).ToList();
-            Assert.Equal(8, comboBoxes.Count, "Hotkey settings dialog should expose eight combo boxes.");
+            List<ModernSelect> modifierSelects = GetDescendants<ModernSelect>(dialog).ToList();
+            Assert.Equal(4, modifierSelects.Count, "Hotkey settings dialog should expose four modifier selectors.");
 
-            List<Button> buttons = GetDescendants<Button>(dialog).ToList();
+            List<HotkeyKeyInput> keyInputs = GetDescendants<HotkeyKeyInput>(dialog).ToList();
+            Assert.Equal(4, keyInputs.Count, "Hotkey settings dialog should expose four key inputs.");
+
+            List<ThemedDialogButton> buttons = GetDescendants<ThemedDialogButton>(dialog).ToList();
             Assert.Equal(3, buttons.Count, "Hotkey settings dialog should expose three action buttons.");
 
-            foreach (Control control in comboBoxes.Cast<Control>().Concat(buttons))
+            foreach (Control control in modifierSelects
+                .Cast<Control>()
+                .Concat(keyInputs)
+                .Concat(buttons))
             {
                 Rectangle bounds = GetBoundsRelativeToAncestor(control, dialog);
 

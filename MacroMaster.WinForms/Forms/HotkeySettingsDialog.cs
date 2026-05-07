@@ -11,16 +11,15 @@ public sealed class HotkeySettingsDialog : Form
     private static readonly Size MinimumClientSize = new(DesignTokens.Scale(600), DesignTokens.Scale(344));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
-    private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
 
     private readonly ModernSelect _recordModifierSelect = CreateSelect();
-    private readonly ModernSelect _recordKeySelect = CreateSelect();
+    private readonly HotkeyKeyInput _recordKeyInput = CreateKeyInput();
     private readonly ModernSelect _playbackModifierSelect = CreateSelect();
-    private readonly ModernSelect _playbackKeySelect = CreateSelect();
+    private readonly HotkeyKeyInput _playbackKeyInput = CreateKeyInput();
     private readonly ModernSelect _stopModifierSelect = CreateSelect();
-    private readonly ModernSelect _stopKeySelect = CreateSelect();
+    private readonly HotkeyKeyInput _stopKeyInput = CreateKeyInput();
     private readonly ModernSelect _hotkeySettingsModifierSelect = CreateSelect();
-    private readonly ModernSelect _hotkeySettingsKeySelect = CreateSelect();
+    private readonly HotkeyKeyInput _hotkeySettingsKeyInput = CreateKeyInput();
     private readonly ThemedDialogButton _cancelButton;
 
     public HotkeySettingsDialog(HotkeySettings currentSettings)
@@ -52,10 +51,6 @@ public sealed class HotkeySettingsDialog : Form
         PopulateSelect(_playbackModifierSelect, ModifierOptions.Select(option => option.DisplayText));
         PopulateSelect(_stopModifierSelect, ModifierOptions.Select(option => option.DisplayText));
         PopulateSelect(_hotkeySettingsModifierSelect, ModifierOptions.Select(option => option.DisplayText));
-        PopulateSelect(_recordKeySelect, KeyOptions.Select(option => option.DisplayText));
-        PopulateSelect(_playbackKeySelect, KeyOptions.Select(option => option.DisplayText));
-        PopulateSelect(_stopKeySelect, KeyOptions.Select(option => option.DisplayText));
-        PopulateSelect(_hotkeySettingsKeySelect, KeyOptions.Select(option => option.DisplayText));
 
         Controls.Add(CreateRootLayoutPanel());
 
@@ -210,25 +205,25 @@ public sealed class HotkeySettingsDialog : Form
             1,
             "Kaydı Başlat/Durdur",
             _recordModifierSelect,
-            _recordKeySelect);
+            _recordKeyInput);
         AddHotkeyRow(
             settingsTableLayoutPanel,
             2,
             "Oynat/Duraklat",
             _playbackModifierSelect,
-            _playbackKeySelect);
+            _playbackKeyInput);
         AddHotkeyRow(
             settingsTableLayoutPanel,
             3,
             "Durdur",
             _stopModifierSelect,
-            _stopKeySelect);
+            _stopKeyInput);
         AddHotkeyRow(
             settingsTableLayoutPanel,
             4,
             "Kısayolları Aç",
             _hotkeySettingsModifierSelect,
-            _hotkeySettingsKeySelect);
+            _hotkeySettingsKeyInput);
 
         return settingsTableLayoutPanel;
     }
@@ -289,14 +284,14 @@ public sealed class HotkeySettingsDialog : Form
         int rowIndex,
         string actionLabel,
         ModernSelect modifierSelect,
-        ModernSelect keySelect)
+        HotkeyKeyInput keyInput)
     {
         tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
 
         modifierSelect.Dock = DockStyle.Fill;
         modifierSelect.Margin = new Padding(0, DesignTokens.Scale(4), DesignTokens.Scale(10), DesignTokens.Scale(4));
-        keySelect.Dock = DockStyle.Fill;
-        keySelect.Margin = new Padding(0, DesignTokens.Scale(4), 0, DesignTokens.Scale(4));
+        keyInput.Dock = DockStyle.Fill;
+        keyInput.Margin = new Padding(0, DesignTokens.Scale(4), 0, DesignTokens.Scale(4));
 
         tableLayoutPanel.Controls.Add(
             new Label
@@ -313,7 +308,7 @@ public sealed class HotkeySettingsDialog : Form
             0,
             rowIndex);
         tableLayoutPanel.Controls.Add(modifierSelect, 1, rowIndex);
-        tableLayoutPanel.Controls.Add(keySelect, 2, rowIndex);
+        tableLayoutPanel.Controls.Add(keyInput, 2, rowIndex);
     }
 
     private void applyButton_Click(object? sender, EventArgs e)
@@ -353,10 +348,10 @@ public sealed class HotkeySettingsDialog : Form
         SelectModifier(_playbackModifierSelect, hotkeySettings.PlaybackToggleHotkey.Modifiers);
         SelectModifier(_stopModifierSelect, hotkeySettings.StopHotkey.Modifiers);
         SelectModifier(_hotkeySettingsModifierSelect, hotkeySettings.HotkeySettingsHotkey.Modifiers);
-        SelectKey(_recordKeySelect, hotkeySettings.RecordToggleHotkey.VirtualKeyCode);
-        SelectKey(_playbackKeySelect, hotkeySettings.PlaybackToggleHotkey.VirtualKeyCode);
-        SelectKey(_stopKeySelect, hotkeySettings.StopHotkey.VirtualKeyCode);
-        SelectKey(_hotkeySettingsKeySelect, hotkeySettings.HotkeySettingsHotkey.VirtualKeyCode);
+        SelectKey(_recordKeyInput, hotkeySettings.RecordToggleHotkey.VirtualKeyCode);
+        SelectKey(_playbackKeyInput, hotkeySettings.PlaybackToggleHotkey.VirtualKeyCode);
+        SelectKey(_stopKeyInput, hotkeySettings.StopHotkey.VirtualKeyCode);
+        SelectKey(_hotkeySettingsKeyInput, hotkeySettings.HotkeySettingsHotkey.VirtualKeyCode);
     }
 
     private HotkeySettings BuildHotkeySettings()
@@ -364,16 +359,16 @@ public sealed class HotkeySettingsDialog : Form
         return new HotkeySettings
         {
             RecordToggleHotkey = new HotkeyBinding(
-                GetSelectedKey(_recordKeySelect),
+                GetSelectedKey(_recordKeyInput),
                 GetSelectedModifiers(_recordModifierSelect)),
             PlaybackToggleHotkey = new HotkeyBinding(
-                GetSelectedKey(_playbackKeySelect),
+                GetSelectedKey(_playbackKeyInput),
                 GetSelectedModifiers(_playbackModifierSelect)),
             StopHotkey = new HotkeyBinding(
-                GetSelectedKey(_stopKeySelect),
+                GetSelectedKey(_stopKeyInput),
                 GetSelectedModifiers(_stopModifierSelect)),
             HotkeySettingsHotkey = new HotkeyBinding(
-                GetSelectedKey(_hotkeySettingsKeySelect),
+                GetSelectedKey(_hotkeySettingsKeyInput),
                 GetSelectedModifiers(_hotkeySettingsModifierSelect))
         };
     }
@@ -392,6 +387,17 @@ public sealed class HotkeySettingsDialog : Form
     private static ModernSelect CreateSelect()
     {
         return new ModernSelect
+        {
+            BackColor = DesignTokens.SurfaceInset,
+            ForeColor = DesignTokens.TextPrimary,
+            Font = DesignTokens.FontUiNormal,
+            MinimumSize = new Size(0, DesignTokens.Scale(30))
+        };
+    }
+
+    private static HotkeyKeyInput CreateKeyInput()
+    {
+        return new HotkeyKeyInput
         {
             BackColor = DesignTokens.SurfaceInset,
             ForeColor = DesignTokens.TextPrimary,
@@ -435,16 +441,10 @@ public sealed class HotkeySettingsDialog : Form
     }
 
     private static void SelectKey(
-        ModernSelect select,
+        HotkeyKeyInput input,
         int virtualKeyCode)
     {
-        int selectedIndex = KeyOptions
-            .Select((option, index) => new { option, index })
-            .FirstOrDefault(pair => pair.option.VirtualKeyCode == virtualKeyCode)?.index
-            ?? throw new InvalidOperationException(
-                $"Kısayol düzenleyici {virtualKeyCode} sanal tuş kodunu desteklemiyor.");
-
-        select.SelectedIndex = selectedIndex;
+        input.VirtualKeyCode = virtualKeyCode;
     }
 
     private static HotkeyModifiers GetSelectedModifiers(ModernSelect select)
@@ -454,11 +454,9 @@ public sealed class HotkeySettingsDialog : Form
             : throw new InvalidOperationException("Bir kısayol değiştiricisi seçilmelidir.");
     }
 
-    private static int GetSelectedKey(ModernSelect select)
+    private static int GetSelectedKey(HotkeyKeyInput input)
     {
-        return select.SelectedIndex >= 0 && select.SelectedIndex < KeyOptions.Count
-            ? KeyOptions[select.SelectedIndex].VirtualKeyCode
-            : throw new InvalidOperationException("Bir kısayol tuşu seçilmelidir.");
+        return input.VirtualKeyCode;
     }
 
     private static List<HotkeyModifierOption> CreateModifierOptions()
@@ -494,33 +492,9 @@ public sealed class HotkeySettingsDialog : Form
         ];
     }
 
-    private static List<HotkeyKeyOption> CreateKeyOptions()
-    {
-        List<HotkeyKeyOption> options = [];
-
-        for (int keyCode = 1; keyCode <= 0xFE; keyCode++)
-        {
-            if (HotkeySettingsValidator.UnsupportedPrimaryVirtualKeys.Contains(keyCode))
-            {
-                continue;
-            }
-
-            string displayText = VirtualKeyDisplayNameFormatter.Format(keyCode);
-            options.Add(new HotkeyKeyOption(displayText, keyCode));
-        }
-
-        return options
-            .OrderBy(option => option.DisplayText, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
     private sealed record HotkeyModifierOption(
         string DisplayText,
         HotkeyModifiers Modifiers);
-
-    private sealed record HotkeyKeyOption(
-        string DisplayText,
-        int VirtualKeyCode);
 
     private sealed class RoundedSurfacePanel : Panel
     {

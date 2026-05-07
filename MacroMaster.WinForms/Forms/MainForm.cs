@@ -1955,17 +1955,34 @@ public partial class MainForm : Form
     {
         EnsureHotkeyMutationAllowed();
 
-        using var dialog = new HotkeySettingsDialog(_hotkeyConfiguration.Snapshot());
+        bool restorePreviousGlobalHotkeys = await SuspendHotkeysForModalDialogAsync();
 
-        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
+        try
         {
-            return;
-        }
+            using var dialog = new HotkeySettingsDialog(_hotkeyConfiguration.Snapshot());
 
-        await ApplyHotkeySettingsAsync(dialog.SelectedHotkeySettings);
+            if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
+            {
+                return;
+            }
+
+            await ApplyHotkeySettingsAsync(
+                dialog.SelectedHotkeySettings,
+                restorePreviousGlobalHotkeys);
+            restorePreviousGlobalHotkeys = false;
+        }
+        finally
+        {
+            if (restorePreviousGlobalHotkeys)
+            {
+                await RestoreHotkeysAfterModalDialogAsync();
+            }
+        }
     }
 
-    private async Task ApplyHotkeySettingsAsync(HotkeySettings hotkeySettings)
+    private async Task ApplyHotkeySettingsAsync(
+        HotkeySettings hotkeySettings,
+        bool restorePreviousRegistrationOnFailure = false)
     {
         ArgumentNullException.ThrowIfNull(hotkeySettings);
 
@@ -1973,7 +1990,7 @@ public partial class MainForm : Form
         HotkeySettingsValidator.Validate(hotkeySettings, "Kisayol ayari uygulama");
 
         HotkeySettings previousSettings = _hotkeyConfiguration.Snapshot();
-        bool wasRegistered = _hotkeyService.IsRegistered;
+        bool wasRegistered = _hotkeyService.IsRegistered || restorePreviousRegistrationOnFailure;
         bool shouldRefreshGlobalRegistration = OperatingSystem.IsWindows();
 
         try
@@ -2055,6 +2072,27 @@ public partial class MainForm : Form
 
         UpdateHotkeySummary();
         RefreshUiState();
+    }
+
+    private async Task<bool> SuspendHotkeysForModalDialogAsync()
+    {
+        if (!OperatingSystem.IsWindows() || !_hotkeyService.IsRegistered)
+        {
+            return false;
+        }
+
+        await _hotkeyService.UnregisterAsync();
+        return true;
+    }
+
+    private async Task RestoreHotkeysAfterModalDialogAsync()
+    {
+        if (!OperatingSystem.IsWindows() || _hotkeyService.IsRegistered)
+        {
+            return;
+        }
+
+        await _hotkeyService.RegisterAsync();
     }
 
     private void UpdateHotkeySummary()
