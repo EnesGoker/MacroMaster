@@ -48,7 +48,7 @@ internal sealed class ThemedConfirmationDialog : Form
             "Vazgeç",
             destructive: true);
 
-        return dialog.ShowDialog(owner) == DialogResult.OK;
+        return ModalDialogOverlay.ShowDialog(owner, dialog) == DialogResult.OK;
     }
 
     protected override void OnHandleCreated(EventArgs e)

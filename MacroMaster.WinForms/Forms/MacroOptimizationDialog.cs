@@ -53,7 +53,7 @@ internal sealed class MacroOptimizationDialog : Form
     public static void ShowNoChanges(IWin32Window owner)
     {
         using var dialog = new MacroOptimizationDialog();
-        _ = dialog.ShowDialog(owner);
+        _ = ModalDialogOverlay.ShowDialog(owner, dialog);
     }
 
     protected override void OnHandleCreated(EventArgs e)

@@ -527,7 +527,7 @@ public partial class MainForm : Form
             message,
             exception);
 
-        MessageBox.Show(
+        ModalDialogOverlay.ShowMessage(
             this,
             $"{message}{Environment.NewLine}{Environment.NewLine}{detail}",
             "MacroMaster",
@@ -836,7 +836,7 @@ public partial class MainForm : Form
             RestoreDirectory = true
         };
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -871,7 +871,7 @@ public partial class MainForm : Form
             RestoreDirectory = true
         };
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -891,7 +891,7 @@ public partial class MainForm : Form
             RestoreDirectory = true
         };
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -919,7 +919,7 @@ public partial class MainForm : Form
             RestoreDirectory = true
         };
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -966,7 +966,7 @@ public partial class MainForm : Form
             RestoreDirectory = true
         };
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -985,7 +985,7 @@ public partial class MainForm : Form
             RestoreDirectory = true
         };
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -1028,7 +1028,7 @@ public partial class MainForm : Form
 
         using var dialog = new MacroNameEditDialog(item.Name);
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }
@@ -1108,7 +1108,7 @@ public partial class MainForm : Form
 
         using var dialog = new EventEditDialog(editRequest.EventIndex, macroEvent);
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return Task.CompletedTask;
         }
@@ -1140,7 +1140,7 @@ public partial class MainForm : Form
 
         using var dialog = new MacroOptimizationDialog(preview);
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return Task.CompletedTask;
         }
@@ -1936,7 +1936,7 @@ public partial class MainForm : Form
 
         using var dialog = new HotkeySettingsDialog(_hotkeyConfiguration.Snapshot());
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
         {
             return;
         }

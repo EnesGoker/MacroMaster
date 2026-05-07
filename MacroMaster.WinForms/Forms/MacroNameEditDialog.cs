@@ -146,7 +146,7 @@ internal sealed class MacroNameEditDialog : Form
 
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
-            MessageBox.Show(
+            ModalDialogOverlay.ShowMessage(
                 this,
                 "Makro adi bos olamaz.",
                 "MacroMaster",

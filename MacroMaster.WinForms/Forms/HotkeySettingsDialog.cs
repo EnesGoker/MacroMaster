@@ -151,7 +151,7 @@ public sealed class HotkeySettingsDialog : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            ModalDialogOverlay.ShowMessage(
                 this,
                 ex.Message,
                 "MacroMaster",

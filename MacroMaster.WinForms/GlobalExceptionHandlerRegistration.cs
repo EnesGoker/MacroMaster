@@ -1,5 +1,6 @@
 using System.Threading;
 using MacroMaster.Application.Abstractions;
+using MacroMaster.WinForms.Forms;
 
 namespace MacroMaster.WinForms;
 
@@ -131,10 +132,49 @@ internal sealed class GlobalExceptionHandlerRegistration : IDisposable
 
     private static void ShowErrorMessage(string message, string caption, MessageBoxIcon icon)
     {
-        MessageBox.Show(
+        ModalDialogOverlay.ShowMessage(
+            ResolveActiveOwner(),
             message,
             caption,
             MessageBoxButtons.OK,
             icon);
+    }
+
+    private static Form? ResolveActiveOwner()
+    {
+        try
+        {
+            Form? activeForm = Form.ActiveForm;
+
+            if (CanUseAsOwner(activeForm))
+            {
+                return activeForm;
+            }
+
+            for (int index = global::System.Windows.Forms.Application.OpenForms.Count - 1; index >= 0; index--)
+            {
+                Form? form = global::System.Windows.Forms.Application.OpenForms[index];
+
+                if (CanUseAsOwner(form))
+                {
+                    return form;
+                }
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static bool CanUseAsOwner(Form? form)
+    {
+        return form is not null
+            && !form.IsDisposed
+            && form.IsHandleCreated
+            && form.Visible
+            && form.WindowState != FormWindowState.Minimized;
     }
 }
