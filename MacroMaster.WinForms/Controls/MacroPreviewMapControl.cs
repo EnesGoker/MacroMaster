@@ -1,3 +1,5 @@
+using MacroMaster.Domain.Enums;
+using MacroMaster.Domain.Models;
 using MacroMaster.WinForms.Theme;
 using System.Drawing.Drawing2D;
 
@@ -10,17 +12,12 @@ internal readonly record struct MacroPreviewMapState(
 
 internal sealed class MacroPreviewMapControl : Control
 {
-    private static readonly PointF[] PlaceholderPathPoints =
-    [
-        new(0.12f, 0.72f),
-        new(0.26f, 0.54f),
-        new(0.44f, 0.62f),
-        new(0.58f, 0.38f),
-        new(0.74f, 0.46f),
-        new(0.86f, 0.24f)
-    ];
+    private const int MaxRoutePointCount = 260;
+    private const int MaxMarkerCount = 80;
 
     private MacroPreviewMapState _state;
+    private List<MapPoint> _mousePoints = [];
+    private RectangleF _coordinateBounds = RectangleF.Empty;
 
     public event EventHandler? PreviewRequested;
 
@@ -46,20 +43,25 @@ internal sealed class MacroPreviewMapControl : Control
     public void UpdatePreview(
         int eventCount,
         int durationMs,
-        string statusText)
+        string statusText,
+        IReadOnlyList<MacroEvent>? events = null)
     {
         UpdatePreview(new MacroPreviewMapState(
             Math.Max(0, eventCount),
             Math.Max(0, durationMs),
-            statusText));
+            statusText), events);
     }
 
-    public void UpdatePreview(MacroPreviewMapState state)
+    public void UpdatePreview(
+        MacroPreviewMapState state,
+        IReadOnlyList<MacroEvent>? events = null)
     {
         _state = new MacroPreviewMapState(
             Math.Max(0, state.EventCount),
             Math.Max(0, state.TotalDurationMs),
             state.StatusText ?? string.Empty);
+        _mousePoints = ExtractMousePoints(events);
+        _coordinateBounds = CalculateCoordinateBounds(_mousePoints);
         Invalidate();
     }
 
@@ -109,34 +111,43 @@ internal sealed class MacroPreviewMapControl : Control
 
         if (_state.EventCount <= 0)
         {
-            DrawEmptyState(graphics, plotBounds);
+            DrawEmptyState(graphics, plotBounds, "Harita icin makro secin");
             return;
         }
 
-        PointF[] resolvedPath = ResolvePath(plotBounds);
+        if (_mousePoints.Count == 0)
+        {
+            DrawEmptyState(graphics, plotBounds, "Fare rotasi bulunamadi");
+            return;
+        }
+
+        PointF[] resolvedPath = ResolvePath(plotBounds, _mousePoints, _coordinateBounds);
+        PointF[] routePath = SampleRoute(resolvedPath);
         using var routePen = new Pen(Color.FromArgb(140, DesignTokens.Accent), Math.Max(2f, DesignTokens.Scale(2)))
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
             LineJoin = LineJoin.Round
         };
-        graphics.DrawCurve(routePen, resolvedPath, 0.35f);
 
-        DrawPoint(graphics, resolvedPath[0], DesignTokens.AccentGreen, DesignTokens.Scale(5));
-        DrawPoint(graphics, resolvedPath[^1], DesignTokens.AccentOrange, DesignTokens.Scale(5));
-        DrawPoint(graphics, resolvedPath[2], DesignTokens.AccentRed, DesignTokens.Scale(4));
-        DrawPoint(graphics, resolvedPath[4], DesignTokens.AccentPurple, DesignTokens.Scale(4));
+        if (routePath.Length > 1)
+        {
+            graphics.DrawLines(routePen, routePath);
+        }
 
-        PointF activePoint = ResolveActivePoint(resolvedPath);
+        DrawActionMarkers(graphics, plotBounds, _mousePoints, resolvedPath);
+
+        PointF currentPoint = resolvedPath[^1];
         using var glowBrush = new SolidBrush(Color.FromArgb(42, DesignTokens.Accent));
         float glowRadius = DesignTokens.Scale(18);
         graphics.FillEllipse(
             glowBrush,
-            activePoint.X - glowRadius,
-            activePoint.Y - glowRadius,
+            currentPoint.X - glowRadius,
+            currentPoint.Y - glowRadius,
             glowRadius * 2,
             glowRadius * 2);
-        DrawPoint(graphics, activePoint, DesignTokens.Accent, DesignTokens.Scale(9));
+        DrawPoint(graphics, resolvedPath[0], DesignTokens.AccentGreen, DesignTokens.Scale(5));
+        DrawPoint(graphics, currentPoint, DesignTokens.AccentOrange, DesignTokens.Scale(6));
     }
 
     private static void DrawGrid(Graphics graphics, Rectangle bounds)
@@ -164,42 +175,204 @@ internal sealed class MacroPreviewMapControl : Control
         }
     }
 
-    private static void DrawEmptyState(Graphics graphics, Rectangle bounds)
+    private static void DrawEmptyState(
+        Graphics graphics,
+        Rectangle bounds,
+        string text)
     {
         TextRenderer.DrawText(
             graphics,
-            "Harita icin makro secin",
+            text,
             DesignTokens.FontUiSmall,
             bounds,
             DesignTokens.TextMuted,
             TextFormatFlags.HorizontalCenter |
             TextFormatFlags.VerticalCenter |
             TextFormatFlags.EndEllipsis |
-            TextFormatFlags.NoPrefix);
+                TextFormatFlags.NoPrefix);
     }
 
-    private static PointF[] ResolvePath(Rectangle bounds)
+    private static List<MapPoint> ExtractMousePoints(IReadOnlyList<MacroEvent>? events)
     {
-        PointF[] resolved = new PointF[PlaceholderPathPoints.Length];
-
-        for (int index = 0; index < PlaceholderPathPoints.Length; index++)
+        if (events is null || events.Count == 0)
         {
+            return [];
+        }
+
+        var points = new List<MapPoint>(events.Count);
+        for (int index = 0; index < events.Count; index++)
+        {
+            MacroEvent macroEvent = events[index];
+            if (macroEvent.EventType != MacroEventType.Mouse
+                || !macroEvent.X.HasValue
+                || !macroEvent.Y.HasValue)
+            {
+                continue;
+            }
+
+            points.Add(new MapPoint(
+                index + 1,
+                macroEvent.X.Value,
+                macroEvent.Y.Value,
+                macroEvent.MouseActionType));
+        }
+
+        return points;
+    }
+
+    private static RectangleF CalculateCoordinateBounds(IReadOnlyList<MapPoint> points)
+    {
+        if (points.Count == 0)
+        {
+            return RectangleF.Empty;
+        }
+
+        int minX = points[0].X;
+        int maxX = points[0].X;
+        int minY = points[0].Y;
+        int maxY = points[0].Y;
+
+        for (int index = 1; index < points.Count; index++)
+        {
+            MapPoint point = points[index];
+            minX = Math.Min(minX, point.X);
+            maxX = Math.Max(maxX, point.X);
+            minY = Math.Min(minY, point.Y);
+            maxY = Math.Max(maxY, point.Y);
+        }
+
+        if (minX == maxX)
+        {
+            minX--;
+            maxX++;
+        }
+
+        if (minY == maxY)
+        {
+            minY--;
+            maxY++;
+        }
+
+        return RectangleF.FromLTRB(minX, minY, maxX, maxY);
+    }
+
+    private static PointF[] ResolvePath(
+        Rectangle bounds,
+        IReadOnlyList<MapPoint> points,
+        RectangleF coordinateBounds)
+    {
+        PointF[] resolved = new PointF[points.Count];
+        if (points.Count == 0 || coordinateBounds.IsEmpty)
+        {
+            return resolved;
+        }
+
+        float coordinateWidth = Math.Max(1f, coordinateBounds.Width);
+        float coordinateHeight = Math.Max(1f, coordinateBounds.Height);
+        float scale = Math.Min(
+            bounds.Width / coordinateWidth,
+            bounds.Height / coordinateHeight);
+        float scaledWidth = coordinateWidth * scale;
+        float scaledHeight = coordinateHeight * scale;
+        float offsetX = bounds.Left + (bounds.Width - scaledWidth) / 2f;
+        float offsetY = bounds.Top + (bounds.Height - scaledHeight) / 2f;
+
+        for (int index = 0; index < points.Count; index++)
+        {
+            MapPoint point = points[index];
             resolved[index] = new PointF(
-                bounds.Left + bounds.Width * PlaceholderPathPoints[index].X,
-                bounds.Top + bounds.Height * PlaceholderPathPoints[index].Y);
+                offsetX + (point.X - coordinateBounds.Left) * scale,
+                offsetY + (point.Y - coordinateBounds.Top) * scale);
         }
 
         return resolved;
     }
 
-    private PointF ResolveActivePoint(PointF[] resolvedPath)
+    private static PointF[] SampleRoute(PointF[] points)
     {
-        uint seed = unchecked((uint)HashCode.Combine(
-            _state.EventCount,
-            _state.TotalDurationMs,
-            _state.StatusText));
-        int index = (int)(seed % (uint)resolvedPath.Length);
-        return resolvedPath[index];
+        if (points.Length <= MaxRoutePointCount)
+        {
+            return points;
+        }
+
+        var sampled = new List<PointF>(MaxRoutePointCount)
+        {
+            points[0]
+        };
+
+        int lastIntermediateIndex = points.Length - 2;
+        int intermediateCount = Math.Max(0, MaxRoutePointCount - 2);
+
+        for (int index = 1; index <= intermediateCount; index++)
+        {
+            int sourceIndex = (int)Math.Round(index * lastIntermediateIndex / (double)(intermediateCount + 1));
+            sourceIndex = Math.Clamp(sourceIndex, 1, lastIntermediateIndex);
+            sampled.Add(points[sourceIndex]);
+        }
+
+        sampled.Add(points[^1]);
+        return sampled.ToArray();
+    }
+
+    private static void DrawActionMarkers(
+        Graphics graphics,
+        Rectangle plotBounds,
+        IReadOnlyList<MapPoint> points,
+        PointF[] resolvedPath)
+    {
+        if (points.Count == 0)
+        {
+            return;
+        }
+
+        var markers = new List<(PointF Point, Color Color)>();
+        for (int index = 0; index < points.Count; index++)
+        {
+            Color? markerColor = ResolveMarkerColor(points[index].ActionType);
+            if (markerColor.HasValue)
+            {
+                markers.Add((resolvedPath[index], markerColor.Value));
+            }
+        }
+
+        foreach ((PointF point, Color color) in SampleMarkers(markers))
+        {
+            if (plotBounds.Contains(Point.Round(point)))
+            {
+                DrawPoint(graphics, point, color, DesignTokens.Scale(4));
+            }
+        }
+    }
+
+    private static Color? ResolveMarkerColor(MouseActionType actionType)
+    {
+        return actionType switch
+        {
+            MouseActionType.LeftDown or
+            MouseActionType.RightDown or
+            MouseActionType.MiddleDown or
+            MouseActionType.DoubleClick => DesignTokens.AccentRed,
+            MouseActionType.Wheel => DesignTokens.AccentPurple,
+            _ => null
+        };
+    }
+
+    private static IReadOnlyList<(PointF Point, Color Color)> SampleMarkers(
+        IReadOnlyList<(PointF Point, Color Color)> markers)
+    {
+        if (markers.Count <= MaxMarkerCount)
+        {
+            return markers;
+        }
+
+        var sampled = new List<(PointF Point, Color Color)>(MaxMarkerCount);
+        for (int index = 0; index < MaxMarkerCount; index++)
+        {
+            int sourceIndex = (int)Math.Round(index * (markers.Count - 1) / (double)(MaxMarkerCount - 1));
+            sampled.Add(markers[sourceIndex]);
+        }
+
+        return sampled;
     }
 
     private static void DrawPoint(
@@ -241,4 +414,10 @@ internal sealed class MacroPreviewMapControl : Control
         path.CloseFigure();
         return path;
     }
+
+    private readonly record struct MapPoint(
+        int EventIndex,
+        int X,
+        int Y,
+        MouseActionType ActionType);
 }

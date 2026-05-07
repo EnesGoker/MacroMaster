@@ -1,3 +1,4 @@
+using MacroMaster.Domain.Models;
 using MacroMaster.WinForms.Theme;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -44,7 +45,9 @@ internal sealed class SessionSummaryControl : UserControl
         UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi"));
     }
 
-    public void UpdateState(SessionSummaryState state)
+    public void UpdateState(
+        SessionSummaryState state,
+        IReadOnlyList<MacroEvent>? events = null)
     {
         string sessionName = string.IsNullOrWhiteSpace(state.SessionName)
             ? "Oturum yok"
@@ -58,7 +61,11 @@ internal sealed class SessionSummaryControl : UserControl
         _durationValueLabel.Text = FormattableString.Invariant($"{Math.Max(0, state.TotalDurationMs)} ms");
         _sessionNameValueLabel.Text = sessionName;
         _fileNameValueLabel.Text = fileName;
-        _previewMapControl.UpdatePreview(state.EventCount, state.TotalDurationMs, state.StatusText);
+        _previewMapControl.UpdatePreview(
+            state.EventCount,
+            state.TotalDurationMs,
+            state.StatusText,
+            events);
         _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
             : DesignTokens.AccentGreen;

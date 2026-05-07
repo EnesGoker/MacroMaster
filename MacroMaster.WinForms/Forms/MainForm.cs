@@ -1490,7 +1490,8 @@ public partial class MainForm : Form
                 displayedSession?.TotalDurationMs ?? 0,
                 string.IsNullOrWhiteSpace(_lastSessionPath)
                     ? "Kaydedilmedi"
-                    : Path.GetFileName(_lastSessionPath)));
+                    : Path.GetFileName(_lastSessionPath)),
+            displayedSession?.Events);
         _titleBarControl.SetStatus(
             statusText,
             ResolveTitleBarStatusColor(_applicationStateService.CurrentState));
