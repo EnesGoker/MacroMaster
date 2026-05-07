@@ -10,14 +10,14 @@ internal sealed class EventListControl : UserControl
 {
     private static readonly TypeFilterOption[] TypeFilterOptions =
     [
-        new(EventListTypeFilterKind.All, "Tür: Tümü"),
-        new(EventListTypeFilterKind.Keyboard, "Tür: Klavye"),
-        new(EventListTypeFilterKind.Mouse, "Tür: Fare")
+        new(EventListTypeFilterKind.All, "Tümü"),
+        new(EventListTypeFilterKind.Keyboard, "Klavye"),
+        new(EventListTypeFilterKind.Mouse, "Fare")
     ];
 
     private static readonly SmartFilterOption[] SmartFilterOptions =
     [
-        new(EventListSmartFilterKind.All, "Analiz: Tümü"),
+        new(EventListSmartFilterKind.All, "Tümü"),
         new(EventListSmartFilterKind.LongDelays, "Uzun beklemeler"),
         new(EventListSmartFilterKind.OptimizationCandidates, "Optimize adayları"),
         new(EventListSmartFilterKind.InvalidOrIncomplete, "Hatalı/eksik")
@@ -249,7 +249,7 @@ internal sealed class EventListControl : UserControl
         var toolbarPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 4,
+            ColumnCount = 6,
             RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
@@ -257,8 +257,10 @@ internal sealed class EventListControl : UserControl
         };
         toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220)));
+        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10)));
         toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(118)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(156)));
+        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10)));
+        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(172)));
         toolbarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var searchPanel = new RoundedInputHostPanel
@@ -266,7 +268,7 @@ internal sealed class EventListControl : UserControl
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
-            Margin = new Padding(0, 0, DesignTokens.Scale(8), 0),
+            Margin = Padding.Empty,
             Padding = new Padding(
                 DesignTokens.Scale(12),
                 DesignTokens.Scale(6),
@@ -277,19 +279,21 @@ internal sealed class EventListControl : UserControl
         searchPanel.Controls.Add(_filterSearchTextBox);
 
         _typeFilterSelect.Dock = DockStyle.Fill;
-        _typeFilterSelect.Margin = new Padding(0, 0, DesignTokens.Scale(8), 0);
+        _typeFilterSelect.Margin = Padding.Empty;
+        _typeFilterSelect.ShowSelectedItemIndicator = true;
         _typeFilterSelect.SetItems(TypeFilterOptions.Select(option => option.Label));
         _typeFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
         _smartFilterSelect.Dock = DockStyle.Fill;
         _smartFilterSelect.Margin = Padding.Empty;
+        _smartFilterSelect.ShowSelectedItemIndicator = true;
         _smartFilterSelect.SetItems(SmartFilterOptions.Select(option => option.Label));
         _smartFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
         toolbarPanel.Controls.Add(_headerTitleLabel, 0, 0);
         toolbarPanel.Controls.Add(searchPanel, 1, 0);
-        toolbarPanel.Controls.Add(_typeFilterSelect, 2, 0);
-        toolbarPanel.Controls.Add(_smartFilterSelect, 3, 0);
+        toolbarPanel.Controls.Add(_typeFilterSelect, 3, 0);
+        toolbarPanel.Controls.Add(_smartFilterSelect, 5, 0);
 
         return toolbarPanel;
     }
