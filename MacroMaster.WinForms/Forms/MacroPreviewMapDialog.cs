@@ -3,16 +3,11 @@ using MacroMaster.WinForms.Controls;
 using MacroMaster.WinForms.Platform;
 using MacroMaster.WinForms.Theme;
 using System.Drawing.Drawing2D;
-using System.Globalization;
 
 namespace MacroMaster.WinForms.Forms;
 
 internal sealed class MacroPreviewMapDialog : Form
 {
-    private readonly Label _statusValueLabel;
-    private readonly Label _eventCountValueLabel;
-    private readonly Label _durationValueLabel;
-    private readonly Label _fileNameValueLabel;
     private readonly Label _inspectedEventValueLabel;
     private readonly Label _inspectedActionValueLabel;
     private readonly Label _inspectedPositionValueLabel;
@@ -35,10 +30,6 @@ internal sealed class MacroPreviewMapDialog : Form
         ClientSize = new Size(DesignTokens.Scale(780), DesignTokens.Scale(580));
         MinimumSize = Size;
 
-        _statusValueLabel = CreateMetricValueLabel();
-        _eventCountValueLabel = CreateMetricValueLabel();
-        _durationValueLabel = CreateMetricValueLabel();
-        _fileNameValueLabel = CreateMetricValueLabel();
         _inspectedEventValueLabel = CreateInspectionValueLabel();
         _inspectedActionValueLabel = CreateInspectionValueLabel();
         _inspectedPositionValueLabel = CreateInspectionValueLabel();
@@ -89,15 +80,6 @@ internal sealed class MacroPreviewMapDialog : Form
         IReadOnlyList<MacroEvent>? events,
         int? activeSourceEventIndex)
     {
-        string fileName = string.IsNullOrWhiteSpace(state.FileName)
-            ? "Kaydedilmedi"
-            : state.FileName;
-
-        _statusValueLabel.Text = state.StatusText;
-        _statusValueLabel.ForeColor = ResolveStatusColor(state.StatusText);
-        _eventCountValueLabel.Text = Math.Max(0, state.EventCount).ToString(CultureInfo.InvariantCulture);
-        _durationValueLabel.Text = FormattableString.Invariant($"{Math.Max(0, state.TotalDurationMs)} ms");
-        _fileNameValueLabel.Text = fileName;
         _mapControl.UpdatePreview(
             state.EventCount,
             state.TotalDurationMs,
@@ -180,7 +162,7 @@ internal sealed class MacroPreviewMapDialog : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 3,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = new Padding(
@@ -190,41 +172,15 @@ internal sealed class MacroPreviewMapDialog : Form
                 DesignTokens.Scale(18))
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(86)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(72)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(76)));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
 
-        rootLayoutPanel.Controls.Add(CreateMetricsPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 1);
-        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 2);
-        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 3);
+        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 1);
+        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 2);
 
         Controls.Add(rootLayoutPanel);
-    }
-
-    private TableLayoutPanel CreateMetricsPanel()
-    {
-        var panel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 4,
-            RowCount = 1,
-            BackColor = DesignTokens.Surface,
-            Margin = new Padding(0, 0, 0, DesignTokens.Scale(12)),
-            Padding = Padding.Empty
-        };
-
-        for (int index = 0; index < 4; index++)
-        {
-            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
-        }
-
-        panel.Controls.Add(new MetricCard("Durum", _statusValueLabel), 0, 0);
-        panel.Controls.Add(new MetricCard("Olay", _eventCountValueLabel), 1, 0);
-        panel.Controls.Add(new MetricCard("Sure", _durationValueLabel), 2, 0);
-        panel.Controls.Add(new MetricCard("Dosya", _fileNameValueLabel), 3, 0);
-        return panel;
     }
 
     private RoundedPanel CreateInspectionPanel()
@@ -297,20 +253,6 @@ internal sealed class MacroPreviewMapDialog : Form
         panel.Controls.Add(new LegendItem("Tiklama", DesignTokens.AccentRed));
         panel.Controls.Add(new LegendItem("Wheel", DesignTokens.AccentPurple));
         return panel;
-    }
-
-    private static Label CreateMetricValueLabel()
-    {
-        return new Label
-        {
-            Dock = DockStyle.Fill,
-            Font = DesignTokens.FontUiBold,
-            ForeColor = DesignTokens.TextPrimary,
-            BackColor = DesignTokens.SurfaceInset,
-            TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true,
-            UseMnemonic = false
-        };
     }
 
     private static Label CreateInspectionValueLabel()
@@ -388,13 +330,6 @@ internal sealed class MacroPreviewMapDialog : Form
         _inspectedDelayValueLabel.Text = FormattableString.Invariant($"{info.DelayMs} ms");
     }
 
-    private static Color ResolveStatusColor(string statusText)
-    {
-        return statusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
-            ? DesignTokens.TextPrimary
-            : DesignTokens.AccentGreen;
-    }
-
     private static int ClampScreenCoordinate(
         int value,
         int minimum,
@@ -403,85 +338,6 @@ internal sealed class MacroPreviewMapDialog : Form
         return minimum > maximum
             ? minimum
             : Math.Clamp(value, minimum, maximum);
-    }
-
-    private sealed class MetricCard : UserControl
-    {
-        private readonly Label _valueLabel;
-
-        public MetricCard(string caption, Label valueLabel)
-        {
-            SetStyle(
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw |
-                ControlStyles.UserPaint,
-                true);
-
-            _valueLabel = valueLabel;
-
-            Dock = DockStyle.Fill;
-            Margin = new Padding(0, 0, DesignTokens.Scale(10), 0);
-            Padding = new Padding(
-                DesignTokens.Scale(14),
-                DesignTokens.Scale(8),
-                DesignTokens.Scale(14),
-                DesignTokens.Scale(8));
-            BackColor = DesignTokens.SurfaceInset;
-
-            var layoutPanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-                BackColor = DesignTokens.SurfaceInset,
-                Margin = Padding.Empty,
-                Padding = Padding.Empty
-            };
-            layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 45f));
-            layoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 55f));
-            layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, 0);
-            layoutPanel.Controls.Add(_valueLabel, 0, 1);
-            Controls.Add(layoutPanel);
-        }
-
-        protected override void OnPaintBackground(PaintEventArgs e)
-        {
-            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Rectangle bounds = Rectangle.Inflate(ClientRectangle, -1, -1);
-            if (bounds.Width <= 0 || bounds.Height <= 0)
-            {
-                return;
-            }
-
-            using GraphicsPath path = CreateRoundPath(bounds, DesignTokens.Scale(10));
-            using var fillBrush = new SolidBrush(DesignTokens.SurfaceInset);
-            using var borderPen = new Pen(DesignTokens.BorderSoft);
-            e.Graphics.FillPath(fillBrush, path);
-            e.Graphics.DrawPath(borderPen, path);
-        }
-
-        private static Label CreateCaptionLabel(string text)
-        {
-            return new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = text,
-                Font = DesignTokens.FontUiSmall,
-                ForeColor = DesignTokens.TextSecondary,
-                BackColor = DesignTokens.SurfaceInset,
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoEllipsis = true,
-                UseMnemonic = false
-            };
-        }
     }
 
     private sealed class LegendItem : Control

@@ -1847,8 +1847,9 @@ public partial class MainForm : Form
         libraryHostPanel.ContentPadding = new Padding(DesignTokens.CardPadding);
         libraryHostPanel.Body.Controls.Add(_macroLibraryControl);
 
-        var previewHostPanel = CreateSectionCard("Olay / Oturum Onizleme");
+        var previewHostPanel = CreateCard();
         previewHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, DesignTokens.GapMedium / 2, 0);
+        previewHostPanel.ContentPadding = new Padding(DesignTokens.CardPadding);
         previewHostPanel.Body.Controls.Add(_eventListControl);
 
         var sessionHostPanel = CreateSectionCard("Oturum Ozeti");
