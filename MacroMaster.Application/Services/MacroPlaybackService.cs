@@ -4,17 +4,20 @@ using MacroMaster.Domain.Models;
 
 namespace MacroMaster.Application.Services;
 
-public sealed class MacroPlaybackService : IMacroPlaybackService
+public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
 {
     private readonly IInputPlaybackAdapter _inputPlaybackAdapter;
     private readonly ICursorPositionProvider _cursorPositionProvider;
     private readonly IApplicationStateService _applicationStateService;
     private readonly IAppLogger _logger;
     private readonly object _syncRoot = new();
+    private readonly SemaphoreSlim _eventExecutionGate = new(1, 1);
 
     private bool _stopRequested;
     private CancellationTokenSource? _playbackCancellationTokenSource;
     private TaskCompletionSource<bool> _resumeSignal = CreateResumeSignal(signaled: true);
+    private int _playbackNextLogicalIndex;
+    private int? _playbackTotalLogicalEventCount;
 
     public MacroPlaybackService(
         IInputPlaybackAdapter inputPlaybackAdapter,
@@ -36,6 +39,11 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
     public event Action? PlaybackResumed;
     public event Action? PlaybackStopped;
     public event Action<MacroEvent>? EventPlayed;
+
+    public void Dispose()
+    {
+        _eventExecutionGate.Dispose();
+    }
 
     public async Task PlayAsync(
         MacroSession session,
@@ -64,6 +72,12 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
         CursorPosition? recordedMouseAnchor = shouldRebaseMouseCoordinates
             ? GetRecordedMouseAnchor(session)
             : null;
+        int repeatCount = effectiveSettings.LoopIndefinitely
+            ? int.MaxValue
+            : Math.Max(effectiveSettings.RepeatCount, 1);
+        int? totalLogicalEventCount = effectiveSettings.LoopIndefinitely
+            ? null
+            : session.Events.Count * repeatCount;
 
         try
         {
@@ -80,6 +94,8 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
                 _playbackCancellationTokenSource =
                     CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 playbackCancellationTokenSource = _playbackCancellationTokenSource;
+                _playbackNextLogicalIndex = 0;
+                _playbackTotalLogicalEventCount = totalLogicalEventCount;
             }
 
             playbackStarted = true;
@@ -99,74 +115,91 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
 
             playbackCancellationToken.ThrowIfCancellationRequested();
 
-            int repeatCount = effectiveSettings.LoopIndefinitely
-                ? int.MaxValue
-                : Math.Max(effectiveSettings.RepeatCount, 1);
+            int? anchoredRelativeIteration = null;
+            CursorPosition? playbackMouseAnchor = null;
 
-            for (int iteration = 0; iteration < repeatCount; iteration++)
+            while (true)
             {
-                CursorPosition? playbackMouseAnchor = recordedMouseAnchor.HasValue
-                    ? await _cursorPositionProvider.GetCursorPositionAsync(playbackCancellationToken)
-                    : null;
+                playbackCancellationToken.ThrowIfCancellationRequested();
+                ThrowIfStopRequested();
+                await WaitIfPausedAsync(playbackCancellationToken);
 
-                for (int eventIndex = 0; eventIndex < session.Events.Count; eventIndex++)
+                int logicalEventIndex = GetPlaybackCursorSnapshot();
+
+                if (IsPlaybackComplete(logicalEventIndex))
                 {
-                    MacroEvent macroEvent = session.Events[eventIndex];
-                    MacroEvent playbackEvent = ResolvePlaybackEvent(
-                        macroEvent,
-                        recordedMouseAnchor,
-                        playbackMouseAnchor);
+                    break;
+                }
 
-                    playbackCancellationToken.ThrowIfCancellationRequested();
-                    ThrowIfStopRequested();
-                    await WaitIfPausedAsync(playbackCancellationToken);
+                int iteration = logicalEventIndex / session.Events.Count;
+                int eventIndex = logicalEventIndex % session.Events.Count;
 
-                    int delayMs = ResolveDelayMs(playbackEvent, effectiveSettings);
+                if (recordedMouseAnchor.HasValue
+                    && anchoredRelativeIteration != iteration)
+                {
+                    playbackMouseAnchor =
+                        await _cursorPositionProvider.GetCursorPositionAsync(playbackCancellationToken);
+                    anchoredRelativeIteration = iteration;
+                }
 
-                    if (delayMs > 0)
+                MacroEvent macroEvent = session.Events[eventIndex];
+                MacroEvent playbackEvent = ResolvePlaybackEvent(
+                    macroEvent,
+                    recordedMouseAnchor,
+                    playbackMouseAnchor);
+                int delayMs = ResolveDelayMs(playbackEvent, effectiveSettings);
+
+                if (delayMs > 0)
+                {
+                    await Task.Delay(delayMs, playbackCancellationToken);
+                }
+
+                playbackCancellationToken.ThrowIfCancellationRequested();
+                ThrowIfStopRequested();
+
+                if (_applicationStateService.IsState(AppState.Paused))
+                {
+                    continue;
+                }
+
+                if (GetPlaybackCursorSnapshot() != logicalEventIndex)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    await PlayResolvedEventAsync(
+                        playbackEvent,
+                        effectiveSettings,
+                        playbackCancellationToken);
+                    AdvancePlaybackCursor(logicalEventIndex);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    Exception playbackException = CreatePlaybackException(
+                        iteration,
+                        eventIndex,
+                        playbackEvent,
+                        ex);
+
+                    _logger.Log(
+                        AppLogLevel.Error,
+                        nameof(MacroPlaybackService),
+                        "Olay oynatilirken hata olustu.",
+                        playbackException);
+
+                    if (effectiveSettings.StopOnError)
                     {
-                        await Task.Delay(delayMs, playbackCancellationToken);
+                        throw playbackException;
                     }
 
-                    playbackCancellationToken.ThrowIfCancellationRequested();
-                    ThrowIfStopRequested();
-
-                    try
-                    {
-                        if (!effectiveSettings.SimulationMode)
-                        {
-                            await _inputPlaybackAdapter.PlayEventAsync(
-                                playbackEvent,
-                                playbackCancellationToken);
-                        }
-
-                        SafeInvokeEventPlayed(playbackEvent);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        Exception playbackException = CreatePlaybackException(
-                            iteration,
-                            eventIndex,
-                            playbackEvent,
-                            ex);
-
-                        _logger.Log(
-                            AppLogLevel.Error,
-                            nameof(MacroPlaybackService),
-                            "Olay oynatilirken hata olustu.",
-                            playbackException);
-
-                        if (effectiveSettings.StopOnError)
-                        {
-                            throw playbackException;
-                        }
-
-                        playbackErrors.Add(playbackException);
-                    }
+                    playbackErrors.Add(playbackException);
+                    AdvancePlaybackCursor(logicalEventIndex);
                 }
             }
 
@@ -227,6 +260,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
                     AppState.Paused,
                     AppState.Stopping,
                     AppState.Error);
+                ResetPlaybackRuntime();
                 SafeInvokePlaybackStopped();
             }
         }
@@ -340,10 +374,10 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
         ArgumentNullException.ThrowIfNull(settings);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!_applicationStateService.IsState(AppState.Idle))
+        if (!_applicationStateService.IsAny(AppState.Idle, AppState.Paused))
         {
             throw new InvalidOperationException(
-                "Tek olay oynatma yalnizca uygulama bostayken kullanilabilir.");
+                "Tek olay oynatma yalnizca uygulama bostayken veya duraklatilmisken kullanilabilir.");
         }
 
         if (eventIndex < 0 || eventIndex >= session.Events.Count)
@@ -371,9 +405,18 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
 
         try
         {
-            if (!effectiveSettings.SimulationMode)
+            await _eventExecutionGate.WaitAsync(cancellationToken);
+
+            try
             {
-                await _inputPlaybackAdapter.PlayEventAsync(playbackEvent, cancellationToken);
+                if (!effectiveSettings.SimulationMode)
+                {
+                    await _inputPlaybackAdapter.PlayEventAsync(playbackEvent, cancellationToken);
+                }
+            }
+            finally
+            {
+                _eventExecutionGate.Release();
             }
 
             _logger.Log(
@@ -404,6 +447,59 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
         }
     }
 
+    public async Task WaitForPlaybackNavigationReadyAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_applicationStateService.IsState(AppState.Paused))
+        {
+            return;
+        }
+
+        await _eventExecutionGate.WaitAsync(cancellationToken);
+
+        try
+        {
+            return;
+        }
+        finally
+        {
+            _eventExecutionGate.Release();
+        }
+    }
+
+    public async Task SeekPlaybackCursorAsync(
+        int logicalEventIndex,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_applicationStateService.IsState(AppState.Paused))
+        {
+            return;
+        }
+
+        await _eventExecutionGate.WaitAsync(cancellationToken);
+
+        try
+        {
+            lock (_syncRoot)
+            {
+                if (_playbackCancellationTokenSource is null
+                    || !_applicationStateService.IsState(AppState.Paused))
+                {
+                    return;
+                }
+
+                _playbackNextLogicalIndex = ClampPlaybackCursorIndex(logicalEventIndex);
+            }
+        }
+        finally
+        {
+            _eventExecutionGate.Release();
+        }
+    }
+
     private async Task WaitIfPausedAsync(CancellationToken cancellationToken)
     {
         Task waitTask;
@@ -421,6 +517,76 @@ public sealed class MacroPlaybackService : IMacroPlaybackService
         await waitTask.WaitAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         ThrowIfStopRequested();
+    }
+
+    private async Task PlayResolvedEventAsync(
+        MacroEvent playbackEvent,
+        PlaybackSettings effectiveSettings,
+        CancellationToken cancellationToken)
+    {
+        await _eventExecutionGate.WaitAsync(cancellationToken);
+
+        try
+        {
+            if (!effectiveSettings.SimulationMode)
+            {
+                await _inputPlaybackAdapter.PlayEventAsync(playbackEvent, cancellationToken);
+            }
+
+            SafeInvokeEventPlayed(playbackEvent);
+        }
+        finally
+        {
+            _eventExecutionGate.Release();
+        }
+    }
+
+    private int GetPlaybackCursorSnapshot()
+    {
+        lock (_syncRoot)
+        {
+            return ClampPlaybackCursorIndex(_playbackNextLogicalIndex);
+        }
+    }
+
+    private bool IsPlaybackComplete(int logicalEventIndex)
+    {
+        lock (_syncRoot)
+        {
+            return _playbackTotalLogicalEventCount.HasValue
+                && logicalEventIndex >= _playbackTotalLogicalEventCount.Value;
+        }
+    }
+
+    private void AdvancePlaybackCursor(int playedLogicalEventIndex)
+    {
+        lock (_syncRoot)
+        {
+            int nextLogicalEventIndex = playedLogicalEventIndex + 1;
+
+            if (nextLogicalEventIndex > _playbackNextLogicalIndex)
+            {
+                _playbackNextLogicalIndex = ClampPlaybackCursorIndex(nextLogicalEventIndex);
+            }
+        }
+    }
+
+    private int ClampPlaybackCursorIndex(int logicalEventIndex)
+    {
+        int safeLogicalEventIndex = Math.Max(logicalEventIndex, 0);
+
+        return _playbackTotalLogicalEventCount.HasValue
+            ? Math.Min(safeLogicalEventIndex, _playbackTotalLogicalEventCount.Value)
+            : safeLogicalEventIndex;
+    }
+
+    private void ResetPlaybackRuntime()
+    {
+        lock (_syncRoot)
+        {
+            _playbackNextLogicalIndex = 0;
+            _playbackTotalLogicalEventCount = null;
+        }
     }
 
     private void TrySetErrorState()

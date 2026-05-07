@@ -175,6 +175,15 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroPlaybackService pauses until resume is requested")]
     public Task MacroPlaybackService_PauseResume_WaitsForResume() => MacroPlaybackService_PauseResume_WaitsForResumeAsync();
 
+    [Fact(DisplayName = "MacroPlaybackService seeks paused playback before resume")]
+    public Task MacroPlaybackService_SeekPausedPlayback_ResumesFromCursor() => MacroPlaybackService_SeekPausedPlayback_ResumesFromCursorAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService supports single stepping while paused")]
+    public Task MacroPlaybackService_PausedSingleStep_ContinuesAfterSteppedEvent() => MacroPlaybackService_PausedSingleStep_ContinuesAfterSteppedEventAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService does not replay a stale delayed event after paused stepping")]
+    public Task MacroPlaybackService_PausedStepDuringDelay_DoesNotReplayStaleEvent() => MacroPlaybackService_PausedStepDuringDelay_DoesNotReplayStaleEventAsync();
+
     [Fact(DisplayName = "MacroPlaybackService stops immediately on playback errors when StopOnError is enabled")]
     public Task MacroPlaybackService_StopOnErrorTrue_StopsImmediately() => MacroPlaybackService_StopOnErrorTrue_StopsImmediatelyAsync();
 
@@ -2180,6 +2189,143 @@ public sealed class MacroMasterTests
         Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Playback should return to Idle after resume completes.");
     }
 
+    private static async Task MacroPlaybackService_SeekPausedPlayback_ResumesFromCursorAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(inputPlaybackAdapter, inputPlaybackAdapter, applicationStateService);
+        var firstEventPlayed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        MacroSession session = CreateThreeEventPlaybackSession();
+
+        playbackService.EventPlayed += macroEvent =>
+        {
+            if (macroEvent.Id != session.Events[0].Id
+                || firstEventPlayed.Task.IsCompleted)
+            {
+                return;
+            }
+
+            playbackService.PauseAsync().GetAwaiter().GetResult();
+            firstEventPlayed.TrySetResult(true);
+        };
+
+        Task playTask = playbackService.PlayAsync(
+            session,
+            new PlaybackSettings { StopOnError = true });
+
+        await firstEventPlayed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await playbackService.WaitForPlaybackNavigationReadyAsync();
+        await playbackService.SeekPlaybackCursorAsync(0);
+        await playbackService.ResumeAsync();
+        await playTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(
+            new[]
+            {
+                session.Events[0].Id,
+                session.Events[0].Id,
+                session.Events[1].Id,
+                session.Events[2].Id
+            },
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.Id).ToArray(),
+            "Seeking a paused playback cursor should make resume continue from the requested logical event.");
+        Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Playback should finish after replaying from the requested cursor.");
+    }
+
+    private static async Task MacroPlaybackService_PausedSingleStep_ContinuesAfterSteppedEventAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(inputPlaybackAdapter, inputPlaybackAdapter, applicationStateService);
+        var firstEventPlayed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        MacroSession session = CreateThreeEventPlaybackSession();
+
+        playbackService.EventPlayed += macroEvent =>
+        {
+            if (macroEvent.Id != session.Events[0].Id
+                || firstEventPlayed.Task.IsCompleted)
+            {
+                return;
+            }
+
+            playbackService.PauseAsync().GetAwaiter().GetResult();
+            firstEventPlayed.TrySetResult(true);
+        };
+
+        Task playTask = playbackService.PlayAsync(
+            session,
+            new PlaybackSettings { StopOnError = true });
+
+        await firstEventPlayed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await playbackService.WaitForPlaybackNavigationReadyAsync();
+        await playbackService.PlayEventAtAsync(session, new PlaybackSettings { StopOnError = true }, eventIndex: 1);
+        await playbackService.SeekPlaybackCursorAsync(2);
+        await playbackService.ResumeAsync();
+        await playTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(
+            new[]
+            {
+                session.Events[0].Id,
+                session.Events[1].Id,
+                session.Events[2].Id
+            },
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.Id).ToArray(),
+            "A manually stepped paused event should not be replayed after resume.");
+        Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Playback should return to Idle after the remaining event completes.");
+    }
+
+    private static async Task MacroPlaybackService_PausedStepDuringDelay_DoesNotReplayStaleEventAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(inputPlaybackAdapter, inputPlaybackAdapter, applicationStateService);
+        var firstEventPlayed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        MacroSession session = CreateThreeEventPlaybackSession();
+        session.Events[1].DelayMs = 250;
+
+        playbackService.EventPlayed += macroEvent =>
+        {
+            if (macroEvent.Id == session.Events[0].Id)
+            {
+                firstEventPlayed.TrySetResult(true);
+            }
+        };
+
+        Task playTask = playbackService.PlayAsync(
+            session,
+            new PlaybackSettings
+            {
+                PreserveOriginalTiming = true,
+                StopOnError = true
+            });
+
+        await firstEventPlayed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await Task.Delay(25);
+        await playbackService.PauseAsync();
+        await playbackService.PlayEventAtAsync(
+            session,
+            new PlaybackSettings
+            {
+                PreserveOriginalTiming = true,
+                StopOnError = true
+            },
+            eventIndex: 1);
+        await playbackService.SeekPlaybackCursorAsync(2);
+        await playbackService.ResumeAsync();
+        await playTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(
+            new[]
+            {
+                session.Events[0].Id,
+                session.Events[1].Id,
+                session.Events[2].Id
+            },
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.Id).ToArray(),
+            "A delayed event that was manually stepped while paused must not be replayed by the background loop.");
+    }
+
     private static async Task MacroPlaybackService_StopOnErrorTrue_StopsImmediatelyAsync()
     {
         var inputPlaybackAdapter = new TestInputPlaybackAdapter();
@@ -2253,6 +2399,44 @@ public sealed class MacroMasterTests
                     KeyCode = 0x41,
                     ScanCode = 0x1E,
                     Description = "A up"
+                }
+            }
+        };
+    }
+
+    private static MacroSession CreateThreeEventPlaybackSession()
+    {
+        return new MacroSession
+        {
+            Name = "SteppablePlayback",
+            Events =
+            {
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    KeyCode = 0x41,
+                    ScanCode = 0x1E,
+                    Description = "A down"
+                },
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyUp,
+                    KeyCode = 0x41,
+                    ScanCode = 0x1E,
+                    Description = "A up"
+                },
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    KeyCode = 0x42,
+                    ScanCode = 0x30,
+                    Description = "B down"
                 }
             }
         };

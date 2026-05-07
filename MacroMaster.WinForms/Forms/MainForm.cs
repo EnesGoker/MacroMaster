@@ -38,6 +38,7 @@ public partial class MainForm : Form
     private int _playedEventCount;
     private int _playedDurationMs;
     private int? _activePlaybackSourceIndex;
+    private int _playbackNavigationInProgress;
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
@@ -339,59 +340,111 @@ public partial class MainForm : Form
         return modifiers;
     }
 
-    private Task ResetPlaybackCursorAsync()
+    private async Task ResetPlaybackCursorAsync()
     {
-        MacroSession? session = GetSessionForPlayback();
-
-        if (!CanNavigatePlayback(session, BuildPlaybackSettings()))
+        if (Interlocked.Exchange(ref _playbackNavigationInProgress, 1) == 1)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        _playedEventCount = 0;
-        _playedDurationMs = 0;
-        _activePlaybackSourceIndex = session is { Events.Count: > 0 }
-            ? 0
-            : null;
-        RefreshUiState();
-        return Task.CompletedTask;
+        try
+        {
+            MacroSession? session = GetSessionForPlayback();
+            PlaybackSettings playbackSettings = BuildPlaybackSettings();
+
+            if (!CanNavigatePlayback(session, playbackSettings))
+            {
+                return;
+            }
+
+            if (_macroPlaybackService.IsPaused)
+            {
+                await _macroPlaybackService.WaitForPlaybackNavigationReadyAsync();
+            }
+
+            _playedEventCount = 0;
+            _playedDurationMs = 0;
+            _activePlaybackSourceIndex = session is { Events.Count: > 0 }
+                ? 0
+                : null;
+
+            if (_macroPlaybackService.IsPaused)
+            {
+                await _macroPlaybackService.SeekPlaybackCursorAsync(_playedEventCount);
+            }
+
+            RefreshUiState();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _playbackNavigationInProgress, 0);
+        }
     }
 
     private async Task StepPlaybackAsync(int stepDirection)
     {
-        MacroSession? session = GetSessionForPlayback();
-        PlaybackSettings playbackSettings = BuildPlaybackSettings();
-
-        if (session is null || !CanNavigatePlayback(session, playbackSettings))
+        if (Interlocked.Exchange(ref _playbackNavigationInProgress, 1) == 1)
         {
             return;
         }
 
-        int totalPlaybackEvents = GetTotalPlaybackEventCount(session, playbackSettings);
-
-        if (stepDirection <= 0)
+        try
         {
-            StepPlaybackCursorBack(session);
-            return;
+            MacroSession? session = GetSessionForPlayback();
+            PlaybackSettings playbackSettings = BuildPlaybackSettings();
+
+            if (session is null || !CanNavigatePlayback(session, playbackSettings))
+            {
+                return;
+            }
+
+            if (_macroPlaybackService.IsPaused)
+            {
+                await _macroPlaybackService.WaitForPlaybackNavigationReadyAsync();
+            }
+
+            int totalPlaybackEvents = GetTotalPlaybackEventCount(session, playbackSettings);
+
+            if (stepDirection <= 0)
+            {
+                StepPlaybackCursorBack(session);
+
+                if (_macroPlaybackService.IsPaused)
+                {
+                    await _macroPlaybackService.SeekPlaybackCursorAsync(_playedEventCount);
+                }
+
+                return;
+            }
+
+            int targetLogicalIndex = _playedEventCount;
+
+            if (targetLogicalIndex >= totalPlaybackEvents)
+            {
+                return;
+            }
+
+            int sourceEventIndex = targetLogicalIndex % session.Events.Count;
+            await _macroPlaybackService.PlayEventAtAsync(
+                session,
+                playbackSettings,
+                sourceEventIndex);
+
+            _playedEventCount = targetLogicalIndex + 1;
+            _playedDurationMs = CalculatePlayedDurationMs(session, targetLogicalIndex);
+            _activePlaybackSourceIndex = sourceEventIndex;
+
+            if (_macroPlaybackService.IsPaused)
+            {
+                await _macroPlaybackService.SeekPlaybackCursorAsync(_playedEventCount);
+            }
+
+            RefreshUiState();
         }
-
-        int targetLogicalIndex = _playedEventCount;
-
-        if (targetLogicalIndex >= totalPlaybackEvents)
+        finally
         {
-            return;
+            Interlocked.Exchange(ref _playbackNavigationInProgress, 0);
         }
-
-        int sourceEventIndex = targetLogicalIndex % session.Events.Count;
-        await _macroPlaybackService.PlayEventAtAsync(
-            session,
-            playbackSettings,
-            sourceEventIndex);
-
-        _playedEventCount = targetLogicalIndex + 1;
-        _playedDurationMs = CalculatePlayedDurationMs(session, targetLogicalIndex);
-        _activePlaybackSourceIndex = sourceEventIndex;
-        RefreshUiState();
     }
 
     private void StepPlaybackCursorBack(MacroSession session)
@@ -1454,10 +1507,13 @@ public partial class MainForm : Form
         }
 
         bool shouldFollowIdleDebugCursor = _applicationStateService.IsState(AppState.Idle);
+        bool shouldFollowPausedDebugCursor = _applicationStateService.IsState(AppState.Paused);
         bool shouldFollowSimulationPlayback = playbackSettings.SimulationMode
-            && _applicationStateService.IsAny(AppState.Playing, AppState.Paused);
+            && _applicationStateService.IsState(AppState.Playing);
 
-        if (!shouldFollowIdleDebugCursor && !shouldFollowSimulationPlayback)
+        if (!shouldFollowIdleDebugCursor
+            && !shouldFollowPausedDebugCursor
+            && !shouldFollowSimulationPlayback)
         {
             return;
         }
@@ -2061,8 +2117,7 @@ public partial class MainForm : Form
             && session is { Events.Count: > 0 }
             && !_macroRecorderService.IsRecording
             && !_macroPlaybackService.IsPlaying
-            && !_macroPlaybackService.IsPaused
-            && _applicationStateService.IsState(AppState.Idle)
+            && _applicationStateService.IsAny(AppState.Idle, AppState.Paused)
             && GetTotalPlaybackEventCount(session, playbackSettings) > 0;
     }
 

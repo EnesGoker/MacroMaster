@@ -24,6 +24,12 @@ public interface IMacroPlaybackService
         int eventIndex,
         CancellationToken cancellationToken = default);
 
+    Task WaitForPlaybackNavigationReadyAsync(CancellationToken cancellationToken = default);
+
+    Task SeekPlaybackCursorAsync(
+        int logicalEventIndex,
+        CancellationToken cancellationToken = default);
+
     event Action? PlaybackStarted;
     event Action? PlaybackPaused;
     event Action? PlaybackResumed;
