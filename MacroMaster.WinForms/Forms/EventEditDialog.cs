@@ -22,7 +22,7 @@ internal sealed class EventEditDialog : Form
             || macroEvent.X.HasValue
             || macroEvent.Y.HasValue;
 
-        Text = $"Olay #{eventIndex + 1:000} Duzenle";
+        Text = $"Olay #{eventIndex + 1:000} Düzenle";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -32,10 +32,10 @@ internal sealed class EventEditDialog : Form
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        ClientSize = new Size(DesignTokens.Scale(420), DesignTokens.Scale(238));
+        ClientSize = new Size(DesignTokens.Scale(420), DesignTokens.Scale(264));
         MinimumSize = Size;
 
-        _cancelButton = CreateDialogButton("Iptal", ThemedDialogButtonStyle.Secondary);
+        _cancelButton = CreateDialogButton("İptal", ThemedDialogButtonStyle.Secondary);
         BuildLayout(macroEvent);
     }
 
@@ -52,14 +52,14 @@ internal sealed class EventEditDialog : Form
             Padding = new Padding(DesignTokens.Scale(18)),
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(120)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(132)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(52)));
 
         var titleLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Olay ayarlarini duzenle",
+            Text = "Olay ayarlarını düzenle",
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = Color.Transparent,
@@ -78,9 +78,9 @@ internal sealed class EventEditDialog : Form
         };
         fieldsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(136)));
         fieldsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
-        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
-        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(40)));
+        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        fieldsLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
 
         ConfigureNumericInput(_delayNumericInput, 0, 600000, macroEvent.DelayMs);
         ConfigureNumericInput(_xNumericInput, -100000, 100000, macroEvent.X ?? 0);
@@ -90,9 +90,9 @@ internal sealed class EventEditDialog : Form
 
         fieldsLayoutPanel.Controls.Add(CreateFieldLabel("Gecikme (ms)"), 0, 0);
         fieldsLayoutPanel.Controls.Add(_delayNumericInput, 1, 0);
-        fieldsLayoutPanel.Controls.Add(CreateFieldLabel("X koordinati"), 0, 1);
+        fieldsLayoutPanel.Controls.Add(CreateFieldLabel("X koordinatı"), 0, 1);
         fieldsLayoutPanel.Controls.Add(_xNumericInput, 1, 1);
-        fieldsLayoutPanel.Controls.Add(CreateFieldLabel("Y koordinati"), 0, 2);
+        fieldsLayoutPanel.Controls.Add(CreateFieldLabel("Y koordinatı"), 0, 2);
         fieldsLayoutPanel.Controls.Add(_yNumericInput, 1, 2);
 
         var buttonLayoutPanel = new FlowLayoutPanel

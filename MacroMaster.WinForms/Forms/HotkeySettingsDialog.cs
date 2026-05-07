@@ -8,7 +8,7 @@ namespace MacroMaster.WinForms.Forms;
 
 public sealed class HotkeySettingsDialog : Form
 {
-    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(720), DesignTokens.Scale(392));
+    private static readonly Size MinimumClientSize = new(DesignTokens.Scale(720), DesignTokens.Scale(430));
 
     private static readonly IReadOnlyList<HotkeyModifierOption> ModifierOptions = CreateModifierOptions();
     private static readonly IReadOnlyList<HotkeyKeyOption> KeyOptions = CreateKeyOptions();
@@ -31,7 +31,7 @@ public sealed class HotkeySettingsDialog : Form
 
         SuspendLayout();
 
-        Text = "Kisayol Ayarlari";
+        Text = "Kısayol Ayarları";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -46,7 +46,7 @@ public sealed class HotkeySettingsDialog : Form
         ClientSize = MinimumClientSize;
         MinimumSize = SizeFromClientSize(ClientSize);
 
-        _cancelButton = CreateDialogButton("Iptal", ThemedDialogButtonStyle.Secondary);
+        _cancelButton = CreateDialogButton("İptal", ThemedDialogButtonStyle.Secondary);
 
         PopulateSelect(_recordModifierSelect, ModifierOptions.Select(option => option.DisplayText));
         PopulateSelect(_playbackModifierSelect, ModifierOptions.Select(option => option.DisplayText));
@@ -142,7 +142,7 @@ public sealed class HotkeySettingsDialog : Form
             new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Kisayol Ayarlari",
+                Text = "Kısayol Ayarları",
                 Font = DesignTokens.FontUiBold,
                 ForeColor = DesignTokens.TextPrimary,
                 BackColor = Color.Transparent,
@@ -155,7 +155,7 @@ public sealed class HotkeySettingsDialog : Form
             new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Global kisayollari secin ve kaydedin.",
+                Text = "Global kısayolları seçin ve kaydedin.",
                 Font = DesignTokens.FontUiSmall,
                 ForeColor = DesignTokens.TextSecondary,
                 BackColor = Color.Transparent,
@@ -208,13 +208,13 @@ public sealed class HotkeySettingsDialog : Form
         AddHotkeyRow(
             settingsTableLayoutPanel,
             1,
-            "Kayit Degistir",
+            "Kaydı Başlat/Durdur",
             _recordModifierSelect,
             _recordKeySelect);
         AddHotkeyRow(
             settingsTableLayoutPanel,
             2,
-            "Oynatma Degistir",
+            "Oynat/Duraklat",
             _playbackModifierSelect,
             _playbackKeySelect);
         AddHotkeyRow(
@@ -226,7 +226,7 @@ public sealed class HotkeySettingsDialog : Form
         AddHotkeyRow(
             settingsTableLayoutPanel,
             4,
-            "Kisayol Ayarlari",
+            "Kısayolları Aç",
             _hotkeySettingsModifierSelect,
             _hotkeySettingsKeySelect);
 
@@ -235,7 +235,7 @@ public sealed class HotkeySettingsDialog : Form
 
     private TableLayoutPanel CreateButtonFooterPanel()
     {
-        var resetDefaultsButton = CreateDialogButton("Varsayilan", ThemedDialogButtonStyle.Secondary);
+        var resetDefaultsButton = CreateDialogButton("Varsayılan", ThemedDialogButtonStyle.Secondary);
         var applyButton = CreateDialogButton("Kaydet", ThemedDialogButtonStyle.Primary);
 
         _cancelButton.DialogResult = DialogResult.Cancel;
@@ -279,9 +279,9 @@ public sealed class HotkeySettingsDialog : Form
     {
         tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(32)));
 
-        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Islem"), 0, 0);
-        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Degistirici"), 1, 0);
-        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Tus"), 2, 0);
+        tableLayoutPanel.Controls.Add(CreateHeaderLabel("İşlem"), 0, 0);
+        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Değiştirici"), 1, 0);
+        tableLayoutPanel.Controls.Add(CreateHeaderLabel("Tuş"), 2, 0);
     }
 
     private static void AddHotkeyRow(
@@ -324,7 +324,7 @@ public sealed class HotkeySettingsDialog : Form
         try
         {
             HotkeySettings selectedHotkeySettings = BuildHotkeySettings();
-            HotkeySettingsValidator.Validate(selectedHotkeySettings, "Kisayol ayarlari penceresi uygulama");
+            HotkeySettingsValidator.Validate(selectedHotkeySettings, "Kısayol ayarları penceresi uygulama");
             SelectedHotkeySettings = selectedHotkeySettings;
             DialogResult = DialogResult.OK;
             Close();
@@ -429,7 +429,7 @@ public sealed class HotkeySettingsDialog : Form
         int selectedIndex = ModifierOptions
             .Select((option, index) => new { option, index })
             .FirstOrDefault(pair => pair.option.Modifiers == modifiers)?.index
-            ?? throw new InvalidOperationException("Kisayol degistiricisi desteklenmiyor.");
+            ?? throw new InvalidOperationException("Kısayol değiştiricisi desteklenmiyor.");
 
         select.SelectedIndex = selectedIndex;
     }
@@ -442,7 +442,7 @@ public sealed class HotkeySettingsDialog : Form
             .Select((option, index) => new { option, index })
             .FirstOrDefault(pair => pair.option.VirtualKeyCode == virtualKeyCode)?.index
             ?? throw new InvalidOperationException(
-                $"Kisayol duzenleyici {virtualKeyCode} sanal tus kodunu desteklemiyor.");
+                $"Kısayol düzenleyici {virtualKeyCode} sanal tuş kodunu desteklemiyor.");
 
         select.SelectedIndex = selectedIndex;
     }
@@ -451,14 +451,14 @@ public sealed class HotkeySettingsDialog : Form
     {
         return select.SelectedIndex >= 0 && select.SelectedIndex < ModifierOptions.Count
             ? ModifierOptions[select.SelectedIndex].Modifiers
-            : throw new InvalidOperationException("Bir kisayol degistiricisi secilmelidir.");
+            : throw new InvalidOperationException("Bir kısayol değiştiricisi seçilmelidir.");
     }
 
     private static int GetSelectedKey(ModernSelect select)
     {
         return select.SelectedIndex >= 0 && select.SelectedIndex < KeyOptions.Count
             ? KeyOptions[select.SelectedIndex].VirtualKeyCode
-            : throw new InvalidOperationException("Bir kisayol tusu secilmelidir.");
+            : throw new InvalidOperationException("Bir kısayol tuşu seçilmelidir.");
     }
 
     private static List<HotkeyModifierOption> CreateModifierOptions()
