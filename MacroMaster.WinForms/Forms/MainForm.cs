@@ -12,6 +12,8 @@ namespace MacroMaster.WinForms.Forms;
 
 public partial class MainForm : Form
 {
+    private const int PlaybackUiRefreshIntervalMs = 33;
+
     private readonly IApplicationStateService _applicationStateService;
     private readonly IMacroRecorderService _macroRecorderService;
     private readonly IMacroPlaybackService _macroPlaybackService;
@@ -44,7 +46,9 @@ public partial class MainForm : Form
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
     private System.Windows.Forms.Timer? _recordingEventRefreshTimer;
+    private System.Windows.Forms.Timer? _playbackUiRefreshTimer;
     private bool _recordingEventRefreshPending;
+    private bool _playbackUiRefreshPending;
 
     public MainForm(
         IApplicationStateService applicationStateService,
@@ -613,7 +617,7 @@ public partial class MainForm : Form
         _activePlaybackSourceIndex = ResolveCurrentPlaybackSourceIndex();
         _playedEventCount++;
         _playedDurationMs += Math.Max(0, macroEvent.DelayMs);
-        RequestUiRefresh();
+        RequestPlaybackUiRefresh();
     }
 
     private int? ResolveCurrentPlaybackSourceIndex()
@@ -1621,6 +1625,34 @@ public partial class MainForm : Form
         RefreshUiState();
     }
 
+    private void RequestPlaybackUiRefresh()
+    {
+        if (!IsHandleCreated || IsDisposed || _shutdownInProgress)
+        {
+            return;
+        }
+
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action(RequestPlaybackUiRefresh));
+            return;
+        }
+
+        _playbackUiRefreshPending = true;
+
+        if (_playbackUiRefreshTimer is null)
+        {
+            _playbackUiRefreshPending = false;
+            RefreshUiState();
+            return;
+        }
+
+        if (!_playbackUiRefreshTimer.Enabled)
+        {
+            _playbackUiRefreshTimer.Start();
+        }
+    }
+
     private void RequestRecordingEventRefresh()
     {
         if (!IsHandleCreated || IsDisposed || _shutdownInProgress)
@@ -1665,6 +1697,22 @@ public partial class MainForm : Form
         RefreshUiState();
     }
 
+    private void PlaybackUiRefreshTimer_Tick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _playbackUiRefreshTimer?.Stop();
+
+        if (!_playbackUiRefreshPending || _shutdownInProgress || IsDisposed)
+        {
+            return;
+        }
+
+        _playbackUiRefreshPending = false;
+        RefreshUiState();
+    }
+
     private void InitializeDynamicControls()
     {
         BuildResponsiveHostLayout();
@@ -1674,6 +1722,12 @@ public partial class MainForm : Form
             Interval = 50
         };
         _recordingEventRefreshTimer.Tick += RecordingEventRefreshTimer_Tick;
+
+        _playbackUiRefreshTimer = new System.Windows.Forms.Timer(components)
+        {
+            Interval = PlaybackUiRefreshIntervalMs
+        };
+        _playbackUiRefreshTimer.Tick += PlaybackUiRefreshTimer_Tick;
 
         _toolbarControl.Name = "toolbarControl";
         _toolbarControl.Dock = DockStyle.Fill;

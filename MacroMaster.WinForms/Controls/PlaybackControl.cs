@@ -1,6 +1,5 @@
 using MacroMaster.WinForms.Theme;
 using System.Drawing.Drawing2D;
-using System.Globalization;
 
 namespace MacroMaster.WinForms.Controls;
 
@@ -22,11 +21,10 @@ public readonly record struct PlaybackControlState(
 internal sealed class PlaybackControl : UserControl
 {
     private readonly PlaybackProgressBar _progressBar;
-    private readonly Label _elapsedTimeLabel;
-    private readonly Label _remainingTimeLabel;
-    private readonly Label _statusLabel;
-    private readonly Label _eventCounterLabel;
-    private readonly Label _settingsLabel;
+    private readonly MetricCell _statusMetricCell;
+    private readonly MetricCell _eventCounterMetricCell;
+    private readonly MetricCell _elapsedTimeMetricCell;
+    private readonly MetricCell _remainingTimeMetricCell;
     private readonly IconButton _skipBackButton;
     private readonly IconButton _stepBackButton;
     private readonly IconButton _playbackButton;
@@ -54,19 +52,10 @@ internal sealed class PlaybackControl : UserControl
         Font = DesignTokens.FontUiNormal;
 
         _progressBar = new PlaybackProgressBar();
-        _elapsedTimeLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
-        _remainingTimeLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
-        _statusLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Font = DesignTokens.FontUiBold,
-            ForeColor = Color.FromArgb(52, 199, 89), // green — Hazır
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true
-        };
-        _eventCounterLabel = CreateTimeLabel(ContentAlignment.MiddleLeft);
-        _settingsLabel = CreateMetaLabel(ContentAlignment.MiddleRight);
+        _statusMetricCell = new MetricCell("Durum");
+        _eventCounterMetricCell = new MetricCell("Mevcut Olay");
+        _elapsedTimeMetricCell = new MetricCell("Geçen Süre");
+        _remainingTimeMetricCell = new MetricCell("Kalan Süre");
         _skipBackButton = new IconButton(IconButtonKind.SkipBack);
         _stepBackButton = new IconButton(IconButtonKind.StepBack);
         _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSizeOverride = DesignTokens.Scale(52) };
@@ -92,14 +81,13 @@ internal sealed class PlaybackControl : UserControl
             safeTotalDurationMs);
 
         _progressBar.Progress = progress;
-        _elapsedTimeLabel.Text = FormatDuration(safePlayedDurationMs);
-        _remainingTimeLabel.Text = FormatDuration(Math.Max(0, safeTotalDurationMs - safePlayedDurationMs));
-        _statusLabel.Text = state.StatusText;
-        _statusLabel.ForeColor = state.StatusText is "Hazır" or "Hazir" or "Bos" or "Boş"
+        _elapsedTimeMetricCell.ValueText = FormatDuration(safePlayedDurationMs);
+        _remainingTimeMetricCell.ValueText = FormatDuration(Math.Max(0, safeTotalDurationMs - safePlayedDurationMs));
+        _statusMetricCell.ValueText = state.StatusText;
+        _statusMetricCell.ValueColor = state.StatusText is "Hazır" or "Hazir" or "Bos" or "Boş"
             ? Color.FromArgb(52, 199, 89)
             : DesignTokens.TextPrimary;
-        _eventCounterLabel.Text = FormattableString.Invariant($"{safePlayedEvents} / {safeTotalEvents}");
-        _settingsLabel.Text = FormatSettingsSummary(state);
+        _eventCounterMetricCell.ValueText = FormattableString.Invariant($"{safePlayedEvents} / {safeTotalEvents}");
 
         _playbackButton.Kind = state.PlaybackButtonState switch
         {
@@ -151,17 +139,16 @@ internal sealed class PlaybackControl : UserControl
                 DesignTokens.Scale(8))
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(36))); // status row
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveMetricRowHeight())); // status row
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28))); // progress bar
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(20))); // progress % label
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));                    // buttons
 
-        // Row 0: Status info — Durum | Mevcut Olay | Geçen Süre | Kalan Süre
         var statusPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 4,
-            RowCount = 2,
+            RowCount = 1,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = Padding.Empty
@@ -170,22 +157,12 @@ internal sealed class PlaybackControl : UserControl
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
-        statusPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(16)));
         statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        var captionDurum = CreateCaptionLabel("Durum");
-        var captionOlay = CreateCaptionLabel("Mevcut Olay");
-        var captionGecen = CreateCaptionLabel("Geçen Süre");
-        var captionKalan = CreateCaptionLabel("Kalan Süre");
-
-        statusPanel.Controls.Add(captionDurum, 0, 0);
-        statusPanel.Controls.Add(captionOlay, 1, 0);
-        statusPanel.Controls.Add(captionGecen, 2, 0);
-        statusPanel.Controls.Add(captionKalan, 3, 0);
-        statusPanel.Controls.Add(_statusLabel, 0, 1);
-        statusPanel.Controls.Add(_eventCounterLabel, 1, 1);
-        statusPanel.Controls.Add(_elapsedTimeLabel, 2, 1);
-        statusPanel.Controls.Add(_remainingTimeLabel, 3, 1);
+        statusPanel.Controls.Add(_statusMetricCell, 0, 0);
+        statusPanel.Controls.Add(_eventCounterMetricCell, 1, 0);
+        statusPanel.Controls.Add(_elapsedTimeMetricCell, 2, 0);
+        statusPanel.Controls.Add(_remainingTimeMetricCell, 3, 0);
 
         // Row 1: Progress bar
         // Row 2: Progress % (right-aligned)
@@ -233,19 +210,6 @@ internal sealed class PlaybackControl : UserControl
         Controls.Add(rootLayoutPanel);
     }
 
-    private static Label CreateCaptionLabel(string text)
-    {
-        return new Label
-        {
-            Dock = DockStyle.Fill,
-            Text = text,
-            Font = DesignTokens.FontUiSmall,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-    }
-
     private void WireEvents()
     {
         _skipBackButton.Click += (_, _) => SkipBackClicked?.Invoke(this, EventArgs.Empty);
@@ -271,31 +235,6 @@ internal sealed class PlaybackControl : UserControl
             : Math.Clamp((double)playedEventCount / totalEventCount, 0, 1);
     }
 
-    private static Label CreateTimeLabel(ContentAlignment alignment)
-    {
-        return new Label
-        {
-            Dock = DockStyle.Fill,
-            Font = DesignTokens.FontUiBold,
-            ForeColor = DesignTokens.TextPrimary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = alignment
-        };
-    }
-
-    private static Label CreateMetaLabel(ContentAlignment alignment)
-    {
-        return new Label
-        {
-            Dock = DockStyle.Fill,
-            Font = DesignTokens.FontUiNormal,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = alignment,
-            AutoEllipsis = true
-        };
-    }
-
     private static string FormatDuration(int milliseconds)
     {
         TimeSpan timeSpan = TimeSpan.FromMilliseconds(Math.Max(0, milliseconds));
@@ -304,20 +243,134 @@ internal sealed class PlaybackControl : UserControl
             : FormattableString.Invariant($"{timeSpan.Minutes:00}:{timeSpan.Seconds:00}");
     }
 
-    private static string FormatSettingsSummary(PlaybackControlState state)
+    private static int ResolveMetricRowHeight()
     {
-        string repeatText = state.LoopIndefinitely
-            ? "sonsuz"
-            : state.RepeatCount <= 1
-                ? "1 tekrar"
-                : string.Create(CultureInfo.InvariantCulture, $"{state.RepeatCount} tekrar");
-        string delayText = state.InitialDelayMs > 0
-            ? string.Create(CultureInfo.InvariantCulture, $" | {state.InitialDelayMs} ms")
-            : string.Empty;
+        int captionHeight = TextRenderer.MeasureText(
+            "Mevcut Olay",
+            DesignTokens.FontUiSmall,
+            Size.Empty,
+            TextFormatFlags.NoPadding).Height;
+        int valueHeight = TextRenderer.MeasureText(
+            "Simülasyon",
+            DesignTokens.FontUiBold,
+            Size.Empty,
+            TextFormatFlags.NoPadding).Height;
 
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{state.SpeedMultiplier:0.##}x | {repeatText}{delayText}");
+        return Math.Max(
+            DesignTokens.Scale(48),
+            captionHeight + valueHeight + DesignTokens.Scale(10));
+    }
+
+    private sealed class MetricCell : Control
+    {
+        private readonly string _caption;
+        private string _valueText = string.Empty;
+        private Color _valueColor = DesignTokens.TextPrimary;
+
+        public MetricCell(string caption)
+        {
+            _caption = caption;
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+
+            Dock = DockStyle.Fill;
+            Margin = Padding.Empty;
+            BackColor = DesignTokens.Surface;
+            ForeColor = DesignTokens.TextPrimary;
+            Font = DesignTokens.FontUiNormal;
+        }
+
+        public string ValueText
+        {
+            get => _valueText;
+            set
+            {
+                string normalized = value ?? string.Empty;
+                if (string.Equals(_valueText, normalized, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                _valueText = normalized;
+                Invalidate();
+            }
+        }
+
+        public Color ValueColor
+        {
+            get => _valueColor;
+            set
+            {
+                if (_valueColor.ToArgb() == value.ToArgb())
+                {
+                    return;
+                }
+
+                _valueColor = value;
+                Invalidate();
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            e.Graphics.Clear(DesignTokens.Surface);
+
+            int captionHeight = TextRenderer.MeasureText(
+                e.Graphics,
+                _caption,
+                DesignTokens.FontUiSmall,
+                Size.Empty,
+                TextFormatFlags.NoPadding).Height;
+            int valueHeight = TextRenderer.MeasureText(
+                e.Graphics,
+                ValueText,
+                DesignTokens.FontUiBold,
+                Size.Empty,
+                TextFormatFlags.NoPadding).Height;
+
+            int gap = DesignTokens.Scale(2);
+            int totalHeight = captionHeight + gap + valueHeight;
+            int top = Math.Max(0, (Height - totalHeight) / 2);
+
+            var captionBounds = new Rectangle(
+                0,
+                top,
+                Width,
+                captionHeight + DesignTokens.Scale(2));
+            var valueBounds = new Rectangle(
+                0,
+                captionBounds.Bottom + gap,
+                Width,
+                Math.Max(0, Height - captionBounds.Bottom - gap));
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                _caption,
+                DesignTokens.FontUiSmall,
+                captionBounds,
+                DesignTokens.TextSecondary,
+                TextFormatFlags.Left |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPrefix |
+                TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(
+                e.Graphics,
+                ValueText,
+                DesignTokens.FontUiBold,
+                valueBounds,
+                ValueColor,
+                TextFormatFlags.Left |
+                TextFormatFlags.Top |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPrefix |
+                TextFormatFlags.NoPadding);
+        }
     }
 
     private sealed class PlaybackProgressBar : Control
