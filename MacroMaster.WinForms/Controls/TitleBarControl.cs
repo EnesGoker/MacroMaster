@@ -6,6 +6,7 @@ namespace MacroMaster.WinForms.Controls;
 internal sealed class TitleBarControl : UserControl
 {
     private readonly Label _appNameLabel;
+    private readonly LogoPanel _logoPanel;
     private readonly StatusPillControl _statusPill;
     private readonly CaptionButton _minimizeButton;
     private readonly CaptionButton _maximizeButton;
@@ -60,7 +61,7 @@ internal sealed class TitleBarControl : UserControl
         _rootLayoutPanel.ColumnStyles.Add(_closeColumnStyle);
         _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(2)));
 
-        var logoPanel = new LogoPanel
+        _logoPanel = new LogoPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.Background,
@@ -106,7 +107,7 @@ internal sealed class TitleBarControl : UserControl
         _maximizeButton.Click += (_, _) => MaximizeRestoreRequested?.Invoke(this, EventArgs.Empty);
         _closeButton.Click += (_, _) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
-        _rootLayoutPanel.Controls.Add(logoPanel, 0, 0);
+        _rootLayoutPanel.Controls.Add(_logoPanel, 0, 0);
         _rootLayoutPanel.Controls.Add(textLayoutPanel, 1, 0);
         _rootLayoutPanel.Controls.Add(_statusPill, 2, 0);
         _rootLayoutPanel.Controls.Add(_minimizeButton, 3, 0);
@@ -131,20 +132,50 @@ internal sealed class TitleBarControl : UserControl
         _minimizeColumnStyle.Width = profile.Chrome.TitleBarButtonWidth;
         _maximizeColumnStyle.Width = profile.Chrome.TitleBarButtonWidth;
         _closeColumnStyle.Width = profile.Chrome.TitleBarButtonWidth;
+        _logoPanel.Margin = profile.Chrome.TitleBarLogoMargin;
+        _logoPanel.ApplyLayoutMetrics(
+            profile.Chrome.TitleBarIconSize,
+            profile.Chrome.TitleBarIconInset,
+            profile.Chrome.TitleBarIconCornerRadius);
         _statusPill.Margin = profile.Chrome.TitleBarStatusMargin;
+        _statusPill.ApplyLayoutMetrics(
+            profile.Chrome.TitleBarStatusCornerRadius,
+            profile.Chrome.TitleBarStatusDotSize,
+            profile.Chrome.TitleBarStatusDotInset,
+            profile.Chrome.TitleBarStatusGlowInset,
+            profile.Chrome.TitleBarStatusTextGap,
+            profile.Chrome.TitleBarStatusTextRightInset);
 
         _minimizeButton.ApplyLayoutMetrics(
             profile.Chrome.TitleBarButtonWidth,
             profile.Chrome.TitleBarButtonHeight,
-            profile.Chrome.TitleBarButtonMargin);
+            profile.Chrome.TitleBarButtonMargin,
+            profile.Chrome.TitleBarButtonCornerRadius,
+            profile.Chrome.TitleBarButtonIconSize,
+            profile.Chrome.TitleBarButtonHorizontalInset,
+            profile.Chrome.TitleBarButtonTopInset,
+            profile.Chrome.TitleBarButtonBottomInset,
+            profile.Chrome.TitleBarButtonIconPenWidth);
         _maximizeButton.ApplyLayoutMetrics(
             profile.Chrome.TitleBarButtonWidth,
             profile.Chrome.TitleBarButtonHeight,
-            profile.Chrome.TitleBarButtonMargin);
+            profile.Chrome.TitleBarButtonMargin,
+            profile.Chrome.TitleBarButtonCornerRadius,
+            profile.Chrome.TitleBarButtonIconSize,
+            profile.Chrome.TitleBarButtonHorizontalInset,
+            profile.Chrome.TitleBarButtonTopInset,
+            profile.Chrome.TitleBarButtonBottomInset,
+            profile.Chrome.TitleBarButtonIconPenWidth);
         _closeButton.ApplyLayoutMetrics(
             profile.Chrome.TitleBarButtonWidth,
             profile.Chrome.TitleBarButtonHeight,
-            profile.Chrome.TitleBarButtonMargin);
+            profile.Chrome.TitleBarButtonMargin,
+            profile.Chrome.TitleBarButtonCornerRadius,
+            profile.Chrome.TitleBarButtonIconSize,
+            profile.Chrome.TitleBarButtonHorizontalInset,
+            profile.Chrome.TitleBarButtonTopInset,
+            profile.Chrome.TitleBarButtonBottomInset,
+            profile.Chrome.TitleBarButtonIconPenWidth);
 
         PerformLayout();
     }
@@ -241,6 +272,12 @@ internal sealed class TitleBarControl : UserControl
     {
         private string _statusText = "Hazir";
         private Color _dotColor = DesignTokens.AccentGreen;
+        private int _cornerRadius = DesignTokens.Scale(8);
+        private int _dotSize = DesignTokens.TitleBarStatusDotSize;
+        private int _dotInset = DesignTokens.Scale(12);
+        private int _glowInset = DesignTokens.Scale(2);
+        private int _textGap = DesignTokens.Scale(8);
+        private int _textRightInset = DesignTokens.Scale(16);
 
         public StatusPillControl()
         {
@@ -265,6 +302,23 @@ internal sealed class TitleBarControl : UserControl
             Invalidate();
         }
 
+        public void ApplyLayoutMetrics(
+            int cornerRadius,
+            int dotSize,
+            int dotInset,
+            int glowInset,
+            int textGap,
+            int textRightInset)
+        {
+            _cornerRadius = cornerRadius;
+            _dotSize = dotSize;
+            _dotInset = dotInset;
+            _glowInset = glowInset;
+            _textGap = textGap;
+            _textRightInset = textRightInset;
+            Invalidate();
+        }
+
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             e.Graphics.Clear(Parent?.BackColor == Color.Transparent
@@ -284,29 +338,29 @@ internal sealed class TitleBarControl : UserControl
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            using var path = CreateRoundedRectanglePath(bounds, DesignTokens.Scale(8));
+            using var path = CreateRoundedRectanglePath(bounds, _cornerRadius);
             using var fillBrush = new SolidBrush(DesignTokens.SurfaceInset);
             using var borderPen = new Pen(DesignTokens.BorderSoft);
 
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
 
-            int dotSize = DesignTokens.TitleBarStatusDotSize;
-            int dotX = bounds.Left + DesignTokens.Scale(12);
+            int dotSize = _dotSize;
+            int dotX = bounds.Left + _dotInset;
             int dotY = bounds.Top + (bounds.Height - dotSize) / 2;
             var dotBounds = new Rectangle(dotX, dotY, dotSize, dotSize);
 
             using var glowBrush = new SolidBrush(Color.FromArgb(55, _dotColor));
             using var dotBrush = new SolidBrush(_dotColor);
-            e.Graphics.FillEllipse(glowBrush, Rectangle.Inflate(dotBounds, DesignTokens.Scale(2), DesignTokens.Scale(2)));
+            e.Graphics.FillEllipse(glowBrush, Rectangle.Inflate(dotBounds, _glowInset, _glowInset));
             e.Graphics.FillEllipse(dotBrush, dotBounds);
 
             e.Graphics.SmoothingMode = SmoothingMode.None;
 
             var textBounds = new Rectangle(
-                dotBounds.Right + DesignTokens.Scale(8),
+                dotBounds.Right + _textGap,
                 bounds.Top,
-                Math.Max(0, bounds.Right - dotBounds.Right - DesignTokens.Scale(16)),
+                Math.Max(0, bounds.Right - dotBounds.Right - _textRightInset),
                 bounds.Height);
 
             TextRenderer.DrawText(
@@ -324,6 +378,10 @@ internal sealed class TitleBarControl : UserControl
 
     private sealed class LogoPanel : Control
     {
+        private int _iconSize = DesignTokens.TitleBarIconSize;
+        private int _iconInset = DesignTokens.Scale(4);
+        private int _cornerRadius = DesignTokens.Scale(7);
+
         public LogoPanel()
         {
             SetStyle(
@@ -332,6 +390,17 @@ internal sealed class TitleBarControl : UserControl
                 ControlStyles.ResizeRedraw |
                 ControlStyles.UserPaint,
                 true);
+        }
+
+        public void ApplyLayoutMetrics(
+            int iconSize,
+            int iconInset,
+            int cornerRadius)
+        {
+            _iconSize = iconSize;
+            _iconInset = iconInset;
+            _cornerRadius = cornerRadius;
+            Invalidate();
         }
 
         protected override void OnPaintBackground(PaintEventArgs pevent)
@@ -344,7 +413,7 @@ internal sealed class TitleBarControl : UserControl
             base.OnPaint(e);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            int size = Math.Min(DesignTokens.TitleBarIconSize, Math.Min(Width, Height) - DesignTokens.Scale(4));
+            int size = Math.Min(_iconSize, Math.Min(Width, Height) - _iconInset);
             if (size <= 0)
             {
                 return;
@@ -356,7 +425,7 @@ internal sealed class TitleBarControl : UserControl
                 size,
                 size);
 
-            using var path = CreateRoundedRectanglePath(bounds, DesignTokens.Scale(7));
+            using var path = CreateRoundedRectanglePath(bounds, _cornerRadius);
             using var fillBrush = new SolidBrush(Color.FromArgb(28, 67, 138));
             using var borderPen = new Pen(Color.FromArgb(160, DesignTokens.Accent));
             using var textBrush = new SolidBrush(DesignTokens.Accent);
@@ -377,6 +446,12 @@ internal sealed class TitleBarControl : UserControl
     {
         private bool _isPressed;
         private CaptionButtonKind _kind;
+        private int _cornerRadius = DesignTokens.Scale(8);
+        private int _iconSize = DesignTokens.Scale(12);
+        private int _horizontalInset = DesignTokens.Scale(3);
+        private int _topInset = DesignTokens.Scale(1);
+        private int _bottomInset = DesignTokens.Scale(5);
+        private float _iconPenWidth = Math.Max(1.6f, DesignTokens.DensityScale * 1.35f);
 
         public CaptionButton(CaptionButtonKind kind)
         {
@@ -405,10 +480,22 @@ internal sealed class TitleBarControl : UserControl
         public void ApplyLayoutMetrics(
             int width,
             int height,
-            Padding margin)
+            Padding margin,
+            int cornerRadius,
+            int iconSize,
+            int horizontalInset,
+            int topInset,
+            int bottomInset,
+            float iconPenWidth)
         {
             MinimumSize = new Size(width, height);
             Margin = margin;
+            _cornerRadius = cornerRadius;
+            _iconSize = iconSize;
+            _horizontalInset = horizontalInset;
+            _topInset = topInset;
+            _bottomInset = bottomInset;
+            _iconPenWidth = iconPenWidth;
             Invalidate();
         }
 
@@ -459,19 +546,16 @@ internal sealed class TitleBarControl : UserControl
                 ? DesignTokens.TextPrimary
                 : DesignTokens.TextMuted;
 
-            int horizontalInset = DesignTokens.Scale(3);
-            int topInset = DesignTokens.Scale(1);
-            int bottomInset = DesignTokens.Scale(5);
             Rectangle buttonBounds = new(
-                horizontalInset,
-                topInset,
-                Math.Max(0, Width - (horizontalInset * 2)),
-                Math.Max(0, Height - topInset - bottomInset));
-            using var path = CreateRoundedRectanglePath(buttonBounds, DesignTokens.Scale(8));
+                _horizontalInset,
+                _topInset,
+                Math.Max(0, Width - (_horizontalInset * 2)),
+                Math.Max(0, Height - _topInset - _bottomInset));
+            using var path = CreateRoundedRectanglePath(buttonBounds, _cornerRadius);
             using var fillBrush = new SolidBrush(fill);
             pevent.Graphics.FillPath(fillBrush, path);
 
-            using var iconPen = new Pen(icon, Math.Max(1.6f, DesignTokens.DensityScale * 1.35f))
+            using var iconPen = new Pen(icon, _iconPenWidth)
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round
@@ -506,7 +590,7 @@ internal sealed class TitleBarControl : UserControl
 
         private void DrawIcon(Graphics graphics, Pen pen)
         {
-            int iconSize = DesignTokens.Scale(12);
+            int iconSize = _iconSize;
             int centerX = Width / 2;
             int centerY = Height / 2;
             int left = centerX - iconSize / 2;
