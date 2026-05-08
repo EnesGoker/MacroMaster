@@ -80,6 +80,11 @@ internal sealed class SessionSummaryControl : UserControl
             : DesignTokens.AccentGreen;
     }
 
+    public void UpdatePreviewActiveSourceEventIndex(int? activeSourceEventIndex)
+    {
+        _previewMapControl.UpdateActiveSourceEventIndex(activeSourceEventIndex);
+    }
+
     private void BuildLayout()
     {
         var rootLayoutPanel = new TableLayoutPanel

@@ -1572,6 +1572,20 @@ public partial class MainForm : Form
             activeSourceEventIndex);
     }
 
+    private void UpdateActivePreviewMapCursor(int? activeSourceEventIndex)
+    {
+        _sessionSummaryControl.UpdatePreviewActiveSourceEventIndex(activeSourceEventIndex);
+
+        if (_macroPreviewMapDialog is null
+            || _macroPreviewMapDialog.IsDisposed
+            || !_macroPreviewMapDialog.Visible)
+        {
+            return;
+        }
+
+        _macroPreviewMapDialog.UpdateActiveSourceEventIndex(activeSourceEventIndex);
+    }
+
     private void ShowMacroPreviewMapDialog(
         SessionSummaryState summaryState,
         IReadOnlyList<MacroEvent>? events,
@@ -1605,10 +1619,22 @@ public partial class MainForm : Form
         MacroSession? displayedSession,
         PlaybackSettings playbackSettings)
     {
+        if (!ShouldFollowActivePlaybackCursor(displayedSession, playbackSettings))
+        {
+            return;
+        }
+
+        _eventListControl.TrySelectSourceEvent(_activePlaybackSourceIndex.GetValueOrDefault());
+    }
+
+    private bool ShouldFollowActivePlaybackCursor(
+        MacroSession? displayedSession,
+        PlaybackSettings playbackSettings)
+    {
         if (displayedSession is not { Events.Count: > 0 }
             || !_activePlaybackSourceIndex.HasValue)
         {
-            return;
+            return false;
         }
 
         bool shouldFollowIdleDebugCursor = _applicationStateService.IsState(AppState.Idle);
@@ -1616,14 +1642,9 @@ public partial class MainForm : Form
         bool shouldFollowSimulationPlayback = playbackSettings.SimulationMode
             && _applicationStateService.IsState(AppState.Playing);
 
-        if (!shouldFollowIdleDebugCursor
-            && !shouldFollowPausedDebugCursor
-            && !shouldFollowSimulationPlayback)
-        {
-            return;
-        }
-
-        _eventListControl.TrySelectSourceEvent(_activePlaybackSourceIndex.Value);
+        return shouldFollowIdleDebugCursor
+            || shouldFollowPausedDebugCursor
+            || shouldFollowSimulationPlayback;
     }
 
     private void RequestUiRefresh()
@@ -1700,6 +1721,11 @@ public partial class MainForm : Form
         MacroSession? displayedSession = GetSessionForPlayback();
         PlaybackSettings playbackSettings = BuildPlaybackSettings();
         SelectActivePlaybackCursor(displayedSession, playbackSettings);
+
+        if (ShouldFollowActivePlaybackCursor(displayedSession, playbackSettings))
+        {
+            UpdateActivePreviewMapCursor(_activePlaybackSourceIndex);
+        }
     }
 
     private void CancelPendingPlaybackSelectionRefresh()

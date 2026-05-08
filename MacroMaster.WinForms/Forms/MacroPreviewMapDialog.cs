@@ -89,6 +89,12 @@ internal sealed class MacroPreviewMapDialog : Form
         UpdateInspectedPoint(_mapControl.GetInspectedPointInfo());
     }
 
+    public void UpdateActiveSourceEventIndex(int? activeSourceEventIndex)
+    {
+        _mapControl.UpdateActiveSourceEventIndex(activeSourceEventIndex);
+        UpdateInspectedPoint(_mapControl.GetInspectedPointInfo());
+    }
+
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);

@@ -122,6 +122,20 @@ internal sealed class MacroPreviewMapControl : Control
         return CreatePointInfo(_mousePoints[currentMousePointIndex]);
     }
 
+    public void UpdateActiveSourceEventIndex(int? activeSourceEventIndex)
+    {
+        int? normalizedActiveSourceEventIndex = NormalizeActiveSourceEventIndex(
+            activeSourceEventIndex,
+            _state.EventCount);
+        if (_activeSourceEventIndex == normalizedActiveSourceEventIndex)
+        {
+            return;
+        }
+
+        _activeSourceEventIndex = normalizedActiveSourceEventIndex;
+        Invalidate();
+    }
+
     public MacroPreviewMapPointInfo? GetInspectedPointInfo()
     {
         if (_hoveredMousePointIndex.HasValue
