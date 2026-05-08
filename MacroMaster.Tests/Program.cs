@@ -1497,9 +1497,9 @@ public sealed class MacroMasterTests
             profile.FitRatio >= 0.94f,
             "Expanded layout should only be selected when the designed shell substantially fits.");
         Assert.Equal(
-            84,
+            56,
             profile.Chrome.TitleBarRowHeight,
-            "Expanded chrome should preserve the compact 42px title-bar baseline at 200% scale.");
+            "Expanded chrome should preserve the compact 28px title-bar baseline at 200% scale.");
         Assert.Equal(
             212,
             profile.Chrome.ToolbarRowHeight,
