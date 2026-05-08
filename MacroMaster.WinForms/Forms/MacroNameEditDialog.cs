@@ -7,14 +7,32 @@ internal sealed class MacroNameEditDialog : Form
 {
     private readonly TextBox _nameTextBox = new();
     private readonly ThemedDialogButton _cancelButton;
+    private readonly string _headingText;
+    private readonly string _confirmText;
 
     public MacroNameEditDialog(string currentName)
+        : this(
+            currentName,
+            "Makro Ismi Duzenle",
+            "Makro adini duzenle",
+            "Kaydet")
+    {
+    }
+
+    private MacroNameEditDialog(
+        string currentName,
+        string title,
+        string headingText,
+        string confirmText)
     {
         MacroName = string.IsNullOrWhiteSpace(currentName)
             ? "MakroOturumu"
             : currentName.Trim();
 
-        Text = "Makro Ismi Duzenle";
+        _headingText = headingText;
+        _confirmText = confirmText;
+
+        Text = title;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -32,6 +50,15 @@ internal sealed class MacroNameEditDialog : Form
     }
 
     public string MacroName { get; private set; }
+
+    public static MacroNameEditDialog CreateSaveDialog(string suggestedName)
+    {
+        return new MacroNameEditDialog(
+            suggestedName,
+            "Makro Kaydet",
+            "Makro adini belirle",
+            "Kaydet");
+    }
 
     private void BuildLayout()
     {
@@ -52,7 +79,7 @@ internal sealed class MacroNameEditDialog : Form
         var titleLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Makro adini duzenle",
+            Text = _headingText,
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = Color.Transparent,
@@ -87,6 +114,7 @@ internal sealed class MacroNameEditDialog : Form
         };
 
         var saveButton = CreateDialogButton("Kaydet", ThemedDialogButtonStyle.Primary);
+        saveButton.Text = _confirmText;
 
         saveButton.Click += (_, _) => SaveAndClose();
         _cancelButton.Click += (_, _) =>
@@ -142,7 +170,7 @@ internal sealed class MacroNameEditDialog : Form
 
     private void SaveAndClose()
     {
-        string trimmedName = _nameTextBox.Text.Trim();
+        string trimmedName = TrimKnownMacroExtension(_nameTextBox.Text.Trim());
 
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
@@ -155,9 +183,31 @@ internal sealed class MacroNameEditDialog : Form
             return;
         }
 
+        if (trimmedName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            ModalDialogOverlay.ShowMessage(
+                this,
+                "Makro adi dosya adinda kullanilamayan karakterler iceremez.",
+                "MacroMaster",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return;
+        }
+
         MacroName = trimmedName;
         DialogResult = DialogResult.OK;
         Close();
+    }
+
+    private static string TrimKnownMacroExtension(string macroName)
+    {
+        if (macroName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            || macroName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.GetFileNameWithoutExtension(macroName);
+        }
+
+        return macroName;
     }
 
     private static ThemedDialogButton CreateDialogButton(string text, ThemedDialogButtonStyle style)

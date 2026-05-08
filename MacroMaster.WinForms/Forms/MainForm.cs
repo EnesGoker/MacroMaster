@@ -877,12 +877,78 @@ public partial class MainForm : Form
         EnsureSessionMutationAllowed();
 
         MacroLibraryFileFormat format = ResolveCurrentLibrarySaveFormat();
-        string filePath = await _macroLibraryService.SaveAsync(session, format);
+        string? macroName = await PromptForLibraryMacroNameAsync(session, format);
+
+        if (macroName is null)
+        {
+            return;
+        }
+
+        string previousName = session.Name;
+        session.Name = macroName;
+
+        string filePath;
+
+        try
+        {
+            filePath = await _macroLibraryService.SaveAsync(session, format);
+        }
+        catch
+        {
+            session.Name = previousName;
+            throw;
+        }
+
         _lastSessionPath = filePath;
         MarkLibraryFileUsed(filePath);
         await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
+    }
+
+    private async Task<string?> PromptForLibraryMacroNameAsync(
+        MacroSession session,
+        MacroLibraryFileFormat format)
+    {
+        string suggestedName = session.Name;
+
+        while (true)
+        {
+            using var dialog = MacroNameEditDialog.CreateSaveDialog(suggestedName);
+
+            if (ModalDialogOverlay.ShowDialog(this, dialog) != DialogResult.OK)
+            {
+                return null;
+            }
+
+            string requestedName = dialog.MacroName;
+
+            if (!await IsLibraryNameInUseByAnotherMacroAsync(requestedName, format))
+            {
+                return requestedName;
+            }
+
+            ModalDialogOverlay.ShowMessage(
+                this,
+                $"Bu isimde bir makro zaten var: {requestedName}",
+                "MacroMaster",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+
+            suggestedName = requestedName;
+        }
+    }
+
+    private async Task<bool> IsLibraryNameInUseByAnotherMacroAsync(
+        string macroName,
+        MacroLibraryFileFormat format)
+    {
+        IReadOnlyList<MacroLibraryEntry> entries = await _macroLibraryService.ListAsync();
+
+        return entries.Any(entry =>
+            entry.Format == format
+            && string.Equals(entry.Name, macroName, StringComparison.OrdinalIgnoreCase)
+            && !IsSamePath(_lastSessionPath, entry.FilePath));
     }
 
     private async Task LoadJsonAsync()
