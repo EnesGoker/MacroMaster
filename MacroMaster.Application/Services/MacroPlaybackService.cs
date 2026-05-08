@@ -9,7 +9,6 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
     private readonly IInputPlaybackAdapter _inputPlaybackAdapter;
     private readonly ICursorPositionProvider _cursorPositionProvider;
     private readonly IApplicationStateService _applicationStateService;
-    private readonly IRecordedScreenProvider _recordedScreenProvider;
     private readonly IAppLogger _logger;
     private readonly object _syncRoot = new();
     private readonly SemaphoreSlim _eventExecutionGate = new(1, 1);
@@ -25,13 +24,11 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
         IInputPlaybackAdapter inputPlaybackAdapter,
         ICursorPositionProvider cursorPositionProvider,
         IApplicationStateService applicationStateService,
-        IAppLogger? logger = null,
-        IRecordedScreenProvider? recordedScreenProvider = null)
+        IAppLogger? logger = null)
     {
         _inputPlaybackAdapter = inputPlaybackAdapter;
         _cursorPositionProvider = cursorPositionProvider;
         _applicationStateService = applicationStateService;
-        _recordedScreenProvider = recordedScreenProvider ?? NullRecordedScreenProvider.Instance;
         _logger = logger ?? NullAppLogger.Instance;
     }
 
@@ -71,18 +68,14 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
             return;
         }
 
-        PlaybackSettings effectiveSettings = NormalizeSettingsForExecution(settings);
-        PlaybackCoordinateResolver? coordinateResolver = PlaybackCoordinateResolver.Create(
-            session,
-            effectiveSettings,
-            _recordedScreenProvider);
-
         if (!_applicationStateService.TryTransitionTo(AppState.Playing, AppState.Idle))
         {
-            coordinateResolver.Dispose();
             return;
         }
 
+        PlaybackSettings effectiveSettings = NormalizeSettingsForExecution(settings);
+        PlaybackCoordinateResolver coordinateResolver =
+            PlaybackCoordinateResolver.Create(session, effectiveSettings);
         CancellationTokenSource? playbackCancellationTokenSource = null;
         bool playbackStarted = false;
         List<Exception> playbackErrors = [];
@@ -146,37 +139,35 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
                 int iteration = logicalEventIndex / session.Events.Count;
                 int eventIndex = logicalEventIndex % session.Events.Count;
 
+                await coordinateResolver.PrepareForIterationAsync(
+                    iteration,
+                    _cursorPositionProvider,
+                    playbackCancellationToken);
+
                 MacroEvent macroEvent = session.Events[eventIndex];
-                MacroEvent playbackEvent = macroEvent;
+                MacroEvent playbackEvent = coordinateResolver.Resolve(macroEvent);
+                int delayMs = ResolveDelayMs(playbackEvent, effectiveSettings);
+
+                if (delayMs > 0)
+                {
+                    await Task.Delay(delayMs, playbackCancellationToken);
+                }
+
+                playbackCancellationToken.ThrowIfCancellationRequested();
+                ThrowIfStopRequested();
+
+                if (_applicationStateService.IsState(AppState.Paused))
+                {
+                    continue;
+                }
+
+                if (GetPlaybackCursorSnapshot() != logicalEventIndex)
+                {
+                    continue;
+                }
 
                 try
                 {
-                    await coordinateResolver.PrepareForIterationAsync(
-                        iteration,
-                        _cursorPositionProvider,
-                        playbackCancellationToken);
-
-                    playbackEvent = coordinateResolver.Resolve(macroEvent);
-                    int delayMs = ResolveDelayMs(playbackEvent, effectiveSettings);
-
-                    if (delayMs > 0)
-                    {
-                        await Task.Delay(delayMs, playbackCancellationToken);
-                    }
-
-                    playbackCancellationToken.ThrowIfCancellationRequested();
-                    ThrowIfStopRequested();
-
-                    if (_applicationStateService.IsState(AppState.Paused))
-                    {
-                        continue;
-                    }
-
-                    if (GetPlaybackCursorSnapshot() != logicalEventIndex)
-                    {
-                        continue;
-                    }
-
                     await PlayResolvedEventAsync(
                         playbackEvent,
                         effectiveSettings,
@@ -259,7 +250,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
             }
 
             playbackCancellationTokenSource?.Dispose();
-            coordinateResolver?.Dispose();
+            coordinateResolver.Dispose();
 
             if (playbackStarted
                 || _applicationStateService.IsAny(
@@ -455,10 +446,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
         PlaybackCoordinateResolver? coordinateResolver = GetActiveCoordinateResolverIfPaused();
         bool shouldDisposeCoordinateResolver = coordinateResolver is null;
 
-        coordinateResolver ??= PlaybackCoordinateResolver.Create(
-            session,
-            effectiveSettings,
-            _recordedScreenProvider);
+        coordinateResolver ??= PlaybackCoordinateResolver.Create(session, effectiveSettings);
         MacroEvent playbackEvent = sourceEvent;
 
         try
@@ -704,12 +692,6 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
 
     private static PlaybackSettings NormalizeSettingsForExecution(PlaybackSettings settings)
     {
-        if (settings.UseRelativeCoordinates && settings.UseScreenScaledCoordinates)
-        {
-            throw new InvalidOperationException(
-                "Goreceli koordinat ve ekrana gore koordinat olcekleme ayni anda kullanilamaz.");
-        }
-
         return new PlaybackSettings
         {
             SpeedMultiplier = settings.PreserveOriginalTiming
@@ -721,7 +703,6 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
             InitialDelayMs = Math.Max(settings.InitialDelayMs, 0),
             LoopIndefinitely = settings.LoopIndefinitely,
             UseRelativeCoordinates = settings.UseRelativeCoordinates,
-            UseScreenScaledCoordinates = settings.UseScreenScaledCoordinates,
             SimulationMode = settings.SimulationMode,
             StopOnError = settings.StopOnError,
             PreserveOriginalTiming = settings.PreserveOriginalTiming

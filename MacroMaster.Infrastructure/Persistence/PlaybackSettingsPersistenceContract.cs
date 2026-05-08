@@ -62,14 +62,6 @@ internal static class PlaybackSettingsPersistenceContract
                 operation,
                 filePath);
         }
-
-        if (settings.UseRelativeCoordinates && settings.UseScreenScaledCoordinates)
-        {
-            throw CreateValidationException(
-                "Goreceli koordinat ve ekrana gore koordinat olcekleme ayni anda etkin olamaz.",
-                operation,
-                filePath);
-        }
     }
 
     private static InvalidOperationException CreateValidationException(

@@ -26,7 +26,6 @@ public partial class MainForm : Form
     private readonly IMacroLibraryUserStateStore _macroLibraryUserStateStore;
     private readonly IMutableHotkeyConfiguration _hotkeyConfiguration;
     private readonly IHotkeyService _hotkeyService;
-    private readonly IRecordedScreenProvider _recordedScreenProvider;
     private readonly IAppLogger _logger;
     private readonly ToolbarControl _toolbarControl = new();
     private readonly TitleBarControl _titleBarControl = new();
@@ -64,7 +63,6 @@ public partial class MainForm : Form
         IMacroLibraryUserStateStore macroLibraryUserStateStore,
         IMutableHotkeyConfiguration hotkeyConfiguration,
         IHotkeyService hotkeyService,
-        IRecordedScreenProvider recordedScreenProvider,
         IAppLogger logger)
     {
         _applicationStateService = applicationStateService;
@@ -78,7 +76,6 @@ public partial class MainForm : Form
         _macroLibraryUserStateStore = macroLibraryUserStateStore;
         _hotkeyConfiguration = hotkeyConfiguration;
         _hotkeyService = hotkeyService;
-        _recordedScreenProvider = recordedScreenProvider;
         _logger = logger;
 
         InitializeComponent();
@@ -248,14 +245,7 @@ public partial class MainForm : Form
 
         if (GetSessionForPlayback() is { Events.Count: > 0 } currentSession)
         {
-            PlaybackSettings? playbackSettings = ResolvePlaybackSettingsForStart(currentSession);
-
-            if (playbackSettings is null)
-            {
-                return;
-            }
-
-            await _macroPlaybackService.PlayAsync(currentSession, playbackSettings);
+            await _macroPlaybackService.PlayAsync(currentSession, BuildPlaybackSettings());
         }
     }
 
@@ -2351,71 +2341,6 @@ public partial class MainForm : Form
     private PlaybackSettings BuildPlaybackSettings()
     {
         return _playbackSettingsControl.GetCurrentSettings();
-    }
-
-    private PlaybackSettings? ResolvePlaybackSettingsForStart(MacroSession session)
-    {
-        PlaybackSettings playbackSettings = BuildPlaybackSettings();
-
-        if (!PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(session, playbackSettings))
-        {
-            return playbackSettings;
-        }
-
-        RecordedScreenInfo? currentScreen = TryGetCurrentScreenForResolutionWarning();
-
-        if (!PlaybackResolutionWarningPolicy.ShouldWarn(session, playbackSettings, currentScreen))
-        {
-            return playbackSettings;
-        }
-
-        PlaybackResolutionWarningChoice warningChoice =
-            PlaybackResolutionWarningDialog.Show(this, session.RecordedScreen!, currentScreen!);
-
-        return warningChoice switch
-        {
-            PlaybackResolutionWarningChoice.ScaledPlayback =>
-                ClonePlaybackSettings(playbackSettings, useScreenScaledCoordinates: true),
-            PlaybackResolutionWarningChoice.NormalPlayback => playbackSettings,
-            _ => null
-        };
-    }
-
-    private RecordedScreenInfo? TryGetCurrentScreenForResolutionWarning()
-    {
-        try
-        {
-            return _recordedScreenProvider.GetRecordedScreen();
-        }
-        catch (Exception ex)
-        {
-            _logger.Log(
-                AppLogLevel.Warning,
-                nameof(MainForm),
-                "Oynatma cozunurluk uyarisi icin mevcut ekran bilgisi alinamadi.",
-                ex);
-            return null;
-        }
-    }
-
-    private static PlaybackSettings ClonePlaybackSettings(
-        PlaybackSettings source,
-        bool useScreenScaledCoordinates)
-    {
-        return new PlaybackSettings
-        {
-            SpeedMultiplier = source.SpeedMultiplier,
-            RepeatCount = source.RepeatCount,
-            InitialDelayMs = source.InitialDelayMs,
-            LoopIndefinitely = source.LoopIndefinitely,
-            UseRelativeCoordinates = useScreenScaledCoordinates
-                ? false
-                : source.UseRelativeCoordinates,
-            UseScreenScaledCoordinates = useScreenScaledCoordinates,
-            SimulationMode = source.SimulationMode,
-            StopOnError = source.StopOnError,
-            PreserveOriginalTiming = source.PreserveOriginalTiming
-        };
     }
 
     private PlaybackControlState BuildPlaybackControlState(

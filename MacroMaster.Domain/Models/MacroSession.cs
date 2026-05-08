@@ -12,9 +12,6 @@ public sealed class MacroSession
 
     public string FormatVersion { get; set; } = MacroSessionFormat.CurrentVersion;
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public RecordedScreenInfo? RecordedScreen { get; set; }
-
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
     public List<MacroEvent> Events { get; } = new();
 
