@@ -7,9 +7,13 @@ partial class MainForm
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && components is not null)
+        if (disposing)
         {
-            components.Dispose();
+            DisposeDynamicResources();
+            if (components is not null)
+            {
+                components.Dispose();
+            }
         }
 
         base.Dispose(disposing);

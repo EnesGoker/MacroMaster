@@ -3,7 +3,7 @@ using System.Drawing.Drawing2D;
 
 namespace MacroMaster.WinForms.Controls;
 
-public readonly record struct PlaybackControlState(
+public readonly record struct PlaybackTelemetrySnapshot(
     string StatusText,
     int PlayedEventCount,
     int TotalEventCount,
@@ -12,7 +12,10 @@ public readonly record struct PlaybackControlState(
     double SpeedMultiplier,
     int RepeatCount,
     bool LoopIndefinitely,
-    int InitialDelayMs,
+    int InitialDelayMs);
+
+public readonly record struct PlaybackControlState(
+    PlaybackTelemetrySnapshot Telemetry,
     bool CanPlayback,
     bool CanStop,
     bool CanNavigate,
@@ -37,6 +40,14 @@ internal sealed class PlaybackControl : UserControl
     public event EventHandler? PlaybackClicked;
     public event EventHandler? StepForwardClicked;
     public event EventHandler? StopClicked;
+
+    private readonly record struct NormalizedPlaybackTelemetry(
+        string StatusText,
+        int PlayedEventCount,
+        int TotalEventCount,
+        int PlayedDurationMs,
+        int RemainingDurationMs,
+        double Progress);
 
     public PlaybackControl()
     {
@@ -65,29 +76,18 @@ internal sealed class PlaybackControl : UserControl
 
         BuildLayout();
         WireEvents();
-        UpdateState(new PlaybackControlState("Hazır", 0, 0, 0, 0, 1, 1, false, 0, false, false, false, PlaybackButtonState.Play));
+        UpdateState(new PlaybackControlState(
+            new PlaybackTelemetrySnapshot("Hazır", 0, 0, 0, 0, 1, 1, false, 0),
+            false,
+            false,
+            false,
+            PlaybackButtonState.Play));
     }
 
     public void UpdateState(PlaybackControlState state)
     {
-        int safeTotalEvents = Math.Max(0, state.TotalEventCount);
-        int safePlayedEvents = Math.Clamp(state.PlayedEventCount, 0, safeTotalEvents);
-        int safeTotalDurationMs = Math.Max(0, state.TotalDurationMs);
-        int safePlayedDurationMs = Math.Clamp(state.PlayedDurationMs, 0, safeTotalDurationMs);
-        double progress = ResolveProgressRatio(
-            safePlayedEvents,
-            safeTotalEvents,
-            safePlayedDurationMs,
-            safeTotalDurationMs);
-
-        _progressBar.Progress = progress;
-        _elapsedTimeMetricCell.ValueText = FormatDuration(safePlayedDurationMs);
-        _remainingTimeMetricCell.ValueText = FormatDuration(Math.Max(0, safeTotalDurationMs - safePlayedDurationMs));
-        _statusMetricCell.ValueText = state.StatusText;
-        _statusMetricCell.ValueColor = state.StatusText is "Hazır" or "Hazir" or "Bos" or "Boş"
-            ? Color.FromArgb(52, 199, 89)
-            : DesignTokens.TextPrimary;
-        _eventCounterMetricCell.ValueText = FormattableString.Invariant($"{safePlayedEvents} / {safeTotalEvents}");
+        NormalizedPlaybackTelemetry telemetry = NormalizeTelemetry(state.Telemetry);
+        ApplyTelemetry(telemetry);
 
         _playbackButton.Kind = state.PlaybackButtonState switch
         {
@@ -97,9 +97,9 @@ internal sealed class PlaybackControl : UserControl
 
         _playbackButton.Enabled = state.CanPlayback;
         _stopButton.Enabled = state.CanStop;
-        _skipBackButton.Enabled = state.CanNavigate && safePlayedEvents > 0;
-        _stepBackButton.Enabled = state.CanNavigate && safePlayedEvents > 0;
-        _stepForwardButton.Enabled = state.CanNavigate && safePlayedEvents < safeTotalEvents;
+        _skipBackButton.Enabled = state.CanNavigate && telemetry.PlayedEventCount > 0;
+        _stepBackButton.Enabled = state.CanNavigate && telemetry.PlayedEventCount > 0;
+        _stepForwardButton.Enabled = state.CanNavigate && telemetry.PlayedEventCount < telemetry.TotalEventCount;
 
         _toolTip.SetToolTip(_playbackButton, state.PlaybackButtonState switch
         {
@@ -111,6 +111,11 @@ internal sealed class PlaybackControl : UserControl
         _toolTip.SetToolTip(_skipBackButton, _skipBackButton.Enabled ? "Debug imlecini basa al" : "Basa almak icin ilerleme gerekli");
         _toolTip.SetToolTip(_stepBackButton, _stepBackButton.Enabled ? "Debug imlecini bir olay geri al" : "Geri adim icin ilerleme gerekli");
         _toolTip.SetToolTip(_stepForwardButton, _stepForwardButton.Enabled ? "Sıradaki olayı çalıştır" : "Oynatilacak olay yok");
+    }
+
+    public void UpdateTelemetry(PlaybackTelemetrySnapshot telemetry)
+    {
+        ApplyTelemetry(NormalizeTelemetry(telemetry));
     }
 
     protected override void Dispose(bool disposing)
@@ -210,6 +215,40 @@ internal sealed class PlaybackControl : UserControl
         Controls.Add(rootLayoutPanel);
     }
 
+    private static NormalizedPlaybackTelemetry NormalizeTelemetry(PlaybackTelemetrySnapshot telemetry)
+    {
+        int safeTotalEvents = Math.Max(0, telemetry.TotalEventCount);
+        int safePlayedEvents = Math.Clamp(telemetry.PlayedEventCount, 0, safeTotalEvents);
+        int safeTotalDurationMs = Math.Max(0, telemetry.TotalDurationMs);
+        int safePlayedDurationMs = Math.Clamp(telemetry.PlayedDurationMs, 0, safeTotalDurationMs);
+        double progress = ResolveProgressRatio(
+            safePlayedEvents,
+            safeTotalEvents,
+            safePlayedDurationMs,
+            safeTotalDurationMs);
+        string statusText = string.IsNullOrWhiteSpace(telemetry.StatusText)
+            ? "Hazır"
+            : telemetry.StatusText;
+
+        return new NormalizedPlaybackTelemetry(
+            statusText,
+            safePlayedEvents,
+            safeTotalEvents,
+            safePlayedDurationMs,
+            Math.Max(0, safeTotalDurationMs - safePlayedDurationMs),
+            progress);
+    }
+
+    private void ApplyTelemetry(NormalizedPlaybackTelemetry telemetry)
+    {
+        _progressBar.Progress = telemetry.Progress;
+        _elapsedTimeMetricCell.ValueText = FormatDuration(telemetry.PlayedDurationMs);
+        _remainingTimeMetricCell.ValueText = FormatDuration(telemetry.RemainingDurationMs);
+        _statusMetricCell.ValueText = telemetry.StatusText;
+        _statusMetricCell.ValueColor = ResolveStatusColor(telemetry.StatusText);
+        _eventCounterMetricCell.ValueText = FormattableString.Invariant($"{telemetry.PlayedEventCount} / {telemetry.TotalEventCount}");
+    }
+
     private void WireEvents()
     {
         _skipBackButton.Click += (_, _) => SkipBackClicked?.Invoke(this, EventArgs.Empty);
@@ -241,6 +280,13 @@ internal sealed class PlaybackControl : UserControl
         return timeSpan.TotalHours >= 1
             ? FormattableString.Invariant($"{(int)timeSpan.TotalHours:00}:{timeSpan.Minutes:00}:{timeSpan.Seconds:00}")
             : FormattableString.Invariant($"{timeSpan.Minutes:00}:{timeSpan.Seconds:00}");
+    }
+
+    private static Color ResolveStatusColor(string statusText)
+    {
+        return statusText is "Hazır" or "Hazir" or "Bos" or "Boş"
+            ? Color.FromArgb(52, 199, 89)
+            : DesignTokens.TextPrimary;
     }
 
     private static int ResolveMetricRowHeight()

@@ -12,7 +12,8 @@ namespace MacroMaster.WinForms.Forms;
 
 public partial class MainForm : Form
 {
-    private const int PlaybackUiRefreshIntervalMs = 33;
+    private const int PlaybackTelemetryRefreshIntervalMs = 33;
+    private const int PlaybackSelectionRefreshIntervalMs = 80;
 
     private readonly IApplicationStateService _applicationStateService;
     private readonly IMacroRecorderService _macroRecorderService;
@@ -45,10 +46,9 @@ public partial class MainForm : Form
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
-    private System.Windows.Forms.Timer? _recordingEventRefreshTimer;
-    private System.Windows.Forms.Timer? _playbackUiRefreshTimer;
-    private bool _recordingEventRefreshPending;
-    private bool _playbackUiRefreshPending;
+    private UiRefreshThrottle? _recordingEventRefreshThrottle;
+    private UiRefreshThrottle? _playbackTelemetryRefreshThrottle;
+    private UiRefreshThrottle? _playbackSelectionRefreshThrottle;
 
     public MainForm(
         IApplicationStateService applicationStateService,
@@ -474,8 +474,9 @@ public partial class MainForm : Form
 
     private async Task ShutdownAsync()
     {
-        _recordingEventRefreshTimer?.Stop();
-        _recordingEventRefreshPending = false;
+        _recordingEventRefreshThrottle?.Cancel();
+        _playbackTelemetryRefreshThrottle?.Cancel();
+        _playbackSelectionRefreshThrottle?.Cancel();
 
         _hotkeyService.RecordToggleRequested -= OnRecordToggleRequested;
         _hotkeyService.PlaybackToggleRequested -= OnPlaybackToggleRequested;
@@ -500,6 +501,16 @@ public partial class MainForm : Form
 
         await SavePlaybackSettingsAsync();
         await SaveHotkeySettingsAsync();
+    }
+
+    private void DisposeDynamicResources()
+    {
+        _recordingEventRefreshThrottle?.Dispose();
+        _recordingEventRefreshThrottle = null;
+        _playbackTelemetryRefreshThrottle?.Dispose();
+        _playbackTelemetryRefreshThrottle = null;
+        _playbackSelectionRefreshThrottle?.Dispose();
+        _playbackSelectionRefreshThrottle = null;
     }
 
     private async Task ExecuteUiActionAsync(
@@ -594,8 +605,7 @@ public partial class MainForm : Form
     private void OnRecordingStopped(MacroSession session)
     {
         _activeSession = session;
-        _recordingEventRefreshTimer?.Stop();
-        _recordingEventRefreshPending = false;
+        _recordingEventRefreshThrottle?.Cancel();
         RequestUiRefresh();
     }
 
@@ -604,20 +614,25 @@ public partial class MainForm : Form
         _playedEventCount = 0;
         _playedDurationMs = 0;
         _activePlaybackSourceIndex = null;
+        CancelPendingPlaybackTelemetryRefresh();
+        CancelPendingPlaybackSelectionRefresh();
         RequestUiRefresh();
     }
 
     private void OnPlaybackStateChanged()
     {
+        CancelPendingPlaybackTelemetryRefresh();
+        CancelPendingPlaybackSelectionRefresh();
         RequestUiRefresh();
     }
 
     private void OnPlaybackEventPlayed(MacroEvent macroEvent)
     {
         _activePlaybackSourceIndex = ResolveCurrentPlaybackSourceIndex();
-        _playedEventCount++;
-        _playedDurationMs += Math.Max(0, macroEvent.DelayMs);
-        RequestPlaybackUiRefresh();
+        _playedEventCount = SaturatingAdd(_playedEventCount, 1);
+        _playedDurationMs = SaturatingAdd(_playedDurationMs, macroEvent.DelayMs);
+        RequestPlaybackTelemetryRefresh();
+        RequestPlaybackSelectionRefresh();
     }
 
     private int? ResolveCurrentPlaybackSourceIndex()
@@ -640,6 +655,8 @@ public partial class MainForm : Form
         _playedEventCount = 0;
         _playedDurationMs = 0;
         _activePlaybackSourceIndex = null;
+        CancelPendingPlaybackTelemetryRefresh();
+        CancelPendingPlaybackSelectionRefresh();
         RequestUiRefresh();
     }
 
@@ -1611,123 +1628,115 @@ public partial class MainForm : Form
 
     private void RequestUiRefresh()
     {
-        if (!IsHandleCreated || IsDisposed)
+        if (!CanRunDeferredUiRefresh())
         {
             return;
         }
 
         if (InvokeRequired)
         {
-            BeginInvoke(new Action(() => RefreshUiState()));
+            TryBeginInvokeOnUiThread(() => RefreshUiState());
             return;
         }
 
         RefreshUiState();
     }
 
-    private void RequestPlaybackUiRefresh()
+    private bool CanRunDeferredUiRefresh()
     {
-        if (!IsHandleCreated || IsDisposed || _shutdownInProgress)
+        return !_shutdownInProgress && IsHandleCreated && !IsDisposed;
+    }
+
+    private void TryBeginInvokeOnUiThread(Action action)
+    {
+        try
         {
+            BeginInvoke(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private void RequestPlaybackTelemetryRefresh()
+    {
+        if (_playbackTelemetryRefreshThrottle is null)
+        {
+            RequestUiRefresh();
             return;
         }
 
-        if (InvokeRequired)
+        _playbackTelemetryRefreshThrottle.Request();
+    }
+
+    private void RefreshPlaybackTelemetry()
+    {
+        MacroSession? displayedSession = GetSessionForPlayback();
+        PlaybackSettings playbackSettings = BuildPlaybackSettings();
+        _playbackControl.UpdateTelemetry(BuildPlaybackTelemetrySnapshot(displayedSession, playbackSettings));
+    }
+
+    private void CancelPendingPlaybackTelemetryRefresh()
+    {
+        _playbackTelemetryRefreshThrottle?.Cancel();
+    }
+
+    private void RequestPlaybackSelectionRefresh()
+    {
+        if (_playbackSelectionRefreshThrottle is null)
         {
-            BeginInvoke(new Action(RequestPlaybackUiRefresh));
+            RequestUiRefresh();
             return;
         }
 
-        _playbackUiRefreshPending = true;
+        _playbackSelectionRefreshThrottle.Request();
+    }
 
-        if (_playbackUiRefreshTimer is null)
-        {
-            _playbackUiRefreshPending = false;
-            RefreshUiState();
-            return;
-        }
+    private void RefreshPlaybackSelection()
+    {
+        MacroSession? displayedSession = GetSessionForPlayback();
+        PlaybackSettings playbackSettings = BuildPlaybackSettings();
+        SelectActivePlaybackCursor(displayedSession, playbackSettings);
+    }
 
-        if (!_playbackUiRefreshTimer.Enabled)
-        {
-            _playbackUiRefreshTimer.Start();
-        }
+    private void CancelPendingPlaybackSelectionRefresh()
+    {
+        _playbackSelectionRefreshThrottle?.Cancel();
     }
 
     private void RequestRecordingEventRefresh()
     {
-        if (!IsHandleCreated || IsDisposed || _shutdownInProgress)
+        if (_recordingEventRefreshThrottle is null)
         {
+            RequestUiRefresh();
             return;
         }
 
-        if (InvokeRequired)
-        {
-            BeginInvoke(new Action(RequestRecordingEventRefresh));
-            return;
-        }
-
-        _recordingEventRefreshPending = true;
-
-        if (_recordingEventRefreshTimer is null)
-        {
-            _recordingEventRefreshPending = false;
-            RefreshUiState();
-            return;
-        }
-
-        if (!_recordingEventRefreshTimer.Enabled)
-        {
-            _recordingEventRefreshTimer.Start();
-        }
-    }
-
-    private void RecordingEventRefreshTimer_Tick(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        _recordingEventRefreshTimer?.Stop();
-
-        if (!_recordingEventRefreshPending || _shutdownInProgress || IsDisposed)
-        {
-            return;
-        }
-
-        _recordingEventRefreshPending = false;
-        RefreshUiState();
-    }
-
-    private void PlaybackUiRefreshTimer_Tick(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        _playbackUiRefreshTimer?.Stop();
-
-        if (!_playbackUiRefreshPending || _shutdownInProgress || IsDisposed)
-        {
-            return;
-        }
-
-        _playbackUiRefreshPending = false;
-        RefreshUiState();
+        _recordingEventRefreshThrottle.Request();
     }
 
     private void InitializeDynamicControls()
     {
         BuildResponsiveHostLayout();
 
-        _recordingEventRefreshTimer = new System.Windows.Forms.Timer(components)
-        {
-            Interval = 50
-        };
-        _recordingEventRefreshTimer.Tick += RecordingEventRefreshTimer_Tick;
-
-        _playbackUiRefreshTimer = new System.Windows.Forms.Timer(components)
-        {
-            Interval = PlaybackUiRefreshIntervalMs
-        };
-        _playbackUiRefreshTimer.Tick += PlaybackUiRefreshTimer_Tick;
+        _recordingEventRefreshThrottle = new UiRefreshThrottle(
+            this,
+            intervalMs: 50,
+            refreshAction: () => RefreshUiState(),
+            canRun: CanRunDeferredUiRefresh);
+        _playbackTelemetryRefreshThrottle = new UiRefreshThrottle(
+            this,
+            PlaybackTelemetryRefreshIntervalMs,
+            RefreshPlaybackTelemetry,
+            CanRunDeferredUiRefresh);
+        _playbackSelectionRefreshThrottle = new UiRefreshThrottle(
+            this,
+            PlaybackSelectionRefreshIntervalMs,
+            RefreshPlaybackSelection,
+            CanRunDeferredUiRefresh);
 
         _toolbarControl.Name = "toolbarControl";
         _toolbarControl.Dock = DockStyle.Fill;
@@ -2277,27 +2286,10 @@ public partial class MainForm : Form
         bool canStop,
         bool canNavigatePlayback)
     {
-        int repeatCount = Math.Max(playbackSettings.RepeatCount, 1);
-        int sessionEventCount = session?.Events.Count ?? 0;
-        int totalEventCount = playbackSettings.LoopIndefinitely
-            ? sessionEventCount
-            : sessionEventCount * repeatCount;
-        int totalDurationMs = playbackSettings.LoopIndefinitely
-            ? session?.TotalDurationMs ?? 0
-            : (session?.TotalDurationMs ?? 0) * repeatCount + playbackSettings.InitialDelayMs;
-        int playedEventCount = Math.Clamp(_playedEventCount, 0, Math.Max(0, totalEventCount));
-        int playedDurationMs = Math.Clamp(_playedDurationMs, 0, Math.Max(0, totalDurationMs));
+        PlaybackTelemetrySnapshot telemetry = BuildPlaybackTelemetrySnapshot(session, playbackSettings);
 
         return new PlaybackControlState(
-            ResolveStatusText(_applicationStateService.CurrentState, playbackSettings),
-            playedEventCount,
-            totalEventCount,
-            playedDurationMs,
-            totalDurationMs,
-            playbackSettings.PreserveOriginalTiming ? 1.0 : playbackSettings.SpeedMultiplier,
-            repeatCount,
-            playbackSettings.LoopIndefinitely,
-            playbackSettings.InitialDelayMs,
+            telemetry,
             canPlayback,
             canStop,
             canNavigatePlayback,
@@ -2306,6 +2298,206 @@ public partial class MainForm : Form
                 : _macroPlaybackService.IsPlaying
                     ? PlaybackButtonState.Pause
                     : PlaybackButtonState.Play);
+    }
+
+    private PlaybackTelemetrySnapshot BuildPlaybackTelemetrySnapshot(
+        MacroSession? session,
+        PlaybackSettings playbackSettings)
+    {
+        int repeatCount = Math.Max(playbackSettings.RepeatCount, 1);
+        int sessionEventCount = session?.Events.Count ?? 0;
+        int sessionDurationMs = Math.Max(0, session?.TotalDurationMs ?? 0);
+        int initialDelayMs = Math.Max(0, playbackSettings.InitialDelayMs);
+        int totalEventCount = playbackSettings.LoopIndefinitely
+            ? Math.Max(0, sessionEventCount)
+            : SaturatingMultiply(sessionEventCount, repeatCount);
+        int totalDurationMs = playbackSettings.LoopIndefinitely
+            ? sessionDurationMs
+            : SaturatingAdd(SaturatingMultiply(sessionDurationMs, repeatCount), initialDelayMs);
+        int playedEventCount = Math.Clamp(_playedEventCount, 0, Math.Max(0, totalEventCount));
+        int playedDurationMs = Math.Clamp(_playedDurationMs, 0, Math.Max(0, totalDurationMs));
+        double speedMultiplier = playbackSettings.PreserveOriginalTiming || playbackSettings.SpeedMultiplier <= 0
+            ? 1.0
+            : playbackSettings.SpeedMultiplier;
+
+        return new PlaybackTelemetrySnapshot(
+            ResolveStatusText(_applicationStateService.CurrentState, playbackSettings),
+            playedEventCount,
+            totalEventCount,
+            playedDurationMs,
+            totalDurationMs,
+            speedMultiplier,
+            repeatCount,
+            playbackSettings.LoopIndefinitely,
+            initialDelayMs);
+    }
+
+    private sealed class UiRefreshThrottle : IDisposable
+    {
+        private readonly Control _owner;
+        private readonly System.Windows.Forms.Timer _timer;
+        private readonly Action _refreshAction;
+        private readonly Func<bool> _canRun;
+        private volatile bool _pending;
+        private bool _disposed;
+
+        public UiRefreshThrottle(
+            Control owner,
+            int intervalMs,
+            Action refreshAction,
+            Func<bool> canRun)
+        {
+            ArgumentNullException.ThrowIfNull(owner);
+            ArgumentNullException.ThrowIfNull(refreshAction);
+            ArgumentNullException.ThrowIfNull(canRun);
+
+            if (intervalMs <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(intervalMs),
+                    intervalMs,
+                    "Refresh throttle interval must be greater than zero.");
+            }
+
+            _owner = owner;
+            _refreshAction = refreshAction;
+            _canRun = canRun;
+            _timer = new System.Windows.Forms.Timer
+            {
+                Interval = intervalMs
+            };
+            _timer.Tick += OnTick;
+        }
+
+        public void Request()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!CanAccessOwner())
+            {
+                return;
+            }
+
+            if (_owner.InvokeRequired)
+            {
+                TryBeginInvoke(RequestCore);
+                return;
+            }
+
+            RequestCore();
+        }
+
+        public void Cancel()
+        {
+            _pending = false;
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!_owner.IsHandleCreated || _owner.IsDisposed)
+            {
+                return;
+            }
+
+            if (_owner.InvokeRequired)
+            {
+                TryBeginInvoke(CancelCore);
+                return;
+            }
+
+            CancelCore();
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _pending = false;
+            _timer.Tick -= OnTick;
+            _timer.Dispose();
+        }
+
+        private void RequestCore()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!CanAccessOwner())
+            {
+                CancelCore();
+                return;
+            }
+
+            _pending = true;
+
+            if (!_timer.Enabled)
+            {
+                _timer.Start();
+            }
+        }
+
+        private void CancelCore()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _pending = false;
+            _timer.Stop();
+        }
+
+        private void OnTick(object? sender, EventArgs e)
+        {
+            _ = sender;
+            _ = e;
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            _timer.Stop();
+
+            if (!_pending || !CanAccessOwner())
+            {
+                _pending = false;
+                return;
+            }
+
+            _pending = false;
+            _refreshAction();
+        }
+
+        private bool CanAccessOwner()
+        {
+            return !_disposed && _owner.IsHandleCreated && !_owner.IsDisposed && _canRun();
+        }
+
+        private void TryBeginInvoke(Action action)
+        {
+            try
+            {
+                _owner.BeginInvoke(action);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
     }
 
     private bool CanNavigatePlayback(
@@ -2333,7 +2525,19 @@ public partial class MainForm : Form
             ? 1
             : Math.Max(playbackSettings.RepeatCount, 1);
 
-        return session.Events.Count * repeatCount;
+        return SaturatingMultiply(session.Events.Count, repeatCount);
+    }
+
+    private static int SaturatingMultiply(int value, int multiplier)
+    {
+        long result = (long)Math.Max(0, value) * Math.Max(0, multiplier);
+        return result > int.MaxValue ? int.MaxValue : (int)result;
+    }
+
+    private static int SaturatingAdd(int left, int right)
+    {
+        long result = (long)Math.Max(0, left) + Math.Max(0, right);
+        return result > int.MaxValue ? int.MaxValue : (int)result;
     }
 
     private static int CalculatePlayedDurationMs(
