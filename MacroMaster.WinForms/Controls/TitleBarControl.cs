@@ -10,6 +10,12 @@ internal sealed class TitleBarControl : UserControl
     private readonly CaptionButton _minimizeButton;
     private readonly CaptionButton _maximizeButton;
     private readonly CaptionButton _closeButton;
+    private readonly TableLayoutPanel _rootLayoutPanel;
+    private readonly ColumnStyle _logoColumnStyle;
+    private readonly ColumnStyle _statusColumnStyle;
+    private readonly ColumnStyle _minimizeColumnStyle;
+    private readonly ColumnStyle _maximizeColumnStyle;
+    private readonly ColumnStyle _closeColumnStyle;
 
     public TitleBarControl()
     {
@@ -26,7 +32,7 @@ internal sealed class TitleBarControl : UserControl
         Font = DesignTokens.FontUiNormal;
         MinimumSize = new Size(0, DesignTokens.TitleBarHeight);
 
-        var rootLayoutPanel = new TableLayoutPanel
+        _rootLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 7,
@@ -40,13 +46,19 @@ internal sealed class TitleBarControl : UserControl
                 DesignTokens.Scale(2))
         };
 
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(8)));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(2)));
+        _logoColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(8));
+        _statusColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132));
+        _minimizeColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth);
+        _maximizeColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth);
+        _closeColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth);
+
+        _rootLayoutPanel.ColumnStyles.Add(_logoColumnStyle);
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _rootLayoutPanel.ColumnStyles.Add(_statusColumnStyle);
+        _rootLayoutPanel.ColumnStyles.Add(_minimizeColumnStyle);
+        _rootLayoutPanel.ColumnStyles.Add(_maximizeColumnStyle);
+        _rootLayoutPanel.ColumnStyles.Add(_closeColumnStyle);
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(2)));
 
         var logoPanel = new LogoPanel
         {
@@ -94,14 +106,14 @@ internal sealed class TitleBarControl : UserControl
         _maximizeButton.Click += (_, _) => MaximizeRestoreRequested?.Invoke(this, EventArgs.Empty);
         _closeButton.Click += (_, _) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
-        rootLayoutPanel.Controls.Add(logoPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(textLayoutPanel, 1, 0);
-        rootLayoutPanel.Controls.Add(_statusPill, 2, 0);
-        rootLayoutPanel.Controls.Add(_minimizeButton, 3, 0);
-        rootLayoutPanel.Controls.Add(_maximizeButton, 4, 0);
-        rootLayoutPanel.Controls.Add(_closeButton, 5, 0);
+        _rootLayoutPanel.Controls.Add(logoPanel, 0, 0);
+        _rootLayoutPanel.Controls.Add(textLayoutPanel, 1, 0);
+        _rootLayoutPanel.Controls.Add(_statusPill, 2, 0);
+        _rootLayoutPanel.Controls.Add(_minimizeButton, 3, 0);
+        _rootLayoutPanel.Controls.Add(_maximizeButton, 4, 0);
+        _rootLayoutPanel.Controls.Add(_closeButton, 5, 0);
 
-        Controls.Add(rootLayoutPanel);
+        Controls.Add(_rootLayoutPanel);
         AttachDragForwarding(this);
     }
 
@@ -109,6 +121,33 @@ internal sealed class TitleBarControl : UserControl
     public event EventHandler? MinimizeRequested;
     public event EventHandler? MaximizeRestoreRequested;
     public event EventHandler? CloseRequested;
+
+    internal void ApplyShellLayoutProfile(AppShellLayoutProfile profile)
+    {
+        MinimumSize = new Size(0, profile.Chrome.TitleBarRowHeight);
+        _rootLayoutPanel.Padding = profile.Chrome.TitleBarPadding;
+        _logoColumnStyle.Width = profile.Chrome.TitleBarIconColumnWidth;
+        _statusColumnStyle.Width = profile.Chrome.TitleBarStatusWidth;
+        _minimizeColumnStyle.Width = profile.Chrome.TitleBarButtonWidth;
+        _maximizeColumnStyle.Width = profile.Chrome.TitleBarButtonWidth;
+        _closeColumnStyle.Width = profile.Chrome.TitleBarButtonWidth;
+        _statusPill.Margin = profile.Chrome.TitleBarStatusMargin;
+
+        _minimizeButton.ApplyLayoutMetrics(
+            profile.Chrome.TitleBarButtonWidth,
+            profile.Chrome.TitleBarButtonHeight,
+            profile.Chrome.TitleBarButtonMargin);
+        _maximizeButton.ApplyLayoutMetrics(
+            profile.Chrome.TitleBarButtonWidth,
+            profile.Chrome.TitleBarButtonHeight,
+            profile.Chrome.TitleBarButtonMargin);
+        _closeButton.ApplyLayoutMetrics(
+            profile.Chrome.TitleBarButtonWidth,
+            profile.Chrome.TitleBarButtonHeight,
+            profile.Chrome.TitleBarButtonMargin);
+
+        PerformLayout();
+    }
 
     public void SetTitle(string title)
     {
@@ -361,6 +400,16 @@ internal sealed class TitleBarControl : UserControl
             Cursor = Cursors.Hand;
             FlatAppearance.BorderSize = 0;
             BackColor = DesignTokens.Background;
+        }
+
+        public void ApplyLayoutMetrics(
+            int width,
+            int height,
+            Padding margin)
+        {
+            MinimumSize = new Size(width, height);
+            Margin = margin;
+            Invalidate();
         }
 
         public CaptionButtonKind Kind

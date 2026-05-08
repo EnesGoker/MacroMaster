@@ -1917,6 +1917,8 @@ public partial class MainForm : Form
         Padding = Padding.Empty;
         ApplyWindowChromeConfiguration();
         LogLayoutProfile(startupWorkingArea, _layoutProfile);
+        _titleBarControl.ApplyShellLayoutProfile(_layoutProfile);
+        _toolbarControl.ApplyShellLayoutProfile(_layoutProfile);
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -1927,8 +1929,8 @@ public partial class MainForm : Form
             Padding = _layoutProfile.RootPadding,
             Margin = Padding.Empty
         };
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(8)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.ToolbarHeight + DesignTokens.Scale(24)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, _layoutProfile.Chrome.TitleBarRowHeight));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, _layoutProfile.Chrome.ToolbarRowHeight));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
 
@@ -1945,12 +1947,8 @@ public partial class MainForm : Form
         headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
 
         var toolbarHostPanel = CreateCard();
-        toolbarHostPanel.Margin = new Padding(0, DesignTokens.Scale(16), 0, DesignTokens.Scale(4));
-        toolbarHostPanel.ContentPadding = new Padding(
-            DesignTokens.Scale(18),
-            DesignTokens.Scale(7),
-            DesignTokens.Scale(18),
-            DesignTokens.Scale(7));
+        toolbarHostPanel.Margin = _layoutProfile.Chrome.ToolbarHostMargin;
+        toolbarHostPanel.ContentPadding = _layoutProfile.Chrome.ToolbarContentPadding;
         toolbarHostPanel.Body.Controls.Add(_toolbarControl);
 
         var mainLayoutPanel = new TableLayoutPanel
@@ -2045,7 +2043,7 @@ public partial class MainForm : Form
             AppLogLevel.Information,
             nameof(MainForm),
             FormattableString.Invariant(
-                $"Shell layout profile resolved. Mode={profile.Mode}; Density={DesignTokens.DensityScale:0.##}; FontScale={DesignTokens.FontScale:0.##}; WorkingArea={workingArea.Width}x{workingArea.Height}; Client={profile.PreferredClientSize.Width}x{profile.PreferredClientSize.Height}; Minimum={profile.MinimumClientSize.Width}x{profile.MinimumClientSize.Height}; Fit={profile.FitRatio:0.###}."));
+                $"Shell layout profile resolved. Mode={profile.Mode}; Density={DesignTokens.DensityScale:0.##}; FontScale={DesignTokens.FontScale:0.##}; WorkingArea={workingArea.Width}x{workingArea.Height}; Client={profile.PreferredClientSize.Width}x{profile.PreferredClientSize.Height}; Minimum={profile.MinimumClientSize.Width}x{profile.MinimumClientSize.Height}; Chrome={profile.Chrome.TitleBarRowHeight}/{profile.Chrome.ToolbarRowHeight}; Fit={profile.FitRatio:0.###}."));
     }
 
     private static DashboardCard CreateCard()

@@ -1811,6 +1811,14 @@ public sealed class MacroMasterTests
         Assert.True(
             profile.FitRatio >= 0.94f,
             "Expanded layout should only be selected when the designed shell substantially fits.");
+        Assert.Equal(
+            92,
+            profile.Chrome.TitleBarRowHeight,
+            "Expanded chrome should preserve the original 46px title-bar baseline at 200% scale.");
+        Assert.Equal(
+            212,
+            profile.Chrome.ToolbarRowHeight,
+            "Expanded chrome should preserve the original 106px toolbar-row baseline at 200% scale.");
 
         return Task.CompletedTask;
     }
@@ -1834,6 +1842,18 @@ public sealed class MacroMasterTests
         Assert.True(
             profile.MinimumClientSize.Width < 1920,
             "The minimum shell size should remain resizable below the constrained working area.");
+        AppShellLayoutProfile expandedProfile = AppShellLayoutProfileResolver.Resolve(
+            new Rectangle(0, 0, 3360, 2100),
+            densityScale: 2f);
+        Assert.True(
+            profile.Chrome.TitleBarRowHeight < expandedProfile.Chrome.TitleBarRowHeight,
+            "Constrained chrome should reclaim vertical space from the title bar.");
+        Assert.True(
+            profile.Chrome.ToolbarRowHeight < expandedProfile.Chrome.ToolbarRowHeight,
+            "Constrained chrome should reclaim vertical space from the toolbar row.");
+        Assert.True(
+            profile.Chrome.ToolbarControlMinimumHeight <= profile.Chrome.ToolbarRowHeight,
+            "Toolbar control minimum height should fit inside the constrained toolbar row.");
 
         return Task.CompletedTask;
     }

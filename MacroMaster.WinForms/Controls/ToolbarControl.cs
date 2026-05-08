@@ -111,6 +111,23 @@ public partial class ToolbarControl : UserControl
         SetButtonText(hotkeysButton, "Kisayollar", _hotkeysHotkey);
     }
 
+    internal void ApplyShellLayoutProfile(AppShellLayoutProfile profile)
+    {
+        MinimumSize = new Size(0, profile.Chrome.ToolbarControlMinimumHeight);
+        toolbarLayoutPanel.Padding = profile.Chrome.ToolbarControlPadding;
+
+        foreach (Control control in toolbarLayoutPanel.Controls)
+        {
+            if (control is ToolbarButton button)
+            {
+                button.Margin = profile.Chrome.ToolbarButtonMargin;
+                button.Invalidate();
+            }
+        }
+
+        PerformLayout();
+    }
+
     private void WireEvents()
     {
         recordButton.Click += (_, _) => RecordToggleClicked?.Invoke(this, EventArgs.Empty);
