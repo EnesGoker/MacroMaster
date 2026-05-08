@@ -36,6 +36,7 @@ public partial class MainForm : Form
     private readonly MacroLibraryControl _macroLibraryControl = new();
     private readonly SessionSummaryControl _sessionSummaryControl = new();
     private MacroPreviewMapDialog? _macroPreviewMapDialog;
+    private AppShellLayoutProfile _layoutProfile;
 
     private MacroSession? _activeSession;
     private string? _lastSessionPath;
@@ -1903,13 +1904,19 @@ public partial class MainForm : Form
     {
         SuspendLayout();
 
+        Rectangle startupWorkingArea = ResolveStartupWorkingArea();
+        _layoutProfile = AppShellLayoutProfileResolver.Resolve(
+            startupWorkingArea,
+            DesignTokens.DensityScale);
+
         BackColor = DesignTokens.Background;
         ForeColor = DesignTokens.TextPrimary;
         AutoScaleMode = AutoScaleMode.None;
-        ClientSize = new Size(DesignTokens.Scale(1280), DesignTokens.Scale(760));
-        MinimumSize = new Size(DesignTokens.Scale(640), DesignTokens.Scale(480));
+        ClientSize = _layoutProfile.PreferredClientSize;
+        MinimumSize = _layoutProfile.MinimumClientSize;
         Padding = Padding.Empty;
         ApplyWindowChromeConfiguration();
+        LogLayoutProfile(startupWorkingArea, _layoutProfile);
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -1917,11 +1924,7 @@ public partial class MainForm : Form
             ColumnCount = 1,
             RowCount = 4,
             BackColor = DesignTokens.Background,
-            Padding = new Padding(
-                DesignTokens.Scale(18),
-                0,
-                DesignTokens.Scale(18),
-                DesignTokens.Scale(16)),
+            Padding = _layoutProfile.RootPadding,
             Margin = Padding.Empty
         };
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.TitleBarHeight - DesignTokens.Scale(8)));
@@ -2013,6 +2016,36 @@ public partial class MainForm : Form
         Controls.Add(rootLayoutPanel);
 
         ResumeLayout(performLayout: true);
+    }
+
+    private static Rectangle ResolveStartupWorkingArea()
+    {
+        try
+        {
+            Screen cursorScreen = Screen.FromPoint(Cursor.Position);
+            if (!cursorScreen.WorkingArea.IsEmpty)
+            {
+                return cursorScreen.WorkingArea;
+            }
+        }
+        catch
+        {
+            // Fall through to the primary screen fallback.
+        }
+
+        return Screen.PrimaryScreen?.WorkingArea
+            ?? new Rectangle(0, 0, DesignTokens.Scale(1280), DesignTokens.Scale(760));
+    }
+
+    private void LogLayoutProfile(
+        Rectangle workingArea,
+        AppShellLayoutProfile profile)
+    {
+        _logger.Log(
+            AppLogLevel.Information,
+            nameof(MainForm),
+            FormattableString.Invariant(
+                $"Shell layout profile resolved. Mode={profile.Mode}; Density={DesignTokens.DensityScale:0.##}; FontScale={DesignTokens.FontScale:0.##}; WorkingArea={workingArea.Width}x{workingArea.Height}; Client={profile.PreferredClientSize.Width}x{profile.PreferredClientSize.Height}; Minimum={profile.MinimumClientSize.Width}x{profile.MinimumClientSize.Height}; Fit={profile.FitRatio:0.###}."));
     }
 
     private static DashboardCard CreateCard()

@@ -21,6 +21,7 @@ using MacroMaster.WinForms.Composition;
 using MacroMaster.WinForms.Controls;
 using MacroMaster.WinForms.Forms;
 using MacroMaster.WinForms.Reporting;
+using MacroMaster.WinForms.Theme;
 using Xunit;
 using Assert = global::MacroMaster.Tests.Expect;
 
@@ -132,6 +133,12 @@ public sealed class MacroMasterTests
 
     [Fact(DisplayName = "PlaybackResolutionWarningPolicy skips warning for non-mouse or incomplete metadata")]
     public Task PlaybackResolutionWarningPolicy_SkipsNonMouseOrIncompleteMetadata() => PlaybackResolutionWarningPolicy_SkipsNonMouseOrIncompleteMetadataAsync();
+
+    [Fact(DisplayName = "AppShellLayoutProfile keeps expanded layout when the designed shell fits")]
+    public Task AppShellLayoutProfile_UsesExpandedLayoutWhenDesignedShellFits() => AppShellLayoutProfile_UsesExpandedLayoutWhenDesignedShellFitsAsync();
+
+    [Fact(DisplayName = "AppShellLayoutProfile constrains startup size on small high-DPI working areas")]
+    public Task AppShellLayoutProfile_ConstrainsSmallHighDpiWorkingAreas() => AppShellLayoutProfile_ConstrainsSmallHighDpiWorkingAreasAsync();
 
     [Fact(DisplayName = "AppCompositionRoot honors injected app storage paths")]
     public Task AppCompositionRoot_UsesInjectedStoragePaths() => AppCompositionRoot_UsesInjectedStoragePathsAsync();
@@ -1784,6 +1791,50 @@ public sealed class MacroMasterTests
         Assert.False(
             PlaybackResolutionWarningPolicy.ShouldWarn(CreateResolutionWarningSession(), new PlaybackSettings(), null),
             "Resolution warning should not appear when current screen metadata cannot be read.");
+        return Task.CompletedTask;
+    }
+
+    private static Task AppShellLayoutProfile_UsesExpandedLayoutWhenDesignedShellFitsAsync()
+    {
+        AppShellLayoutProfile profile = AppShellLayoutProfileResolver.Resolve(
+            new Rectangle(0, 0, 3360, 2100),
+            densityScale: 2f);
+
+        Assert.Equal(
+            AppShellLayoutMode.Expanded,
+            profile.Mode,
+            "A 3360x2100 working area at 200% scale should keep the full dashboard layout.");
+        Assert.Equal(
+            new Size(2560, 1520),
+            profile.PreferredClientSize,
+            "The expanded shell should preserve the designed 1280x760 baseline at 200% scale.");
+        Assert.True(
+            profile.FitRatio >= 0.94f,
+            "Expanded layout should only be selected when the designed shell substantially fits.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task AppShellLayoutProfile_ConstrainsSmallHighDpiWorkingAreasAsync()
+    {
+        AppShellLayoutProfile profile = AppShellLayoutProfileResolver.Resolve(
+            new Rectangle(0, 0, 1920, 1200),
+            densityScale: 2f);
+
+        Assert.Equal(
+            AppShellLayoutMode.Constrained,
+            profile.Mode,
+            "A 1920x1200 working area at 200% scale needs the constrained shell layout.");
+        Assert.True(
+            profile.PreferredClientSize.Width <= 1920,
+            "Constrained startup width should fit inside the working area.");
+        Assert.True(
+            profile.PreferredClientSize.Height <= 1200,
+            "Constrained startup height should fit inside the working area.");
+        Assert.True(
+            profile.MinimumClientSize.Width < 1920,
+            "The minimum shell size should remain resizable below the constrained working area.");
+
         return Task.CompletedTask;
     }
 
