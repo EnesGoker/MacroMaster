@@ -1993,18 +1993,6 @@ public partial class MainForm : Form
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 72f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 28f));
 
-        var headerLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 1,
-            BackColor = Color.Transparent,
-            Margin = Padding.Empty,
-            Padding = new Padding(0, 0, DesignTokens.Scale(4), 0)
-        };
-        headerLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
-
         var toolbarHostPanel = CreateCard();
         toolbarHostPanel.Margin = _layoutProfile.Chrome.ToolbarHostMargin;
         toolbarHostPanel.ContentPadding = _layoutProfile.Chrome.ToolbarContentPadding;
@@ -2068,7 +2056,7 @@ public partial class MainForm : Form
         bottomLayoutPanel.Controls.Add(playbackControlCard, 0, 0);
         bottomLayoutPanel.Controls.Add(playbackSettingsHostPanel, 1, 0);
 
-        rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
+        rootLayoutPanel.Controls.Add(_titleBarControl, 0, 0);
         rootLayoutPanel.Controls.Add(toolbarHostPanel, 0, 1);
         rootLayoutPanel.Controls.Add(mainLayoutPanel, 0, 2);
         rootLayoutPanel.Controls.Add(bottomLayoutPanel, 0, 3);

@@ -27,8 +27,8 @@ internal sealed class MacroPreviewMapDialog : Form
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
         Font = DesignTokens.FontUiNormal;
-        ClientSize = new Size(DesignTokens.Scale(780), DesignTokens.Scale(580));
-        MinimumSize = Size;
+        ClientSize = ResolvePreferredClientSize();
+        MinimumSize = SizeFromClientSize(ResolveMinimumClientSize());
 
         _inspectedEventValueLabel = CreateInspectionValueLabel();
         _inspectedActionValueLabel = CreateInspectionValueLabel();
@@ -56,6 +56,7 @@ internal sealed class MacroPreviewMapDialog : Form
             : anchorScreenBounds;
         Rectangle workingArea = Screen.FromRectangle(referenceBounds).WorkingArea;
         int margin = DesignTokens.Scale(12);
+        ApplyWorkingAreaSize(workingArea, margin);
 
         int preferredX = anchorScreenBounds.IsEmpty
             ? ownerScreenBounds.Left + (ownerScreenBounds.Width - Width) / 2
@@ -171,22 +172,30 @@ internal sealed class MacroPreviewMapDialog : Form
             RowCount = 3,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
-            Padding = new Padding(
-                DesignTokens.Scale(22),
-                DesignTokens.Scale(18),
-                DesignTokens.Scale(22),
-                DesignTokens.Scale(18))
+            Padding = ResolveRootPadding()
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(76)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveInspectionRowHeight()));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveLegendRowHeight()));
 
         rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 0);
         rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 1);
         rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 2);
 
         Controls.Add(rootLayoutPanel);
+    }
+
+    private void ApplyWorkingAreaSize(Rectangle workingArea, int margin)
+    {
+        Size minimumClientSize = ResolveMinimumClientSizeForWorkingArea(workingArea, margin);
+        MinimumSize = SizeFromClientSize(minimumClientSize);
+
+        Size nextClientSize = ResolveClientSizeForWorkingArea(workingArea, margin, minimumClientSize);
+        if (ClientSize != nextClientSize)
+        {
+            ClientSize = nextClientSize;
+        }
     }
 
     private RoundedPanel CreateInspectionPanel()
@@ -198,11 +207,7 @@ internal sealed class MacroPreviewMapDialog : Form
             FillColor = DesignTokens.SurfaceInset,
             BorderColor = DesignTokens.BorderSoft,
             Margin = new Padding(0, 0, 0, DesignTokens.Scale(12)),
-            Padding = new Padding(
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(7),
-                DesignTokens.Scale(12),
-                DesignTokens.Scale(7))
+            Padding = ResolveInspectionPanelPadding()
         };
 
         var layoutPanel = new TableLayoutPanel
@@ -288,11 +293,67 @@ internal sealed class MacroPreviewMapDialog : Form
             Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
             Padding = Padding.Empty
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 43f));
-        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 57f));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveInspectionCaptionRowHeight()));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         panel.Controls.Add(CreateInspectionCaptionLabel(caption), 0, 0);
         panel.Controls.Add(valueLabel, 0, 1);
         return panel;
+    }
+
+    private static int ResolveInspectionRowHeight()
+    {
+        Padding padding = ResolveInspectionPanelPadding();
+        int contentHeight = ResolveInspectionCaptionRowHeight()
+            + ResolveInspectionValueRowHeight();
+
+        return Math.Max(
+            DesignTokens.Scale(76),
+            padding.Vertical
+            + contentHeight
+            + DesignTokens.Scale(12)
+            + DesignTokens.Scale(2));
+    }
+
+    private static int ResolveLegendRowHeight()
+    {
+        return Math.Max(
+            DesignTokens.Scale(44),
+            DesignTokens.Scale(10)
+            + DesignTokens.Scale(28)
+            + DesignTokens.Scale(4));
+    }
+
+    private static Padding ResolveInspectionPanelPadding()
+    {
+        return new Padding(
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(7),
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(7));
+    }
+
+    private static int ResolveInspectionCaptionRowHeight()
+    {
+        return Math.Max(
+            DesignTokens.Scale(18),
+            TextRenderer.MeasureText(
+                "Gecikme",
+                DesignTokens.FontUiSmall,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Height
+            + DesignTokens.Scale(3));
+    }
+
+    private static int ResolveInspectionValueRowHeight()
+    {
+        return Math.Max(
+            DesignTokens.Scale(24),
+            TextRenderer.MeasureText(
+                "Olay secilmedi",
+                DesignTokens.FontUiBold,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Height
+            + DesignTokens.Scale(5));
     }
 
     private static Label CreateInspectionCaptionLabel(string text)
@@ -344,6 +405,70 @@ internal sealed class MacroPreviewMapDialog : Form
         return minimum > maximum
             ? minimum
             : Math.Clamp(value, minimum, maximum);
+    }
+
+    internal static Size ResolvePreferredClientSize()
+    {
+        return new Size(DesignTokens.Scale(780), DesignTokens.Scale(580));
+    }
+
+    internal static Size ResolveMinimumClientSize()
+    {
+        Padding rootPadding = ResolveRootPadding();
+        int minimumMapHeight = DesignTokens.Scale(260);
+
+        return new Size(
+            DesignTokens.Scale(560),
+            Math.Max(
+                DesignTokens.Scale(420),
+                rootPadding.Vertical
+                + ResolveInspectionRowHeight()
+                + ResolveLegendRowHeight()
+                + minimumMapHeight));
+    }
+
+    internal static Size ResolveMinimumClientSizeForWorkingArea(Rectangle workingArea, int margin)
+    {
+        Size minimumClientSize = ResolveMinimumClientSize();
+        if (workingArea.Width <= 0 || workingArea.Height <= 0)
+        {
+            return minimumClientSize;
+        }
+
+        int availableWidth = Math.Max(DesignTokens.Scale(360), workingArea.Width - (margin * 2));
+        int availableHeight = Math.Max(DesignTokens.Scale(320), workingArea.Height - (margin * 2));
+
+        return new Size(
+            Math.Min(minimumClientSize.Width, availableWidth),
+            Math.Min(minimumClientSize.Height, availableHeight));
+    }
+
+    internal static Size ResolveClientSizeForWorkingArea(
+        Rectangle workingArea,
+        int margin,
+        Size minimumClientSize)
+    {
+        Size preferredClientSize = ResolvePreferredClientSize();
+        if (workingArea.Width <= 0 || workingArea.Height <= 0)
+        {
+            return preferredClientSize;
+        }
+
+        int availableWidth = Math.Max(minimumClientSize.Width, workingArea.Width - (margin * 2));
+        int availableHeight = Math.Max(minimumClientSize.Height, workingArea.Height - (margin * 2));
+
+        return new Size(
+            Math.Clamp(preferredClientSize.Width, minimumClientSize.Width, availableWidth),
+            Math.Clamp(preferredClientSize.Height, minimumClientSize.Height, availableHeight));
+    }
+
+    private static Padding ResolveRootPadding()
+    {
+        return new Padding(
+            DesignTokens.Scale(22),
+            DesignTokens.Scale(18),
+            DesignTokens.Scale(22),
+            DesignTokens.Scale(18));
     }
 
     private sealed class LegendItem : Control

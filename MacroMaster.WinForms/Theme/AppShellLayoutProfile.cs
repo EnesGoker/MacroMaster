@@ -98,6 +98,7 @@ internal static class AppShellLayoutProfileResolver
     private const int MinimumClientHeight = 620;
     private const float CompactFitThreshold = 0.94f;
     private const float ConstrainedFitThreshold = 0.78f;
+    private const int DashboardCardVerticalInset = 2;
 
     public static AppShellLayoutProfile Resolve(
         Rectangle workingArea,
@@ -194,9 +195,21 @@ internal static class AppShellLayoutProfileResolver
         float densityScale)
     {
         float chromeScale = ResolveChromeScale(mode, densityScale);
+        int titleBarRowHeight = Scale(54, chromeScale);
+        int toolbarRowHeight = Scale(ResolveToolbarRowHeight(mode), chromeScale);
+        Padding toolbarHostMargin = new(
+            0,
+            Scale(ResolveToolbarHostTopMargin(mode), chromeScale),
+            0,
+            Scale(4, chromeScale));
+        Padding toolbarContentPadding = new(
+            Scale(ResolveToolbarContentHorizontalPadding(mode), chromeScale),
+            Scale(ResolveToolbarContentVerticalPadding(mode), chromeScale),
+            Scale(ResolveToolbarContentHorizontalPadding(mode), chromeScale),
+            Scale(ResolveToolbarContentVerticalPadding(mode), chromeScale));
 
         return new AppShellChromeMetrics(
-            TitleBarRowHeight: Scale(54, chromeScale),
+            TitleBarRowHeight: titleBarRowHeight,
             TitleBarIconColumnWidth: Scale(40, chromeScale),
             TitleBarStatusWidth: Scale(ResolveStatusWidth(mode), chromeScale),
             TitleBarButtonWidth: Scale(ResolveTitleButtonWidth(mode), chromeScale),
@@ -236,18 +249,15 @@ internal static class AppShellLayoutProfileResolver
             TitleBarButtonTopInset: Scale(1, chromeScale),
             TitleBarButtonBottomInset: Scale(5, chromeScale),
             TitleBarButtonIconPenWidth: Math.Max(1.6f, chromeScale * 1.35f),
-            ToolbarRowHeight: Scale(ResolveToolbarRowHeight(mode), chromeScale),
-            ToolbarControlMinimumHeight: Scale(ResolveToolbarControlMinimumHeight(mode), chromeScale),
-            ToolbarHostMargin: new Padding(
-                0,
-                Scale(ResolveToolbarHostTopMargin(mode), chromeScale),
-                0,
-                Scale(4, chromeScale)),
-            ToolbarContentPadding: new Padding(
-                Scale(ResolveToolbarContentHorizontalPadding(mode), chromeScale),
-                Scale(ResolveToolbarContentVerticalPadding(mode), chromeScale),
-                Scale(ResolveToolbarContentHorizontalPadding(mode), chromeScale),
-                Scale(ResolveToolbarContentVerticalPadding(mode), chromeScale)),
+            ToolbarRowHeight: toolbarRowHeight,
+            ToolbarControlMinimumHeight: ResolveToolbarControlMinimumHeight(
+                mode,
+                chromeScale,
+                toolbarRowHeight,
+                toolbarHostMargin,
+                toolbarContentPadding),
+            ToolbarHostMargin: toolbarHostMargin,
+            ToolbarContentPadding: toolbarContentPadding,
             ToolbarControlPadding: new Padding(
                 Scale(ResolveToolbarControlHorizontalPadding(mode), chromeScale),
                 Scale(ResolveToolbarControlVerticalPadding(mode), chromeScale),
@@ -647,7 +657,7 @@ internal static class AppShellLayoutProfileResolver
         };
     }
 
-    private static int ResolveToolbarControlMinimumHeight(AppShellLayoutMode mode)
+    private static int ResolveToolbarControlDesiredHeight(AppShellLayoutMode mode)
     {
         return mode switch
         {
@@ -655,6 +665,24 @@ internal static class AppShellLayoutProfileResolver
             AppShellLayoutMode.Compact => 66,
             _ => 82
         };
+    }
+
+    private static int ResolveToolbarControlMinimumHeight(
+        AppShellLayoutMode mode,
+        float chromeScale,
+        int toolbarRowHeight,
+        Padding toolbarHostMargin,
+        Padding toolbarContentPadding)
+    {
+        int desiredHeight = Scale(ResolveToolbarControlDesiredHeight(mode), chromeScale);
+        int availableHeight = Math.Max(
+            0,
+            toolbarRowHeight
+            - toolbarHostMargin.Vertical
+            - toolbarContentPadding.Vertical
+            - DashboardCardVerticalInset);
+
+        return Math.Min(desiredHeight, availableHeight);
     }
 
     private static int ResolveToolbarHostTopMargin(AppShellLayoutMode mode)

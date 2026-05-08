@@ -110,11 +110,20 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "HotkeySettingsDialog exposes all controls within the dialog bounds")]
     public Task HotkeySettingsDialog_UsesStableLayout() => HotkeySettingsDialog_UsesStableLayoutAsync();
 
+    [Fact(DisplayName = "MacroPreviewMapDialog keeps preview content within popup bounds")]
+    public Task MacroPreviewMapDialog_UsesStableLayout() => MacroPreviewMapDialog_UsesStableLayoutAsync();
+
+    [Fact(DisplayName = "MacroPreviewMapDialog clamps its size to the working area")]
+    public Task MacroPreviewMapDialog_ClampsSizeToWorkingArea() => MacroPreviewMapDialog_ClampsSizeToWorkingAreaAsync();
+
     [Fact(DisplayName = "AppShellLayoutProfile keeps expanded layout when the designed shell fits")]
     public Task AppShellLayoutProfile_UsesExpandedLayoutWhenDesignedShellFits() => AppShellLayoutProfile_UsesExpandedLayoutWhenDesignedShellFitsAsync();
 
     [Fact(DisplayName = "AppShellLayoutProfile constrains startup size on small high-DPI working areas")]
     public Task AppShellLayoutProfile_ConstrainsSmallHighDpiWorkingAreas() => AppShellLayoutProfile_ConstrainsSmallHighDpiWorkingAreasAsync();
+
+    [Fact(DisplayName = "AppShellLayoutProfile keeps toolbar chrome metrics internally consistent")]
+    public Task AppShellLayoutProfile_KeepsToolbarMetricsConsistent() => AppShellLayoutProfile_KeepsToolbarMetricsConsistentAsync();
 
     [Fact(DisplayName = "AppCompositionRoot honors injected app storage paths")]
     public Task AppCompositionRoot_UsesInjectedStoragePaths() => AppCompositionRoot_UsesInjectedStoragePathsAsync();
@@ -1396,6 +1405,80 @@ public sealed class MacroMasterTests
         });
     }
 
+    private static async Task MacroPreviewMapDialog_UsesStableLayoutAsync()
+    {
+        _ = await RunOnStaThreadAsync(() =>
+        {
+            using var dialog = new MacroPreviewMapDialog();
+            dialog.CreateControl();
+            dialog.PerformLayout();
+
+            Size minimumClientSize = MacroPreviewMapDialog.ResolveMinimumClientSize();
+            Assert.True(
+                dialog.ClientSize.Width >= minimumClientSize.Width,
+                $"Preview map dialog should allocate at least its minimum width. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
+            Assert.True(
+                dialog.ClientSize.Height >= minimumClientSize.Height,
+                $"Preview map dialog should allocate at least its minimum height. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
+
+            MacroPreviewMapControl mapControl = GetDescendants<MacroPreviewMapControl>(dialog).Single();
+            Rectangle mapBounds = GetBoundsRelativeToAncestor(mapControl, dialog);
+            Assert.True(
+                mapBounds.Height >= DesignTokens.Scale(260),
+                $"Preview map should retain enough vertical room after popup chrome is laid out. Actual map bounds: {mapBounds}.");
+
+            foreach (Control control in GetDescendants<Control>(dialog).Where(control => control.Visible))
+            {
+                Rectangle bounds = GetBoundsRelativeToAncestor(control, dialog);
+                Assert.True(
+                    bounds.Left >= 0 && bounds.Top >= 0,
+                    $"{DescribeControl(control)} should remain within the preview dialog origin.");
+                Assert.True(
+                    bounds.Right <= dialog.ClientSize.Width,
+                    $"{DescribeControl(control)} should be fully visible within the preview dialog width.");
+                Assert.True(
+                    bounds.Bottom <= dialog.ClientSize.Height,
+                    $"{DescribeControl(control)} should be fully visible within the preview dialog height.");
+            }
+        });
+    }
+
+    private static async Task MacroPreviewMapDialog_ClampsSizeToWorkingAreaAsync()
+    {
+        _ = await RunOnStaThreadAsync(() =>
+        {
+            Rectangle workingArea = new(
+                0,
+                0,
+                DesignTokens.Scale(520),
+                DesignTokens.Scale(380));
+            int margin = DesignTokens.Scale(12);
+            Size minimumClientSize = MacroPreviewMapDialog.ResolveMinimumClientSizeForWorkingArea(
+                workingArea,
+                margin);
+            Size clientSize = MacroPreviewMapDialog.ResolveClientSizeForWorkingArea(
+                workingArea,
+                margin,
+                minimumClientSize);
+
+            int availableWidth = workingArea.Width - (margin * 2);
+            int availableHeight = workingArea.Height - (margin * 2);
+
+            Assert.True(
+                clientSize.Width <= availableWidth,
+                $"Preview map dialog width should clamp to the working area. Client={clientSize.Width}, Available={availableWidth}.");
+            Assert.True(
+                clientSize.Height <= availableHeight,
+                $"Preview map dialog height should clamp to the working area. Client={clientSize.Height}, Available={availableHeight}.");
+            Assert.True(
+                clientSize.Width >= minimumClientSize.Width,
+                "Preview map dialog width should not shrink below its working-area-adjusted minimum.");
+            Assert.True(
+                clientSize.Height >= minimumClientSize.Height,
+                "Preview map dialog height should not shrink below its working-area-adjusted minimum.");
+        });
+    }
+
     private static Task AppShellLayoutProfile_UsesExpandedLayoutWhenDesignedShellFitsAsync()
     {
         AppShellLayoutProfile profile = AppShellLayoutProfileResolver.Resolve(
@@ -1476,6 +1559,41 @@ public sealed class MacroMasterTests
         Assert.True(
             profile.Main.SummaryCaptionColumnWidth < expandedProfile.Main.SummaryCaptionColumnWidth,
             "Constrained summary details should reduce fixed caption width before truncating values.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task AppShellLayoutProfile_KeepsToolbarMetricsConsistentAsync()
+    {
+        const int dashboardCardVerticalInset = 2;
+        Rectangle[] workingAreas =
+        [
+            new Rectangle(0, 0, 1280, 760),
+            new Rectangle(0, 0, 1920, 1200),
+            new Rectangle(0, 0, 3360, 2100)
+        ];
+        float[] densityScales = [1f, 1.25f, 1.5f, 2f];
+
+        foreach (Rectangle workingArea in workingAreas)
+        {
+            foreach (float densityScale in densityScales)
+            {
+                AppShellLayoutProfile profile = AppShellLayoutProfileResolver.Resolve(
+                    workingArea,
+                    densityScale);
+                int availableToolbarHeight = profile.Chrome.ToolbarRowHeight
+                    - profile.Chrome.ToolbarHostMargin.Vertical
+                    - profile.Chrome.ToolbarContentPadding.Vertical
+                    - dashboardCardVerticalInset;
+
+                Assert.True(
+                    profile.Chrome.ToolbarControlMinimumHeight > 0,
+                    $"Toolbar minimum height should stay positive for {profile.Mode} at {densityScale:0.##}x.");
+                Assert.True(
+                    profile.Chrome.ToolbarControlMinimumHeight <= availableToolbarHeight,
+                    $"Toolbar minimum height should fit its effective row. Mode={profile.Mode}; Density={densityScale:0.##}; Minimum={profile.Chrome.ToolbarControlMinimumHeight}; Available={availableToolbarHeight}.");
+            }
+        }
 
         return Task.CompletedTask;
     }
