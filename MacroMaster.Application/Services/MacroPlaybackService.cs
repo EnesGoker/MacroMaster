@@ -16,6 +16,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
     private bool _stopRequested;
     private CancellationTokenSource? _playbackCancellationTokenSource;
     private TaskCompletionSource<bool> _resumeSignal = CreateResumeSignal(signaled: true);
+    private PlaybackCoordinateResolver? _activeCoordinateResolver;
     private int _playbackNextLogicalIndex;
     private int? _playbackTotalLogicalEventCount;
 
@@ -42,6 +43,15 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
 
     public void Dispose()
     {
+        PlaybackCoordinateResolver? activeCoordinateResolver;
+
+        lock (_syncRoot)
+        {
+            activeCoordinateResolver = _activeCoordinateResolver;
+            _activeCoordinateResolver = null;
+        }
+
+        activeCoordinateResolver?.Dispose();
         _eventExecutionGate.Dispose();
     }
 
@@ -64,14 +74,11 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
         }
 
         PlaybackSettings effectiveSettings = NormalizeSettingsForExecution(settings);
+        PlaybackCoordinateResolver coordinateResolver =
+            PlaybackCoordinateResolver.Create(session, effectiveSettings);
         CancellationTokenSource? playbackCancellationTokenSource = null;
         bool playbackStarted = false;
         List<Exception> playbackErrors = [];
-        bool shouldRebaseMouseCoordinates = effectiveSettings.UseRelativeCoordinates
-            && !effectiveSettings.SimulationMode;
-        CursorPosition? recordedMouseAnchor = shouldRebaseMouseCoordinates
-            ? GetRecordedMouseAnchor(session)
-            : null;
         int repeatCount = effectiveSettings.LoopIndefinitely
             ? int.MaxValue
             : Math.Max(effectiveSettings.RepeatCount, 1);
@@ -94,6 +101,7 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
                 _playbackCancellationTokenSource =
                     CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 playbackCancellationTokenSource = _playbackCancellationTokenSource;
+                _activeCoordinateResolver = coordinateResolver;
                 _playbackNextLogicalIndex = 0;
                 _playbackTotalLogicalEventCount = totalLogicalEventCount;
             }
@@ -115,9 +123,6 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
 
             playbackCancellationToken.ThrowIfCancellationRequested();
 
-            int? anchoredRelativeIteration = null;
-            CursorPosition? playbackMouseAnchor = null;
-
             while (true)
             {
                 playbackCancellationToken.ThrowIfCancellationRequested();
@@ -134,19 +139,13 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
                 int iteration = logicalEventIndex / session.Events.Count;
                 int eventIndex = logicalEventIndex % session.Events.Count;
 
-                if (recordedMouseAnchor.HasValue
-                    && anchoredRelativeIteration != iteration)
-                {
-                    playbackMouseAnchor =
-                        await _cursorPositionProvider.GetCursorPositionAsync(playbackCancellationToken);
-                    anchoredRelativeIteration = iteration;
-                }
+                await coordinateResolver.PrepareForIterationAsync(
+                    iteration,
+                    _cursorPositionProvider,
+                    playbackCancellationToken);
 
                 MacroEvent macroEvent = session.Events[eventIndex];
-                MacroEvent playbackEvent = ResolvePlaybackEvent(
-                    macroEvent,
-                    recordedMouseAnchor,
-                    playbackMouseAnchor);
+                MacroEvent playbackEvent = coordinateResolver.Resolve(macroEvent);
                 int delayMs = ResolveDelayMs(playbackEvent, effectiveSettings);
 
                 if (delayMs > 0)
@@ -240,12 +239,18 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
                     _playbackCancellationTokenSource = null;
                 }
 
+                if (ReferenceEquals(_activeCoordinateResolver, coordinateResolver))
+                {
+                    _activeCoordinateResolver = null;
+                }
+
                 _stopRequested = false;
                 _resumeSignal.TrySetResult(true);
                 _resumeSignal = CreateResumeSignal(signaled: true);
             }
 
             playbackCancellationTokenSource?.Dispose();
+            coordinateResolver.Dispose();
 
             if (playbackStarted
                 || _applicationStateService.IsAny(
@@ -364,11 +369,41 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
         return Task.CompletedTask;
     }
 
-    public async Task<MacroEvent> PlayEventAtAsync(
+    public Task<MacroEvent> PlayEventAtAsync(
         MacroSession session,
         PlaybackSettings settings,
         int eventIndex,
         CancellationToken cancellationToken = default)
+    {
+        return PlayEventAtCoreAsync(
+            session,
+            settings,
+            eventIndex,
+            logicalEventIndex: null,
+            cancellationToken);
+    }
+
+    public Task<MacroEvent> PlayEventAtAsync(
+        MacroSession session,
+        PlaybackSettings settings,
+        int eventIndex,
+        int logicalEventIndex,
+        CancellationToken cancellationToken = default)
+    {
+        return PlayEventAtCoreAsync(
+            session,
+            settings,
+            eventIndex,
+            logicalEventIndex,
+            cancellationToken);
+    }
+
+    private async Task<MacroEvent> PlayEventAtCoreAsync(
+        MacroSession session,
+        PlaybackSettings settings,
+        int eventIndex,
+        int? logicalEventIndex,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(settings);
@@ -388,23 +423,41 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
                 "Oynatilacak olay dizin araligi disinda.");
         }
 
+        int resolvedLogicalEventIndex = logicalEventIndex ?? eventIndex;
+
+        if (resolvedLogicalEventIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(logicalEventIndex),
+                logicalEventIndex,
+                "Oynatilacak mantiksal olay dizini negatif olamaz.");
+        }
+
+        if (logicalEventIndex.HasValue
+            && resolvedLogicalEventIndex % session.Events.Count != eventIndex)
+        {
+            throw new ArgumentException(
+                "Mantiksal olay dizini kaynak olay diziniyle eslesmelidir.",
+                nameof(logicalEventIndex));
+        }
+
         PlaybackSettings effectiveSettings = NormalizeSettingsForExecution(settings);
         MacroEvent sourceEvent = session.Events[eventIndex];
-        bool shouldRebaseMouseCoordinates = effectiveSettings.UseRelativeCoordinates
-            && !effectiveSettings.SimulationMode;
-        CursorPosition? recordedMouseAnchor = shouldRebaseMouseCoordinates
-            ? GetRecordedMouseAnchor(session)
-            : null;
-        CursorPosition? playbackMouseAnchor = recordedMouseAnchor.HasValue
-            ? await _cursorPositionProvider.GetCursorPositionAsync(cancellationToken)
-            : null;
-        MacroEvent playbackEvent = ResolvePlaybackEvent(
-            sourceEvent,
-            recordedMouseAnchor,
-            playbackMouseAnchor);
+        PlaybackCoordinateResolver? coordinateResolver = GetActiveCoordinateResolverIfPaused();
+        bool shouldDisposeCoordinateResolver = coordinateResolver is null;
+
+        coordinateResolver ??= PlaybackCoordinateResolver.Create(session, effectiveSettings);
+        MacroEvent playbackEvent = sourceEvent;
 
         try
         {
+            await coordinateResolver.PrepareForLogicalEventAsync(
+                resolvedLogicalEventIndex,
+                session.Events.Count,
+                _cursorPositionProvider,
+                cancellationToken);
+            playbackEvent = coordinateResolver.Resolve(sourceEvent);
+
             await _eventExecutionGate.WaitAsync(cancellationToken);
 
             try
@@ -444,6 +497,26 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
                 "Tek olay oynatilirken hata olustu.",
                 playbackException);
             throw playbackException;
+        }
+        finally
+        {
+            if (shouldDisposeCoordinateResolver)
+            {
+                coordinateResolver.Dispose();
+            }
+        }
+    }
+
+    private PlaybackCoordinateResolver? GetActiveCoordinateResolverIfPaused()
+    {
+        if (!_applicationStateService.IsState(AppState.Paused))
+        {
+            return null;
+        }
+
+        lock (_syncRoot)
+        {
+            return _activeCoordinateResolver;
         }
     }
 
@@ -683,88 +756,6 @@ public sealed class MacroPlaybackService : IMacroPlaybackService, IDisposable
             MacroEventType.Mouse => "fare",
             MacroEventType.System => "sistem",
             _ => eventType.ToString()
-        };
-    }
-
-    private static CursorPosition? GetRecordedMouseAnchor(MacroSession session)
-    {
-        foreach (MacroEvent macroEvent in session.Events)
-        {
-            if (macroEvent.EventType == MacroEventType.Mouse
-                && macroEvent.X.HasValue
-                && macroEvent.Y.HasValue)
-            {
-                return new CursorPosition(macroEvent.X.Value, macroEvent.Y.Value);
-            }
-        }
-
-        return null;
-    }
-
-    private static MacroEvent ResolvePlaybackEvent(
-        MacroEvent macroEvent,
-        CursorPosition? recordedMouseAnchor,
-        CursorPosition? playbackMouseAnchor)
-    {
-        if (recordedMouseAnchor is null
-            || playbackMouseAnchor is null
-            || macroEvent.EventType != MacroEventType.Mouse
-            || !macroEvent.X.HasValue
-            || !macroEvent.Y.HasValue)
-        {
-            return macroEvent;
-        }
-
-        int resolvedX = ResolveRelativeCoordinate(
-            macroEvent.X.Value,
-            recordedMouseAnchor.Value.X,
-            playbackMouseAnchor.Value.X);
-        int resolvedY = ResolveRelativeCoordinate(
-            macroEvent.Y.Value,
-            recordedMouseAnchor.Value.Y,
-            playbackMouseAnchor.Value.Y);
-
-        return CloneMacroEventWithCoordinates(macroEvent, resolvedX, resolvedY);
-    }
-
-    private static int ResolveRelativeCoordinate(
-        int recordedCoordinate,
-        int recordedAnchor,
-        int playbackAnchor)
-    {
-        long relativeOffset = (long)recordedCoordinate - recordedAnchor;
-        long resolvedCoordinate = playbackAnchor + relativeOffset;
-
-        if (resolvedCoordinate < int.MinValue || resolvedCoordinate > int.MaxValue)
-        {
-            throw new InvalidOperationException(
-                $"Goreli fare oynatimi gecersiz bir koordinat uretti: {resolvedCoordinate}.");
-        }
-
-        return (int)resolvedCoordinate;
-    }
-
-    private static MacroEvent CloneMacroEventWithCoordinates(
-        MacroEvent source,
-        int x,
-        int y)
-    {
-        return new MacroEvent
-        {
-            Id = source.Id,
-            EventType = source.EventType,
-            KeyboardActionType = source.KeyboardActionType,
-            MouseActionType = source.MouseActionType,
-            DelayMs = source.DelayMs,
-            TimestampUtc = source.TimestampUtc,
-            KeyCode = source.KeyCode,
-            ScanCode = source.ScanCode,
-            IsExtendedKey = source.IsExtendedKey,
-            KeyName = source.KeyName,
-            X = x,
-            Y = y,
-            WheelDelta = source.WheelDelta,
-            Description = source.Description
         };
     }
 

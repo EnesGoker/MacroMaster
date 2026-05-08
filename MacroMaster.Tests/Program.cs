@@ -163,6 +163,15 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroPlaybackService re-anchors relative mouse playback for each repeat iteration")]
     public Task MacroPlaybackService_UseRelativeCoordinates_ReanchorsEachIteration() => MacroPlaybackService_UseRelativeCoordinates_ReanchorsEachIterationAsync();
 
+    [Fact(DisplayName = "MacroPlaybackService does not query cursor anchors when no relative mouse anchor exists")]
+    public Task MacroPlaybackService_UseRelativeCoordinates_NoMouseAnchor_DoesNotQueryCursor() => MacroPlaybackService_UseRelativeCoordinates_NoMouseAnchor_DoesNotQueryCursorAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService keeps the active relative anchor for paused single-step playback")]
+    public Task MacroPlaybackService_UseRelativeCoordinates_PausedStepUsesActiveAnchor() => MacroPlaybackService_UseRelativeCoordinates_PausedStepUsesActiveAnchorAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService re-anchors paused relative single-step playback across repeat iterations")]
+    public Task MacroPlaybackService_UseRelativeCoordinates_PausedStepReanchorsNewIteration() => MacroPlaybackService_UseRelativeCoordinates_PausedStepReanchorsNewIterationAsync();
+
     [Fact(DisplayName = "MacroPlaybackService preserves absolute mouse coordinates when relative playback is disabled")]
     public Task MacroPlaybackService_UseRelativeCoordinatesFalse_PreservesAbsoluteCoordinates() => MacroPlaybackService_UseRelativeCoordinatesFalse_PreservesAbsoluteCoordinatesAsync();
 
@@ -2109,6 +2118,229 @@ public sealed class MacroMasterTests
         Assert.Equal(530, inputPlaybackAdapter.PlayedEvents[1].X, "The first iteration delta should be preserved.");
         Assert.Equal(1000, inputPlaybackAdapter.PlayedEvents[2].X, "The second iteration should use the second cursor anchor.");
         Assert.Equal(1030, inputPlaybackAdapter.PlayedEvents[3].X, "The second iteration delta should be preserved.");
+    }
+
+    private static async Task MacroPlaybackService_UseRelativeCoordinates_NoMouseAnchor_DoesNotQueryCursorAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter
+        {
+            CurrentCursorPosition = new CursorPosition(500, 300)
+        };
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            new ApplicationStateService());
+
+        var session = new MacroSession
+        {
+            Name = "RelativeWithoutMouse",
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    KeyCode = 0x41,
+                    ScanCode = 0x1E,
+                    Description = "Keyboard down"
+                }
+            }
+        };
+
+        await playbackService.PlayAsync(
+            session,
+            new PlaybackSettings { UseRelativeCoordinates = true });
+
+        Assert.Equal(0, inputPlaybackAdapter.CursorPositionReadCount, "Relative playback should not query the cursor when the session has no mouse coordinate anchor.");
+        Assert.Equal(1, inputPlaybackAdapter.PlayedEvents.Count, "The keyboard event should still be played.");
+        Assert.Equal(MacroEventType.Keyboard, inputPlaybackAdapter.PlayedEvents[0].EventType, "Non-mouse events should be preserved.");
+        Assert.False(inputPlaybackAdapter.PlayedEvents[0].X.HasValue, "Keyboard events should not receive synthetic X coordinates.");
+        Assert.False(inputPlaybackAdapter.PlayedEvents[0].Y.HasValue, "Keyboard events should not receive synthetic Y coordinates.");
+    }
+
+    private static async Task MacroPlaybackService_UseRelativeCoordinates_PausedStepUsesActiveAnchorAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        inputPlaybackAdapter.CursorPositions.Enqueue(new CursorPosition(500, 300));
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            applicationStateService);
+        var firstEventPlayed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var session = new MacroSession
+        {
+            Name = "RelativePausedStep",
+            Events =
+            {
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 100,
+                    Y = 200,
+                    Description = "Anchor"
+                },
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftDown,
+                    X = 150,
+                    Y = 220,
+                    Description = "Manual step"
+                },
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftUp,
+                    X = 170,
+                    Y = 250,
+                    Description = "Resume step"
+                }
+            }
+        };
+
+        playbackService.EventPlayed += macroEvent =>
+        {
+            if (macroEvent.Id != session.Events[0].Id
+                || firstEventPlayed.Task.IsCompleted)
+            {
+                return;
+            }
+
+            playbackService.PauseAsync().GetAwaiter().GetResult();
+            inputPlaybackAdapter.CurrentCursorPosition = new CursorPosition(900, 900);
+            firstEventPlayed.TrySetResult(true);
+        };
+
+        Task playTask = playbackService.PlayAsync(
+            session,
+            new PlaybackSettings
+            {
+                UseRelativeCoordinates = true,
+                StopOnError = true
+            });
+
+        await firstEventPlayed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await playbackService.WaitForPlaybackNavigationReadyAsync();
+        await playbackService.PlayEventAtAsync(
+            session,
+            new PlaybackSettings
+            {
+                UseRelativeCoordinates = true,
+                StopOnError = true
+            },
+            eventIndex: 1,
+            logicalEventIndex: 1);
+        await playbackService.SeekPlaybackCursorAsync(2);
+        await playbackService.ResumeAsync();
+        await playTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(1, inputPlaybackAdapter.CursorPositionReadCount, "Paused single-step playback should reuse the active relative anchor for the same iteration.");
+        int[] expectedXCoordinates = [500, 550, 570];
+        int[] expectedYCoordinates = [300, 320, 350];
+
+        Assert.Equal(
+            expectedXCoordinates,
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.X!.Value).ToArray(),
+            "Paused single-step playback should preserve the active iteration's relative X offsets.");
+        Assert.Equal(
+            expectedYCoordinates,
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.Y!.Value).ToArray(),
+            "Paused single-step playback should preserve the active iteration's relative Y offsets.");
+    }
+
+    private static async Task MacroPlaybackService_UseRelativeCoordinates_PausedStepReanchorsNewIterationAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        inputPlaybackAdapter.CursorPositions.Enqueue(new CursorPosition(500, 300));
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            applicationStateService);
+        var firstIterationCompleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var session = new MacroSession
+        {
+            Name = "RelativePausedRepeatStep",
+            Events =
+            {
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 100,
+                    Y = 200,
+                    Description = "Anchor"
+                },
+                new MacroEvent
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftUp,
+                    X = 130,
+                    Y = 240,
+                    Description = "Delta"
+                }
+            }
+        };
+
+        playbackService.EventPlayed += macroEvent =>
+        {
+            if (macroEvent.Id != session.Events[1].Id
+                || firstIterationCompleted.Task.IsCompleted)
+            {
+                return;
+            }
+
+            playbackService.PauseAsync().GetAwaiter().GetResult();
+            inputPlaybackAdapter.CurrentCursorPosition = new CursorPosition(1000, 200);
+            firstIterationCompleted.TrySetResult(true);
+        };
+
+        Task playTask = playbackService.PlayAsync(
+            session,
+            new PlaybackSettings
+            {
+                UseRelativeCoordinates = true,
+                RepeatCount = 2,
+                StopOnError = true
+            });
+
+        await firstIterationCompleted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await playbackService.WaitForPlaybackNavigationReadyAsync();
+        await playbackService.PlayEventAtAsync(
+            session,
+            new PlaybackSettings
+            {
+                UseRelativeCoordinates = true,
+                RepeatCount = 2,
+                StopOnError = true
+            },
+            eventIndex: 0,
+            logicalEventIndex: 2);
+        await playbackService.SeekPlaybackCursorAsync(3);
+        await playbackService.ResumeAsync();
+        await playTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(2, inputPlaybackAdapter.CursorPositionReadCount, "Paused single-step playback should re-anchor when it moves into a new repeat iteration.");
+        int[] expectedXCoordinates = [500, 530, 1000, 1030];
+        int[] expectedYCoordinates = [300, 340, 200, 240];
+
+        Assert.Equal(
+            expectedXCoordinates,
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.X!.Value).ToArray(),
+            "Relative playback should preserve offsets after a paused step enters the next repeat iteration.");
+        Assert.Equal(
+            expectedYCoordinates,
+            inputPlaybackAdapter.PlayedEvents.Select(macroEvent => macroEvent.Y!.Value).ToArray(),
+            "Relative playback should preserve Y offsets after a paused step enters the next repeat iteration.");
     }
 
     private static async Task MacroPlaybackService_RepeatCount_ReplaysEntireSessionAsync()

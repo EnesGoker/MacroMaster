@@ -435,7 +435,8 @@ public partial class MainForm : Form
             await _macroPlaybackService.PlayEventAtAsync(
                 session,
                 playbackSettings,
-                sourceEventIndex);
+                sourceEventIndex,
+                targetLogicalIndex);
 
             _playedEventCount = targetLogicalIndex + 1;
             _playedDurationMs = CalculatePlayedDurationMs(session, targetLogicalIndex);
