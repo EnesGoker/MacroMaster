@@ -8,6 +8,8 @@ namespace MacroMaster.WinForms.Forms;
 
 internal sealed class MacroPreviewMapDialog : Form
 {
+    private const int PositionYOffset = 16;
+
     private readonly Label _inspectedEventValueLabel;
     private readonly Label _inspectedActionValueLabel;
     private readonly Label _inspectedPositionValueLabel;
@@ -70,6 +72,7 @@ internal sealed class MacroPreviewMapDialog : Form
         int preferredY = anchorScreenBounds.IsEmpty
             ? ownerScreenBounds.Top + (ownerScreenBounds.Height - Height) / 2
             : anchorScreenBounds.Top + (anchorScreenBounds.Height - Height) / 2;
+        preferredY += DesignTokens.Scale(PositionYOffset);
 
         Location = new Point(
             ClampScreenCoordinate(preferredX, workingArea.Left + margin, workingArea.Right - Width - margin),
