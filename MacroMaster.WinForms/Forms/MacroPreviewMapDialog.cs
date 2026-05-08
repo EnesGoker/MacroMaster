@@ -8,7 +8,7 @@ namespace MacroMaster.WinForms.Forms;
 
 internal sealed class MacroPreviewMapDialog : Form
 {
-    private const int PositionYOffset = 16;
+    private const int PositionYOffset = 6;
 
     private readonly Label _inspectedEventValueLabel;
     private readonly Label _inspectedActionValueLabel;

@@ -195,7 +195,7 @@ internal static class AppShellLayoutProfileResolver
         float densityScale)
     {
         float chromeScale = ResolveChromeScale(mode, densityScale);
-        int titleBarRowHeight = Scale(44, chromeScale);
+        int titleBarRowHeight = Scale(54, chromeScale);
         int toolbarRowHeight = Scale(ResolveToolbarRowHeight(mode), chromeScale);
         Padding toolbarHostMargin = new(
             0,
@@ -221,7 +221,7 @@ internal static class AppShellLayoutProfileResolver
                 0,
                 0,
                 Scale(8, chromeScale),
-                Scale(4, chromeScale)),
+                Scale(6, chromeScale)),
             TitleBarStatusCornerRadius: Scale(8, chromeScale),
             TitleBarStatusDotSize: Scale(8, chromeScale),
             TitleBarStatusDotInset: Scale(12, chromeScale),
@@ -634,7 +634,7 @@ internal static class AppShellLayoutProfileResolver
 
     private static int ResolveTitleButtonHeight(AppShellLayoutMode mode)
     {
-        return mode == AppShellLayoutMode.Constrained ? 28 : 32;
+        return mode == AppShellLayoutMode.Constrained ? 32 : 36;
     }
 
     private static int ResolveTitleBarRightPadding(AppShellLayoutMode mode)
