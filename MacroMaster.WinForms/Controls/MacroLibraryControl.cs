@@ -26,6 +26,22 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _totalEventValueLabel;
     private readonly TextBox _searchTextBox;
     private readonly FilterIconButton _filterButton;
+    private TableLayoutPanel _rootLayoutPanel = null!;
+    private TableLayoutPanel _headerLayoutPanel = null!;
+    private TableLayoutPanel _footerLayoutPanel = null!;
+    private TableLayoutPanel _listHostPanel = null!;
+    private RoundedPanel _searchPanel = null!;
+    private RoundedPanel _footerPanel = null!;
+    private Button _addButton = null!;
+    private Label _titleLabel = null!;
+    private Label _totalMacroCaptionLabel = null!;
+    private Label _totalEventCaptionLabel = null!;
+    private RowStyle _headerRowStyle = null!;
+    private RowStyle _searchRowStyle = null!;
+    private RowStyle _footerRowStyle = null!;
+    private ColumnStyle _filterButtonColumnStyle = null!;
+    private ColumnStyle _addButtonColumnStyle = null!;
+    private ColumnStyle _scrollColumnStyle = null!;
     private ToolStripDropDown? _filterDropDown;
     private IReadOnlyList<MacroLibraryViewItem> _items = [];
     private MacroLibraryFilterKind _selectedFilterKind = MacroLibraryFilterKind.All;
@@ -94,6 +110,51 @@ internal sealed class MacroLibraryControl : UserControl
         ApplyFilter();
     }
 
+    internal void ApplyShellLayoutProfile(AppShellLayoutProfile profile)
+    {
+        AppShellMainMetrics main = profile.Main;
+
+        SuspendLayout();
+        try
+        {
+            _headerRowStyle.Height = main.LibraryHeaderHeight;
+            _searchRowStyle.Height = main.LibrarySearchHeight;
+            _footerRowStyle.Height = main.LibraryFooterHeight;
+            _headerLayoutPanel.Margin = main.LibraryHeaderMargin;
+            _filterButtonColumnStyle.Width = main.LibraryIconButtonWidth;
+            _addButtonColumnStyle.Width = main.LibraryIconButtonWidth;
+            _filterButton.Margin = main.LibraryButtonMargin;
+            _addButton.Margin = main.LibraryButtonMargin;
+            _filterButton.MinimumSize = Size.Empty;
+            _addButton.MinimumSize = Size.Empty;
+
+            _searchPanel.Margin = main.LibrarySearchMargin;
+            _searchPanel.Padding = main.LibrarySearchPadding;
+            _scrollColumnStyle.Width = main.LibraryScrollColumnWidth;
+            _listScrollBar.Margin = new Padding(Math.Max(1, main.LibraryButtonMargin.Left / 2), 0, 0, 0);
+
+            _footerPanel.Margin = main.LibraryFooterMargin;
+            _footerPanel.Padding = main.LibraryFooterPadding;
+            _footerLayoutPanel.ColumnStyles[0].Width = main.LibraryFooterMacroCaptionPercent;
+            _footerLayoutPanel.ColumnStyles[1].Width = main.LibraryFooterMacroValuePercent;
+            _footerLayoutPanel.ColumnStyles[2].Width = main.LibraryFooterEventCaptionPercent;
+            _footerLayoutPanel.ColumnStyles[3].Width = main.LibraryFooterEventValuePercent;
+            _totalMacroCaptionLabel.Text = profile.Mode == AppShellLayoutMode.Constrained
+                ? "Makro"
+                : "Toplam Makro";
+            _totalEventCaptionLabel.Text = profile.Mode == AppShellLayoutMode.Constrained
+                ? "Olay"
+                : "Toplam Olay";
+        }
+        finally
+        {
+            ResumeLayout(performLayout: true);
+        }
+
+        ResizeLibraryRows();
+        UpdateListScrollLayout();
+    }
+
     private void ApplyFilter()
     {
         string searchTerm = _searchTextBox.Text.Trim();
@@ -158,7 +219,7 @@ internal sealed class MacroLibraryControl : UserControl
 
     private void BuildLayout()
     {
-        var rootLayoutPanel = new TableLayoutPanel
+        _rootLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -167,13 +228,16 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(50)));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _headerRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(42));
+        _searchRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(44));
+        _footerRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(50));
+        _rootLayoutPanel.RowStyles.Add(_headerRowStyle);
+        _rootLayoutPanel.RowStyles.Add(_searchRowStyle);
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _rootLayoutPanel.RowStyles.Add(_footerRowStyle);
 
-        var headerLayoutPanel = new TableLayoutPanel
+        _headerLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
@@ -182,11 +246,13 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
             Padding = Padding.Empty
         };
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
+        _headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _filterButtonColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38));
+        _addButtonColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38));
+        _headerLayoutPanel.ColumnStyles.Add(_filterButtonColumnStyle);
+        _headerLayoutPanel.ColumnStyles.Add(_addButtonColumnStyle);
 
-        var titleLabel = new Label
+        _titleLabel = new Label
         {
             Dock = DockStyle.Fill,
             Text = "Makro Kütüphanesi",
@@ -197,7 +263,7 @@ internal sealed class MacroLibraryControl : UserControl
             AutoEllipsis = true
         };
 
-        var addButton = new Button
+        _addButton = new Button
         {
             Dock = DockStyle.Fill,
             Text = "+",
@@ -208,19 +274,19 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7)),
             UseVisualStyleBackColor = false
         };
-        addButton.FlatAppearance.BorderColor = DesignTokens.BorderSoft;
-        addButton.FlatAppearance.BorderSize = 1;
-        addButton.Click += (_, _) => AddRequested?.Invoke(this, EventArgs.Empty);
+        _addButton.FlatAppearance.BorderColor = DesignTokens.BorderSoft;
+        _addButton.FlatAppearance.BorderSize = 1;
+        _addButton.Click += (_, _) => AddRequested?.Invoke(this, EventArgs.Empty);
 
         _filterButton.Dock = DockStyle.Fill;
         _filterButton.Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7));
         _filterButton.Click += (_, _) => ShowFilterMenu();
 
-        headerLayoutPanel.Controls.Add(titleLabel, 0, 0);
-        headerLayoutPanel.Controls.Add(_filterButton, 1, 0);
-        headerLayoutPanel.Controls.Add(addButton, 2, 0);
+        _headerLayoutPanel.Controls.Add(_titleLabel, 0, 0);
+        _headerLayoutPanel.Controls.Add(_filterButton, 1, 0);
+        _headerLayoutPanel.Controls.Add(_addButton, 2, 0);
 
-        var searchPanel = new RoundedPanel
+        _searchPanel = new RoundedPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
@@ -236,10 +302,10 @@ internal sealed class MacroLibraryControl : UserControl
                 DesignTokens.Scale(10),
                 DesignTokens.Scale(4))
         };
-        searchPanel.Click += (_, _) => _searchTextBox.Focus();
-        searchPanel.Controls.Add(_searchTextBox);
+        _searchPanel.Click += (_, _) => _searchTextBox.Focus();
+        _searchPanel.Controls.Add(_searchTextBox);
 
-        var listHostPanel = new TableLayoutPanel
+        _listHostPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -248,8 +314,9 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(20)));
+        _listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _scrollColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(20));
+        _listHostPanel.ColumnStyles.Add(_scrollColumnStyle);
 
         _listViewportPanel.Dock = DockStyle.Fill;
         _listViewportPanel.BackColor = DesignTokens.Surface;
@@ -273,20 +340,20 @@ internal sealed class MacroLibraryControl : UserControl
         _listScrollBar.ValueChanged += (_, _) => ScrollListTo(_listScrollBar.Value);
 
         _listViewportPanel.Controls.Add(_macroListPanel);
-        listHostPanel.Controls.Add(_listViewportPanel, 0, 0);
-        listHostPanel.Controls.Add(_listScrollBar, 1, 0);
+        _listHostPanel.Controls.Add(_listViewportPanel, 0, 0);
+        _listHostPanel.Controls.Add(_listScrollBar, 1, 0);
 
-        rootLayoutPanel.Controls.Add(headerLayoutPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(searchPanel, 0, 1);
-        rootLayoutPanel.Controls.Add(listHostPanel, 0, 2);
-        rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 3);
+        _rootLayoutPanel.Controls.Add(_headerLayoutPanel, 0, 0);
+        _rootLayoutPanel.Controls.Add(_searchPanel, 0, 1);
+        _rootLayoutPanel.Controls.Add(_listHostPanel, 0, 2);
+        _rootLayoutPanel.Controls.Add(CreateFooterPanel(), 0, 3);
 
-        Controls.Add(rootLayoutPanel);
+        Controls.Add(_rootLayoutPanel);
     }
 
     private RoundedPanel CreateFooterPanel()
     {
-        var footerPanel = new RoundedPanel
+        _footerPanel = new RoundedPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
@@ -295,7 +362,7 @@ internal sealed class MacroLibraryControl : UserControl
             Padding = new Padding(DesignTokens.Scale(12), DesignTokens.Scale(5), DesignTokens.Scale(12), DesignTokens.Scale(5))
         };
 
-        var footerLayoutPanel = new TableLayoutPanel
+        _footerLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 4,
@@ -304,18 +371,20 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12f));
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
-        footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16f));
+        _footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38f));
+        _footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12f));
+        _footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+        _footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16f));
 
-        footerLayoutPanel.Controls.Add(CreateFooterCaptionLabel("Toplam Makro"), 0, 0);
-        footerLayoutPanel.Controls.Add(_totalMacroValueLabel, 1, 0);
-        footerLayoutPanel.Controls.Add(CreateFooterCaptionLabel("Toplam Olay"), 2, 0);
-        footerLayoutPanel.Controls.Add(_totalEventValueLabel, 3, 0);
+        _totalMacroCaptionLabel = CreateFooterCaptionLabel("Toplam Makro");
+        _totalEventCaptionLabel = CreateFooterCaptionLabel("Toplam Olay");
+        _footerLayoutPanel.Controls.Add(_totalMacroCaptionLabel, 0, 0);
+        _footerLayoutPanel.Controls.Add(_totalMacroValueLabel, 1, 0);
+        _footerLayoutPanel.Controls.Add(_totalEventCaptionLabel, 2, 0);
+        _footerLayoutPanel.Controls.Add(_totalEventValueLabel, 3, 0);
 
-        footerPanel.Controls.Add(footerLayoutPanel);
-        return footerPanel;
+        _footerPanel.Controls.Add(_footerLayoutPanel);
+        return _footerPanel;
     }
 
     private void ResizeLibraryRows()

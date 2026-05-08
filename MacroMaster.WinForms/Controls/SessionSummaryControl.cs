@@ -20,6 +20,12 @@ internal sealed class SessionSummaryControl : UserControl
     private readonly Label _sessionNameValueLabel;
     private readonly Label _fileNameValueLabel;
     private readonly MacroPreviewMapControl _previewMapControl;
+    private TableLayoutPanel _rootLayoutPanel = null!;
+    private TableLayoutPanel _mapLayoutPanel = null!;
+    private SoftPanel _detailsPanel = null!;
+    private RowStyle _detailsRowStyle = null!;
+    private RowStyle _mapTitleRowStyle = null!;
+    private ColumnStyle _captionColumnStyle = null!;
 
     public event EventHandler? PreviewMapRequested;
 
@@ -85,9 +91,36 @@ internal sealed class SessionSummaryControl : UserControl
         _previewMapControl.UpdateActiveSourceEventIndex(activeSourceEventIndex);
     }
 
+    internal void ApplyShellLayoutProfile(AppShellLayoutProfile profile)
+    {
+        AppShellMainMetrics main = profile.Main;
+
+        SuspendLayout();
+        try
+        {
+            _detailsRowStyle.Height = main.SummaryDetailsHeight;
+            _detailsPanel.Margin = main.SummaryDetailsMargin;
+            _detailsPanel.Padding = main.SummaryDetailsPadding;
+            _captionColumnStyle.Width = main.SummaryCaptionColumnWidth;
+            _mapTitleRowStyle.Height = main.SummaryMapTitleHeight;
+            _mapLayoutPanel.Margin = main.SummaryMapMargin;
+
+            Padding valueMargin = new(main.SummaryValueLeftMargin, 0, 0, 0);
+            _statusValueLabel.Margin = valueMargin;
+            _eventCountValueLabel.Margin = valueMargin;
+            _durationValueLabel.Margin = valueMargin;
+            _sessionNameValueLabel.Margin = valueMargin;
+            _fileNameValueLabel.Margin = valueMargin;
+        }
+        finally
+        {
+            ResumeLayout(performLayout: true);
+        }
+    }
+
     private void BuildLayout()
     {
-        var rootLayoutPanel = new TableLayoutPanel
+        _rootLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -96,19 +129,20 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(168)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _detailsRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(168));
+        _rootLayoutPanel.RowStyles.Add(_detailsRowStyle);
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        rootLayoutPanel.Controls.Add(CreateCompactDetailsPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateMapSection(), 0, 1);
+        _rootLayoutPanel.Controls.Add(CreateCompactDetailsPanel(), 0, 0);
+        _rootLayoutPanel.Controls.Add(CreateMapSection(), 0, 1);
 
-        Controls.Add(rootLayoutPanel);
+        Controls.Add(_rootLayoutPanel);
     }
 
     private SoftPanel CreateCompactDetailsPanel()
     {
-        var panel = new SoftPanel
+        _detailsPanel = new SoftPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
@@ -130,7 +164,8 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(76)));
+        _captionColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(76));
+        layoutPanel.ColumnStyles.Add(_captionColumnStyle);
         layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
         for (int index = 0; index < 5; index++)
@@ -144,13 +179,13 @@ internal sealed class SessionSummaryControl : UserControl
         AddDetailRow(layoutPanel, 3, "Oturum", _sessionNameValueLabel);
         AddDetailRow(layoutPanel, 4, "Dosya", _fileNameValueLabel);
 
-        panel.Controls.Add(layoutPanel);
-        return panel;
+        _detailsPanel.Controls.Add(layoutPanel);
+        return _detailsPanel;
     }
 
     private TableLayoutPanel CreateMapSection()
     {
-        var mapLayoutPanel = new TableLayoutPanel
+        _mapLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -159,12 +194,13 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = new Padding(0, 0, 0, DesignTokens.Scale(10)),
             Padding = Padding.Empty
         };
-        mapLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28)));
-        mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        mapLayoutPanel.Controls.Add(CreateSectionCaptionLabel("Ekran Onizleme"), 0, 0);
-        mapLayoutPanel.Controls.Add(_previewMapControl, 0, 1);
-        return mapLayoutPanel;
+        _mapLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _mapTitleRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(28));
+        _mapLayoutPanel.RowStyles.Add(_mapTitleRowStyle);
+        _mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _mapLayoutPanel.Controls.Add(CreateSectionCaptionLabel("Ekran Onizleme"), 0, 0);
+        _mapLayoutPanel.Controls.Add(_previewMapControl, 0, 1);
+        return _mapLayoutPanel;
     }
 
     private static void AddDetailRow(

@@ -15,8 +15,48 @@ internal readonly record struct AppShellLayoutProfile(
     Size PreferredClientSize,
     Size MinimumClientSize,
     Padding RootPadding,
+    AppShellMainMetrics Main,
     AppShellChromeMetrics Chrome,
     float FitRatio);
+
+internal readonly record struct AppShellMainMetrics(
+    float LibraryColumnPercent,
+    float PreviewColumnPercent,
+    float SummaryColumnPercent,
+    Padding MainMargin,
+    int CardGap,
+    Padding PrimaryCardContentPadding,
+    Padding SectionCardContentPadding,
+    int SectionHeaderHeight,
+    int EventHeaderHeight,
+    int EventSearchWidth,
+    int EventTypeFilterWidth,
+    int EventSmartFilterWidth,
+    int EventHeaderGap,
+    Padding EventHeaderPadding,
+    Padding EventSearchPadding,
+    int LibraryHeaderHeight,
+    int LibrarySearchHeight,
+    int LibraryFooterHeight,
+    int LibraryIconButtonWidth,
+    int LibraryScrollColumnWidth,
+    Padding LibraryHeaderMargin,
+    Padding LibraryButtonMargin,
+    Padding LibrarySearchMargin,
+    Padding LibrarySearchPadding,
+    Padding LibraryFooterMargin,
+    Padding LibraryFooterPadding,
+    float LibraryFooterMacroCaptionPercent,
+    float LibraryFooterMacroValuePercent,
+    float LibraryFooterEventCaptionPercent,
+    float LibraryFooterEventValuePercent,
+    int SummaryDetailsHeight,
+    int SummaryCaptionColumnWidth,
+    Padding SummaryDetailsMargin,
+    Padding SummaryDetailsPadding,
+    int SummaryValueLeftMargin,
+    int SummaryMapTitleHeight,
+    Padding SummaryMapMargin);
 
 internal readonly record struct AppShellChromeMetrics(
     int TitleBarRowHeight,
@@ -91,6 +131,7 @@ internal static class AppShellLayoutProfileResolver
             preferredClientSize,
             minimumClientSize,
             ResolveRootPadding(mode, safeDensityScale),
+            ResolveMainMetrics(mode, safeDensityScale),
             ResolveChromeMetrics(mode, safeDensityScale),
             fitRatio);
     }
@@ -219,6 +260,89 @@ internal static class AppShellLayoutProfileResolver
                 Scale(ResolveToolbarButtonVerticalMargin(mode), chromeScale)));
     }
 
+    private static AppShellMainMetrics ResolveMainMetrics(
+        AppShellLayoutMode mode,
+        float densityScale)
+    {
+        float mainScale = ResolveMainScale(mode, densityScale);
+        (float libraryPercent, float previewPercent, float summaryPercent) = ResolveMainColumns(mode);
+
+        return new AppShellMainMetrics(
+            LibraryColumnPercent: libraryPercent,
+            PreviewColumnPercent: previewPercent,
+            SummaryColumnPercent: summaryPercent,
+            MainMargin: new Padding(
+                0,
+                Scale(ResolveMainTopMargin(mode), mainScale),
+                0,
+                Scale(ResolveMainBottomMargin(mode), mainScale)),
+            CardGap: Scale(ResolveMainCardGap(mode), mainScale),
+            PrimaryCardContentPadding: new Padding(Scale(ResolvePrimaryCardPadding(mode), mainScale)),
+            SectionCardContentPadding: new Padding(
+                Scale(ResolveSectionCardHorizontalPadding(mode), mainScale),
+                Scale(ResolveSectionCardTopPadding(mode), mainScale),
+                Scale(ResolveSectionCardHorizontalPadding(mode), mainScale),
+                Scale(ResolveSectionCardBottomPadding(mode), mainScale)),
+            SectionHeaderHeight: Scale(ResolveSectionHeaderHeight(mode), mainScale),
+            EventHeaderHeight: Scale(ResolveEventHeaderHeight(mode), mainScale),
+            EventSearchWidth: Scale(ResolveEventSearchWidth(mode), mainScale),
+            EventTypeFilterWidth: Scale(ResolveEventTypeFilterWidth(mode), mainScale),
+            EventSmartFilterWidth: Scale(ResolveEventSmartFilterWidth(mode), mainScale),
+            EventHeaderGap: Scale(ResolveEventHeaderGap(mode), mainScale),
+            EventHeaderPadding: new Padding(0, 0, 0, Scale(ResolveEventHeaderBottomPadding(mode), mainScale)),
+            EventSearchPadding: new Padding(
+                Scale(ResolveEventSearchHorizontalPadding(mode), mainScale),
+                Scale(ResolveEventSearchTopPadding(mode), mainScale),
+                Scale(ResolveEventSearchHorizontalPadding(mode), mainScale),
+                Scale(ResolveEventSearchBottomPadding(mode), mainScale)),
+            LibraryHeaderHeight: Scale(ResolveLibraryHeaderHeight(mode), mainScale),
+            LibrarySearchHeight: Scale(ResolveLibrarySearchHeight(mode), mainScale),
+            LibraryFooterHeight: Scale(ResolveLibraryFooterHeight(mode), mainScale),
+            LibraryIconButtonWidth: Scale(ResolveLibraryIconButtonWidth(mode), mainScale),
+            LibraryScrollColumnWidth: Scale(ResolveLibraryScrollColumnWidth(mode), mainScale),
+            LibraryHeaderMargin: new Padding(0, 0, Scale(ResolveLibraryTrailingInset(mode), mainScale), 0),
+            LibraryButtonMargin: new Padding(
+                Scale(ResolveLibraryButtonLeftMargin(mode), mainScale),
+                Scale(ResolveLibraryButtonTopMargin(mode), mainScale),
+                0,
+                Scale(ResolveLibraryButtonBottomMargin(mode), mainScale)),
+            LibrarySearchMargin: new Padding(
+                0,
+                Scale(ResolveLibrarySearchTopMargin(mode), mainScale),
+                Scale(ResolveLibraryTrailingInset(mode), mainScale),
+                Scale(ResolveLibrarySearchBottomMargin(mode), mainScale)),
+            LibrarySearchPadding: new Padding(
+                Scale(ResolveLibrarySearchHorizontalPadding(mode), mainScale),
+                Scale(ResolveLibrarySearchTopPadding(mode), mainScale),
+                Scale(ResolveLibrarySearchHorizontalPadding(mode), mainScale),
+                Scale(ResolveLibrarySearchBottomPadding(mode), mainScale)),
+            LibraryFooterMargin: new Padding(
+                0,
+                Scale(ResolveLibraryFooterTopMargin(mode), mainScale),
+                Scale(ResolveLibraryTrailingInset(mode), mainScale),
+                0),
+            LibraryFooterPadding: new Padding(
+                Scale(ResolveLibraryFooterHorizontalPadding(mode), mainScale),
+                Scale(ResolveLibraryFooterVerticalPadding(mode), mainScale),
+                Scale(ResolveLibraryFooterHorizontalPadding(mode), mainScale),
+                Scale(ResolveLibraryFooterVerticalPadding(mode), mainScale)),
+            LibraryFooterMacroCaptionPercent: ResolveLibraryFooterMacroCaptionPercent(mode),
+            LibraryFooterMacroValuePercent: ResolveLibraryFooterMacroValuePercent(mode),
+            LibraryFooterEventCaptionPercent: ResolveLibraryFooterEventCaptionPercent(mode),
+            LibraryFooterEventValuePercent: ResolveLibraryFooterEventValuePercent(mode),
+            SummaryDetailsHeight: Scale(ResolveSummaryDetailsHeight(mode), mainScale),
+            SummaryCaptionColumnWidth: Scale(ResolveSummaryCaptionColumnWidth(mode), mainScale),
+            SummaryDetailsMargin: new Padding(0, 0, 0, Scale(ResolveSummaryDetailsBottomMargin(mode), mainScale)),
+            SummaryDetailsPadding: new Padding(
+                Scale(ResolveSummaryDetailsHorizontalPadding(mode), mainScale),
+                Scale(ResolveSummaryDetailsVerticalPadding(mode), mainScale),
+                Scale(ResolveSummaryDetailsHorizontalPadding(mode), mainScale),
+                Scale(ResolveSummaryDetailsVerticalPadding(mode), mainScale)),
+            SummaryValueLeftMargin: Scale(ResolveSummaryValueLeftMargin(mode), mainScale),
+            SummaryMapTitleHeight: Scale(ResolveSummaryMapTitleHeight(mode), mainScale),
+            SummaryMapMargin: new Padding(0, 0, 0, Scale(ResolveSummaryMapBottomMargin(mode), mainScale)));
+    }
+
     private static float ResolveChromeScale(
         AppShellLayoutMode mode,
         float densityScale)
@@ -229,6 +353,258 @@ internal static class AppShellLayoutProfileResolver
             AppShellLayoutMode.Compact => Math.Min(densityScale, 1.45f),
             _ => Math.Min(densityScale, 1.25f)
         };
+    }
+
+    private static float ResolveMainScale(
+        AppShellLayoutMode mode,
+        float densityScale)
+    {
+        return mode switch
+        {
+            AppShellLayoutMode.Expanded => densityScale,
+            AppShellLayoutMode.Compact => Math.Min(densityScale, 1.35f),
+            _ => Math.Min(densityScale, 1.15f)
+        };
+    }
+
+    private static (float Library, float Preview, float Summary) ResolveMainColumns(AppShellLayoutMode mode)
+    {
+        return mode switch
+        {
+            AppShellLayoutMode.Constrained => (24f, 56.5f, 19.5f),
+            AppShellLayoutMode.Compact => (25f, 56.5f, 18.5f),
+            _ => (25.5f, 56.5f, 18f)
+        };
+    }
+
+    private static int ResolveMainTopMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 6 : 8;
+    }
+
+    private static int ResolveMainBottomMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 8 : 10;
+    }
+
+    private static int ResolveMainCardGap(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 8 : 12;
+    }
+
+    private static int ResolvePrimaryCardPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 14 : 18;
+    }
+
+    private static int ResolveSectionCardHorizontalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 14 : 18;
+    }
+
+    private static int ResolveSectionCardTopPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 12 : 16;
+    }
+
+    private static int ResolveSectionCardBottomPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 14 : 18;
+    }
+
+    private static int ResolveSectionHeaderHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 34 : 38;
+    }
+
+    private static int ResolveEventHeaderHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 38 : 42;
+    }
+
+    private static int ResolveEventSearchWidth(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 192 : 220;
+    }
+
+    private static int ResolveEventTypeFilterWidth(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 110 : 118;
+    }
+
+    private static int ResolveEventSmartFilterWidth(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 158 : 172;
+    }
+
+    private static int ResolveEventHeaderGap(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 7 : 10;
+    }
+
+    private static int ResolveEventHeaderBottomPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 6 : 8;
+    }
+
+    private static int ResolveEventSearchHorizontalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 10 : 12;
+    }
+
+    private static int ResolveEventSearchTopPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 5 : 6;
+    }
+
+    private static int ResolveEventSearchBottomPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 4 : 5;
+    }
+
+    private static int ResolveLibraryHeaderHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 38 : 42;
+    }
+
+    private static int ResolveLibrarySearchHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 40 : 44;
+    }
+
+    private static int ResolveLibraryFooterHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 44 : 50;
+    }
+
+    private static int ResolveLibraryIconButtonWidth(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 34 : 38;
+    }
+
+    private static int ResolveLibraryScrollColumnWidth(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 16 : 20;
+    }
+
+    private static int ResolveLibraryTrailingInset(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 8 : 12;
+    }
+
+    private static int ResolveLibraryButtonLeftMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 6 : 8;
+    }
+
+    private static int ResolveLibraryButtonTopMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 3 : 3;
+    }
+
+    private static int ResolveLibraryButtonBottomMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 6 : 7;
+    }
+
+    private static int ResolveLibrarySearchTopMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 2 : 3;
+    }
+
+    private static int ResolveLibrarySearchBottomMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 6 : 8;
+    }
+
+    private static int ResolveLibrarySearchHorizontalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 10 : 14;
+    }
+
+    private static int ResolveLibrarySearchTopPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 4 : 5;
+    }
+
+    private static int ResolveLibrarySearchBottomPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 3 : 4;
+    }
+
+    private static int ResolveLibraryFooterTopMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 6 : 8;
+    }
+
+    private static int ResolveLibraryFooterHorizontalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 8 : 12;
+    }
+
+    private static int ResolveLibraryFooterVerticalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 4 : 5;
+    }
+
+    private static float ResolveLibraryFooterMacroCaptionPercent(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 32f : 38f;
+    }
+
+    private static float ResolveLibraryFooterMacroValuePercent(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 18f : 12f;
+    }
+
+    private static float ResolveLibraryFooterEventCaptionPercent(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 32f : 34f;
+    }
+
+    private static float ResolveLibraryFooterEventValuePercent(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 18f : 16f;
+    }
+
+    private static int ResolveSummaryDetailsHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 150 : 168;
+    }
+
+    private static int ResolveSummaryCaptionColumnWidth(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 58 : 76;
+    }
+
+    private static int ResolveSummaryDetailsBottomMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 10 : 14;
+    }
+
+    private static int ResolveSummaryDetailsHorizontalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 10 : 14;
+    }
+
+    private static int ResolveSummaryDetailsVerticalPadding(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 9 : 12;
+    }
+
+    private static int ResolveSummaryValueLeftMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 2 : 4;
+    }
+
+    private static int ResolveSummaryMapTitleHeight(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 24 : 28;
+    }
+
+    private static int ResolveSummaryMapBottomMargin(AppShellLayoutMode mode)
+    {
+        return mode == AppShellLayoutMode.Constrained ? 8 : 10;
     }
 
     private static int ResolveStatusWidth(AppShellLayoutMode mode)

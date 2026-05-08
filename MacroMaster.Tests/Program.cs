@@ -1819,6 +1819,14 @@ public sealed class MacroMasterTests
             212,
             profile.Chrome.ToolbarRowHeight,
             "Expanded chrome should preserve the original 106px toolbar-row baseline at 200% scale.");
+        Assert.Equal(
+            18f,
+            profile.Main.SummaryColumnPercent,
+            "Expanded main layout should preserve the designed summary-column ratio.");
+        Assert.Equal(
+            36,
+            profile.Main.PrimaryCardContentPadding.Left,
+            "Expanded main cards should preserve the designed 18px content padding at 200% scale.");
 
         return Task.CompletedTask;
     }
@@ -1854,6 +1862,18 @@ public sealed class MacroMasterTests
         Assert.True(
             profile.Chrome.ToolbarControlMinimumHeight <= profile.Chrome.ToolbarRowHeight,
             "Toolbar control minimum height should fit inside the constrained toolbar row.");
+        Assert.True(
+            profile.Main.SummaryColumnPercent > expandedProfile.Main.SummaryColumnPercent,
+            "Constrained main layout should reserve more width for the summary column.");
+        Assert.True(
+            profile.Main.PrimaryCardContentPadding.Left < expandedProfile.Main.PrimaryCardContentPadding.Left,
+            "Constrained main layout should reclaim content padding from the primary cards.");
+        Assert.True(
+            profile.Main.EventSearchWidth < expandedProfile.Main.EventSearchWidth,
+            "Constrained event toolbar should use narrower fixed filter controls.");
+        Assert.True(
+            profile.Main.SummaryCaptionColumnWidth < expandedProfile.Main.SummaryCaptionColumnWidth,
+            "Constrained summary details should reduce fixed caption width before truncating values.");
 
         return Task.CompletedTask;
     }

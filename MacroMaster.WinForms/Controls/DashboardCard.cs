@@ -8,6 +8,7 @@ internal sealed class DashboardCard : UserControl
     private readonly TableLayoutPanel _rootLayoutPanel;
     private readonly Label _titleLabel;
     private bool _showHeader = true;
+    private int _headerHeight = DesignTokens.Scale(38);
     private Size _lastRegionSize;
     private int _lastRegionRadius = -1;
 
@@ -54,7 +55,7 @@ internal sealed class DashboardCard : UserControl
             Padding = new Padding(DesignTokens.CardPadding)
         };
         _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, _headerHeight));
         _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         _rootLayoutPanel.Controls.Add(_titleLabel, 0, 0);
         _rootLayoutPanel.Controls.Add(Body, 0, 1);
@@ -92,6 +93,23 @@ internal sealed class DashboardCard : UserControl
         set => _rootLayoutPanel.Padding = value;
     }
 
+    public int HeaderHeight
+    {
+        get => _headerHeight;
+        set
+        {
+            int nextHeight = Math.Max(0, value);
+            if (_headerHeight == nextHeight)
+            {
+                return;
+            }
+
+            _headerHeight = nextHeight;
+            UpdateHeaderVisibility();
+            Invalidate();
+        }
+    }
+
     protected override void OnPaintBackground(PaintEventArgs e)
     {
         e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Background);
@@ -125,7 +143,7 @@ internal sealed class DashboardCard : UserControl
         // Header divider line
         if (_showHeader)
         {
-            int dividerY = bounds.Top + DesignTokens.Scale(38);
+            int dividerY = bounds.Top + _headerHeight;
             using var dividerPen = new Pen(Color.FromArgb(60, 255, 255, 255), 1f);
             e.Graphics.DrawLine(dividerPen,
                 bounds.Left + DesignTokens.Scale(12),
@@ -145,7 +163,7 @@ internal sealed class DashboardCard : UserControl
     private void UpdateHeaderVisibility()
     {
         _titleLabel.Visible = _showHeader;
-        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? DesignTokens.Scale(38) : 0f;
+        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? _headerHeight : 0f;
     }
 
     private void UpdateRegion()

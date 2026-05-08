@@ -1919,6 +1919,9 @@ public partial class MainForm : Form
         LogLayoutProfile(startupWorkingArea, _layoutProfile);
         _titleBarControl.ApplyShellLayoutProfile(_layoutProfile);
         _toolbarControl.ApplyShellLayoutProfile(_layoutProfile);
+        _macroLibraryControl.ApplyShellLayoutProfile(_layoutProfile);
+        _eventListControl.ApplyShellLayoutProfile(_layoutProfile);
+        _sessionSummaryControl.ApplyShellLayoutProfile(_layoutProfile);
 
         var rootLayoutPanel = new TableLayoutPanel
         {
@@ -1957,25 +1960,29 @@ public partial class MainForm : Form
             ColumnCount = 3,
             RowCount = 1,
             BackColor = Color.Transparent,
-            Margin = new Padding(0, DesignTokens.Scale(8), 0, DesignTokens.Scale(10)),
+            Margin = _layoutProfile.Main.MainMargin,
             Padding = Padding.Empty
         };
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25.5f));
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56.5f));
-        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18f));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, _layoutProfile.Main.LibraryColumnPercent));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, _layoutProfile.Main.PreviewColumnPercent));
+        mainLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, _layoutProfile.Main.SummaryColumnPercent));
+
+        int mainGap = Math.Max(0, _layoutProfile.Main.CardGap);
+        int leadingMainGap = mainGap / 2;
+        int trailingMainGap = mainGap - leadingMainGap;
 
         var libraryHostPanel = CreateCard();
-        libraryHostPanel.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
-        libraryHostPanel.ContentPadding = new Padding(DesignTokens.CardPadding);
+        libraryHostPanel.Margin = new Padding(0, 0, leadingMainGap, 0);
+        libraryHostPanel.ContentPadding = _layoutProfile.Main.PrimaryCardContentPadding;
         libraryHostPanel.Body.Controls.Add(_macroLibraryControl);
 
         var previewHostPanel = CreateCard();
-        previewHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, DesignTokens.GapMedium / 2, 0);
-        previewHostPanel.ContentPadding = new Padding(DesignTokens.CardPadding);
+        previewHostPanel.Margin = new Padding(trailingMainGap, 0, leadingMainGap, 0);
+        previewHostPanel.ContentPadding = _layoutProfile.Main.PrimaryCardContentPadding;
         previewHostPanel.Body.Controls.Add(_eventListControl);
 
-        var sessionHostPanel = CreateSectionCard("Oturum Ozeti");
-        sessionHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, DesignTokens.Scale(6), 0);
+        var sessionHostPanel = CreateSectionCard("Oturum Ozeti", _layoutProfile);
+        sessionHostPanel.Margin = new Padding(trailingMainGap, 0, 0, 0);
         sessionHostPanel.Body.Controls.Add(_sessionSummaryControl);
 
         mainLayoutPanel.Controls.Add(libraryHostPanel, 0, 0);
@@ -1994,11 +2001,11 @@ public partial class MainForm : Form
         bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48f));
         bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52f));
 
-        var playbackControlCard = CreateSectionCard("Oynatma Kontrolu");
+        var playbackControlCard = CreateSectionCard("Oynatma Kontrolu", _layoutProfile);
         playbackControlCard.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
         playbackControlCard.Body.Controls.Add(_playbackControl);
 
-        var playbackSettingsHostPanel = CreateSectionCard("Oynatma Ayarlari");
+        var playbackSettingsHostPanel = CreateSectionCard("Oynatma Ayarlari", _layoutProfile);
         playbackSettingsHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
         playbackSettingsHostPanel.Body.Controls.Add(_playbackSettingsControl);
 
@@ -2056,16 +2063,15 @@ public partial class MainForm : Form
         };
     }
 
-    private static DashboardCard CreateSectionCard(string title)
+    private static DashboardCard CreateSectionCard(
+        string title,
+        AppShellLayoutProfile profile)
     {
         var card = CreateCard();
         card.ShowHeader = true;
         card.Title = title;
-        card.ContentPadding = new Padding(
-            DesignTokens.CardPadding,
-            DesignTokens.Scale(16),
-            DesignTokens.CardPadding,
-            DesignTokens.CardPadding);
+        card.HeaderHeight = profile.Main.SectionHeaderHeight;
+        card.ContentPadding = profile.Main.SectionCardContentPadding;
         return card;
     }
 

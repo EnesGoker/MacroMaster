@@ -32,6 +32,15 @@ internal sealed class EventListControl : UserControl
     private readonly TextBox _filterSearchTextBox;
     private readonly ModernSelect _typeFilterSelect;
     private readonly ModernSelect _smartFilterSelect;
+    private TableLayoutPanel _rootLayoutPanel = null!;
+    private TableLayoutPanel _toolbarPanel = null!;
+    private RoundedInputHostPanel _searchPanel = null!;
+    private RowStyle _headerRowStyle = null!;
+    private ColumnStyle _searchColumnStyle = null!;
+    private ColumnStyle _typeGapColumnStyle = null!;
+    private ColumnStyle _typeFilterColumnStyle = null!;
+    private ColumnStyle _smartGapColumnStyle = null!;
+    private ColumnStyle _smartFilterColumnStyle = null!;
     private MacroSession? _displayedSession;
     private Guid? _displayedSessionId;
     private int _displayedEventCount;
@@ -124,6 +133,36 @@ internal sealed class EventListControl : UserControl
         return selected;
     }
 
+    internal void ApplyShellLayoutProfile(AppShellLayoutProfile profile)
+    {
+        AppShellMainMetrics main = profile.Main;
+
+        SuspendLayout();
+        try
+        {
+            _headerRowStyle.Height = main.EventHeaderHeight;
+            _toolbarPanel.Padding = main.EventHeaderPadding;
+            _searchColumnStyle.Width = main.EventSearchWidth;
+            _typeGapColumnStyle.Width = main.EventHeaderGap;
+            _typeFilterColumnStyle.Width = main.EventTypeFilterWidth;
+            _smartGapColumnStyle.Width = main.EventHeaderGap;
+            _smartFilterColumnStyle.Width = main.EventSmartFilterWidth;
+            _searchPanel.Padding = main.EventSearchPadding;
+            _headerTitleLabel.Padding = new Padding(2, 0, main.EventHeaderGap, 2);
+
+            int minimumControlHeight = Math.Max(0, main.EventHeaderHeight - main.EventHeaderPadding.Vertical);
+            _filterSearchTextBox.MinimumSize = new Size(0, minimumControlHeight);
+            _typeFilterSelect.MinimumSize = new Size(0, minimumControlHeight);
+            _smartFilterSelect.MinimumSize = new Size(0, minimumControlHeight);
+        }
+        finally
+        {
+            ResumeLayout(performLayout: true);
+        }
+
+        LayoutGridViewport();
+    }
+
     private void ResetRowsForSession(MacroSession? session)
     {
         _eventGridView.Rows.Clear();
@@ -207,7 +246,7 @@ internal sealed class EventListControl : UserControl
 
     private void BuildLayout()
     {
-        var rootLayoutPanel = new TableLayoutPanel
+        _rootLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -216,9 +255,10 @@ internal sealed class EventListControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _headerRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(42));
+        _rootLayoutPanel.RowStyles.Add(_headerRowStyle);
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _gridHostPanel.Dock = DockStyle.Fill;
         _gridHostPanel.BackColor = DesignTokens.SurfaceInset;
@@ -238,15 +278,15 @@ internal sealed class EventListControl : UserControl
         _gridHostPanel.Controls.Add(_eventGridView);
         _gridHostPanel.Controls.Add(_eventScrollBar);
         _gridHostPanel.Controls.Add(_emptyStateLabel);
-        rootLayoutPanel.Controls.Add(CreateHeaderToolbar(), 0, 0);
-        rootLayoutPanel.Controls.Add(_gridHostPanel, 0, 1);
+        _rootLayoutPanel.Controls.Add(CreateHeaderToolbar(), 0, 0);
+        _rootLayoutPanel.Controls.Add(_gridHostPanel, 0, 1);
 
-        Controls.Add(rootLayoutPanel);
+        Controls.Add(_rootLayoutPanel);
     }
 
     private TableLayoutPanel CreateHeaderToolbar()
     {
-        var toolbarPanel = new TableLayoutPanel
+        _toolbarPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 6,
@@ -255,15 +295,20 @@ internal sealed class EventListControl : UserControl
             Margin = Padding.Empty,
             Padding = new Padding(0, 0, 0, DesignTokens.Scale(8))
         };
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(118)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(172)));
-        toolbarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        _toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _searchColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220));
+        _typeGapColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10));
+        _typeFilterColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(118));
+        _smartGapColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10));
+        _smartFilterColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(172));
+        _toolbarPanel.ColumnStyles.Add(_searchColumnStyle);
+        _toolbarPanel.ColumnStyles.Add(_typeGapColumnStyle);
+        _toolbarPanel.ColumnStyles.Add(_typeFilterColumnStyle);
+        _toolbarPanel.ColumnStyles.Add(_smartGapColumnStyle);
+        _toolbarPanel.ColumnStyles.Add(_smartFilterColumnStyle);
+        _toolbarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        var searchPanel = new RoundedInputHostPanel
+        _searchPanel = new RoundedInputHostPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.SurfaceInset,
@@ -275,8 +320,8 @@ internal sealed class EventListControl : UserControl
                 DesignTokens.Scale(10),
                 DesignTokens.Scale(5))
         };
-        searchPanel.Click += (_, _) => _filterSearchTextBox.Focus();
-        searchPanel.Controls.Add(_filterSearchTextBox);
+        _searchPanel.Click += (_, _) => _filterSearchTextBox.Focus();
+        _searchPanel.Controls.Add(_filterSearchTextBox);
 
         _typeFilterSelect.Dock = DockStyle.Fill;
         _typeFilterSelect.Margin = Padding.Empty;
@@ -294,12 +339,12 @@ internal sealed class EventListControl : UserControl
             SmartFilterOptions.Select(option => option.MenuLabel));
         _smartFilterSelect.SelectedIndexChanged += (_, _) => UpdateFiltersFromControls();
 
-        toolbarPanel.Controls.Add(_headerTitleLabel, 0, 0);
-        toolbarPanel.Controls.Add(searchPanel, 1, 0);
-        toolbarPanel.Controls.Add(_typeFilterSelect, 3, 0);
-        toolbarPanel.Controls.Add(_smartFilterSelect, 5, 0);
+        _toolbarPanel.Controls.Add(_headerTitleLabel, 0, 0);
+        _toolbarPanel.Controls.Add(_searchPanel, 1, 0);
+        _toolbarPanel.Controls.Add(_typeFilterSelect, 3, 0);
+        _toolbarPanel.Controls.Add(_smartFilterSelect, 5, 0);
 
-        return toolbarPanel;
+        return _toolbarPanel;
     }
 
     private static Label CreateHeaderTitleLabel()
