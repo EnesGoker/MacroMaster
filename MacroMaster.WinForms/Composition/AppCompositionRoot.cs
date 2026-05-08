@@ -22,6 +22,7 @@ internal sealed class AppCompositionRoot : IDisposable
     public IMacroLibraryUserStateStore MacroLibraryUserStateStore { get; }
     public IMutableHotkeyConfiguration HotkeyConfiguration { get; }
     public IHotkeyService HotkeyService { get; }
+    public IRecordedScreenProvider RecordedScreenProvider { get; }
     public IAppLogger AppLogger { get; }
 
     private readonly IReadOnlyList<IDisposable> _disposables;
@@ -39,6 +40,7 @@ internal sealed class AppCompositionRoot : IDisposable
         IMacroLibraryUserStateStore macroLibraryUserStateStore,
         IMutableHotkeyConfiguration hotkeyConfiguration,
         IHotkeyService hotkeyService,
+        IRecordedScreenProvider recordedScreenProvider,
         IAppLogger appLogger,
         IReadOnlyList<IDisposable> disposables)
     {
@@ -53,6 +55,7 @@ internal sealed class AppCompositionRoot : IDisposable
         MacroLibraryUserStateStore = macroLibraryUserStateStore;
         HotkeyConfiguration = hotkeyConfiguration;
         HotkeyService = hotkeyService;
+        RecordedScreenProvider = recordedScreenProvider;
         AppLogger = appLogger;
         _disposables = disposables;
     }
@@ -75,6 +78,7 @@ internal sealed class AppCompositionRoot : IDisposable
         IKeyboardHookSource keyboardHookSource = new WindowsKeyboardHookSource(resolvedLogger);
         IMouseHookSource mouseHookSource = new WindowsMouseHookSource(resolvedLogger);
         IHotkeyService hotkeyService = new WindowsHotkeyService(hotkeyConfiguration, resolvedLogger);
+        IRecordedScreenProvider recordedScreenProvider = new WindowsRecordedScreenProvider();
 
         IJsonMacroStorageService jsonMacroStorageService = new JsonMacroStorageService();
         IXmlMacroStorageService xmlMacroStorageService = new XmlMacroStorageService();
@@ -99,13 +103,15 @@ internal sealed class AppCompositionRoot : IDisposable
             mouseHookSource,
             applicationStateService,
             hotkeyConfiguration,
-            resolvedLogger);
+            resolvedLogger,
+            recordedScreenProvider);
 
         IMacroPlaybackService macroPlaybackService = new MacroPlaybackService(
             inputPlaybackAdapter,
             inputPlaybackAdapter,
             applicationStateService,
-            resolvedLogger);
+            resolvedLogger,
+            recordedScreenProvider);
         IMacroOptimizationService macroOptimizationService = new MacroOptimizationService();
 
         List<IDisposable> disposables = [];
@@ -142,6 +148,7 @@ internal sealed class AppCompositionRoot : IDisposable
             macroLibraryUserStateStore,
             hotkeyConfiguration,
             hotkeyService,
+            recordedScreenProvider,
             resolvedLogger,
             disposables);
     }
@@ -160,6 +167,7 @@ internal sealed class AppCompositionRoot : IDisposable
             MacroLibraryUserStateStore,
             HotkeyConfiguration,
             HotkeyService,
+            RecordedScreenProvider,
             AppLogger);
     }
 

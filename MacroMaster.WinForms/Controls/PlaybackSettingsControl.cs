@@ -37,6 +37,7 @@ public partial class PlaybackSettingsControl : UserControl
             InitialDelayMs = Decimal.ToInt32(initialDelayNumericUpDown.Value),
             LoopIndefinitely = loopIndefinitelyCheckBox.Checked,
             UseRelativeCoordinates = relativeCoordinatesCheckBox.Checked,
+            UseScreenScaledCoordinates = screenScaledCoordinatesCheckBox.Checked,
             SimulationMode = simulationModeCheckBox.Checked,
             StopOnError = stopOnErrorCheckBox.Checked,
             PreserveOriginalTiming = preserveTimingCheckBox.Checked
@@ -63,7 +64,9 @@ public partial class PlaybackSettingsControl : UserControl
             preserveTimingCheckBox.Checked = settings.PreserveOriginalTiming;
             stopOnErrorCheckBox.Checked = settings.StopOnError;
             loopIndefinitelyCheckBox.Checked = settings.LoopIndefinitely;
-            relativeCoordinatesCheckBox.Checked = settings.UseRelativeCoordinates;
+            relativeCoordinatesCheckBox.Checked = settings.UseRelativeCoordinates &&
+                !settings.UseScreenScaledCoordinates;
+            screenScaledCoordinatesCheckBox.Checked = settings.UseScreenScaledCoordinates;
             simulationModeCheckBox.Checked = settings.SimulationMode;
             RefreshDependentControlState();
         }
@@ -79,6 +82,7 @@ public partial class PlaybackSettingsControl : UserControl
         stopOnErrorCheckBox.Enabled = enabled;
         loopIndefinitelyCheckBox.Enabled = enabled;
         relativeCoordinatesCheckBox.Enabled = enabled;
+        screenScaledCoordinatesCheckBox.Enabled = enabled;
         simulationModeCheckBox.Enabled = enabled;
         initialDelayNumericUpDown.Enabled = enabled;
         speedComboBox.Enabled = enabled && !preserveTimingCheckBox.Checked;
@@ -186,6 +190,7 @@ public partial class PlaybackSettingsControl : UserControl
             loopIndefinitelyCheckBox,
             stopOnErrorCheckBox,
             relativeCoordinatesCheckBox,
+            screenScaledCoordinatesCheckBox,
             simulationModeCheckBox
         })
         {
@@ -213,14 +218,15 @@ public partial class PlaybackSettingsControl : UserControl
         stopOnErrorCheckBox.CheckedChanged += OnSettingChanged;
         loopIndefinitelyCheckBox.CheckedChanged += OnSettingChanged;
         relativeCoordinatesCheckBox.CheckedChanged += OnSettingChanged;
+        screenScaledCoordinatesCheckBox.CheckedChanged += OnSettingChanged;
         simulationModeCheckBox.CheckedChanged += OnSettingChanged;
     }
 
     private void OnSettingChanged(object? sender, EventArgs e)
     {
-        _ = sender;
         _ = e;
 
+        NormalizeCoordinateModeSelection(sender);
         RefreshDependentControlState();
 
         if (!_isApplyingSettings)
@@ -233,6 +239,42 @@ public partial class PlaybackSettingsControl : UserControl
     {
         speedComboBox.Enabled = !preserveTimingCheckBox.Checked;
         repeatCountNumericUpDown.Enabled = !loopIndefinitelyCheckBox.Checked;
+    }
+
+    private void NormalizeCoordinateModeSelection(object? sender)
+    {
+        if (_isApplyingSettings)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(sender, relativeCoordinatesCheckBox) &&
+            relativeCoordinatesCheckBox.Checked &&
+            screenScaledCoordinatesCheckBox.Checked)
+        {
+            SetCheckBoxCheckedSilently(screenScaledCoordinatesCheckBox, false);
+        }
+        else if (ReferenceEquals(sender, screenScaledCoordinatesCheckBox) &&
+            screenScaledCoordinatesCheckBox.Checked &&
+            relativeCoordinatesCheckBox.Checked)
+        {
+            SetCheckBoxCheckedSilently(relativeCoordinatesCheckBox, false);
+        }
+    }
+
+    private void SetCheckBoxCheckedSilently(ModernCheckBox checkBox, bool isChecked)
+    {
+        bool wasApplyingSettings = _isApplyingSettings;
+        _isApplyingSettings = true;
+
+        try
+        {
+            checkBox.Checked = isChecked;
+        }
+        finally
+        {
+            _isApplyingSettings = wasApplyingSettings;
+        }
     }
 
     private double GetSelectedSpeedMultiplier()

@@ -12,6 +12,7 @@ public sealed class MacroRecorderService : IMacroRecorderService
     private readonly IMouseHookSource _mouseHookSource;
     private readonly IApplicationStateService _applicationStateService;
     private readonly IHotkeyConfiguration _hotkeyConfiguration;
+    private readonly IRecordedScreenProvider _recordedScreenProvider;
     private readonly IAppLogger _logger;
 
     private readonly List<MacroEvent> _recordedEvents = [];
@@ -25,12 +26,14 @@ public sealed class MacroRecorderService : IMacroRecorderService
         IMouseHookSource mouseHookSource,
         IApplicationStateService applicationStateService,
         IHotkeyConfiguration hotkeyConfiguration,
-        IAppLogger? logger = null)
+        IAppLogger? logger = null,
+        IRecordedScreenProvider? recordedScreenProvider = null)
     {
         _keyboardHookSource = keyboardHookSource;
         _mouseHookSource = mouseHookSource;
         _applicationStateService = applicationStateService;
         _hotkeyConfiguration = hotkeyConfiguration;
+        _recordedScreenProvider = recordedScreenProvider ?? NullRecordedScreenProvider.Instance;
         _logger = logger ?? NullAppLogger.Instance;
     }
 
@@ -66,7 +69,8 @@ public sealed class MacroRecorderService : IMacroRecorderService
         {
             Name = string.IsNullOrWhiteSpace(sessionName)
                 ? $"Macro_{DateTime.UtcNow:yyyyMMdd_HHmmss}"
-                : sessionName.Trim()
+                : sessionName.Trim(),
+            RecordedScreen = _recordedScreenProvider.GetRecordedScreen()
         };
 
         lock (_syncRoot)

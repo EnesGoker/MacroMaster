@@ -43,6 +43,12 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "JsonMacroStorageService rejects unsupported format versions")]
     public Task JsonMacroStorageService_RejectsUnsupportedVersion() => JsonMacroStorageService_RejectsUnsupportedVersionAsync();
 
+    [Fact(DisplayName = "JsonMacroStorageService loads legacy sessions without screen metadata")]
+    public Task JsonMacroStorageService_LoadsLegacySessionWithoutScreenMetadata() => JsonMacroStorageService_LoadsLegacySessionWithoutScreenMetadataAsync();
+
+    [Fact(DisplayName = "JsonMacroStorageService rejects invalid recorded screen metadata")]
+    public Task JsonMacroStorageService_RejectsInvalidRecordedScreenMetadata() => JsonMacroStorageService_RejectsInvalidRecordedScreenMetadataAsync();
+
     [Fact(DisplayName = "JsonMacroStorageService rejects system events during save")]
     public Task JsonMacroStorageService_RejectsSystemEventOnSave() => JsonMacroStorageService_RejectsSystemEventOnSaveAsync();
 
@@ -55,11 +61,17 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "JsonPlaybackSettingsStore round-trips playback settings")]
     public Task JsonPlaybackSettingsStore_RoundTripsSettings() => JsonPlaybackSettingsStore_RoundTripsSettingsAsync();
 
+    [Fact(DisplayName = "JsonPlaybackSettingsStore round-trips screen-scaled coordinate mode")]
+    public Task JsonPlaybackSettingsStore_RoundTripsScreenScaledCoordinates() => JsonPlaybackSettingsStore_RoundTripsScreenScaledCoordinatesAsync();
+
     [Fact(DisplayName = "JsonPlaybackSettingsStore normalizes speed when original timing is preserved")]
     public Task JsonPlaybackSettingsStore_NormalizesPreservedTiming() => JsonPlaybackSettingsStore_NormalizesPreservedTimingAsync();
 
     [Fact(DisplayName = "JsonPlaybackSettingsStore rejects invalid persisted settings")]
     public Task JsonPlaybackSettingsStore_RejectsInvalidSettings() => JsonPlaybackSettingsStore_RejectsInvalidSettingsAsync();
+
+    [Fact(DisplayName = "JsonPlaybackSettingsStore rejects conflicting coordinate modes")]
+    public Task JsonPlaybackSettingsStore_RejectsConflictingCoordinateModes() => JsonPlaybackSettingsStore_RejectsConflictingCoordinateModesAsync();
 
     [Fact(DisplayName = "JsonHotkeySettingsStore returns defaults when no file exists")]
     public Task JsonHotkeySettingsStore_ReturnsDefaultsWhenMissing() => JsonHotkeySettingsStore_ReturnsDefaultsWhenMissingAsync();
@@ -109,6 +121,18 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "HotkeySettingsDialog exposes all controls within the dialog bounds")]
     public Task HotkeySettingsDialog_UsesStableLayout() => HotkeySettingsDialog_UsesStableLayoutAsync();
 
+    [Fact(DisplayName = "PlaybackResolutionWarningDialog exposes all actions within the dialog bounds")]
+    public Task PlaybackResolutionWarningDialog_UsesStableLayout() => PlaybackResolutionWarningDialog_UsesStableLayoutAsync();
+
+    [Fact(DisplayName = "PlaybackResolutionWarningPolicy warns only for risky resolution mismatches")]
+    public Task PlaybackResolutionWarningPolicy_WarnsForRiskyResolutionMismatch() => PlaybackResolutionWarningPolicy_WarnsForRiskyResolutionMismatchAsync();
+
+    [Fact(DisplayName = "PlaybackResolutionWarningPolicy skips warning when coordinate mode already handles playback")]
+    public Task PlaybackResolutionWarningPolicy_SkipsHandledCoordinateModes() => PlaybackResolutionWarningPolicy_SkipsHandledCoordinateModesAsync();
+
+    [Fact(DisplayName = "PlaybackResolutionWarningPolicy skips warning for non-mouse or incomplete metadata")]
+    public Task PlaybackResolutionWarningPolicy_SkipsNonMouseOrIncompleteMetadata() => PlaybackResolutionWarningPolicy_SkipsNonMouseOrIncompleteMetadataAsync();
+
     [Fact(DisplayName = "AppCompositionRoot honors injected app storage paths")]
     public Task AppCompositionRoot_UsesInjectedStoragePaths() => AppCompositionRoot_UsesInjectedStoragePathsAsync();
 
@@ -157,6 +181,9 @@ public sealed class MacroMasterTests
     [Fact(DisplayName = "MacroRecorderService clear is rejected while recording")]
     public Task MacroRecorderService_Clear_WhileRecording_Throws() => MacroRecorderService_Clear_WhileRecording_ThrowsAsync();
 
+    [Fact(DisplayName = "MacroRecorderService captures recorded screen metadata when recording starts")]
+    public Task MacroRecorderService_CapturesRecordedScreenMetadata() => MacroRecorderService_CapturesRecordedScreenMetadataAsync();
+
     [Fact(DisplayName = "MacroPlaybackService rebases mouse coordinates when relative playback is enabled")]
     public Task MacroPlaybackService_UseRelativeCoordinates_RebasesMouseCoordinates() => MacroPlaybackService_UseRelativeCoordinates_RebasesMouseCoordinatesAsync();
 
@@ -174,6 +201,30 @@ public sealed class MacroMasterTests
 
     [Fact(DisplayName = "MacroPlaybackService preserves absolute mouse coordinates when relative playback is disabled")]
     public Task MacroPlaybackService_UseRelativeCoordinatesFalse_PreservesAbsoluteCoordinates() => MacroPlaybackService_UseRelativeCoordinatesFalse_PreservesAbsoluteCoordinatesAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService scales mouse coordinates when screen-scaled playback is enabled")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_ScalesMouseCoordinates() => MacroPlaybackService_UseScreenScaledCoordinates_ScalesMouseCoordinatesAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService scales single-step mouse coordinates when screen-scaled playback is enabled")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_ScalesSingleStepMouseCoordinates() => MacroPlaybackService_UseScreenScaledCoordinates_ScalesSingleStepMouseCoordinatesAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService preserves mouse coordinates when screen-scaled playback uses the same resolution")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_SameResolution_PreservesCoordinates() => MacroPlaybackService_UseScreenScaledCoordinates_SameResolution_PreservesCoordinatesAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService rejects screen-scaled playback when recorded screen metadata is missing")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_MissingRecordedScreenMetadata_Throws() => MacroPlaybackService_UseScreenScaledCoordinates_MissingRecordedScreenMetadata_ThrowsAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService rejects screen-scaled playback when current screen metadata is missing")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_MissingCurrentScreenMetadata_Throws() => MacroPlaybackService_UseScreenScaledCoordinates_MissingCurrentScreenMetadata_ThrowsAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService reports invalid screen-scaled coordinates through StopOnError")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_InvalidCoordinate_UsesStopOnErrorPolicy() => MacroPlaybackService_UseScreenScaledCoordinates_InvalidCoordinate_UsesStopOnErrorPolicyAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService ignores screen scaling for keyboard-only legacy sessions")]
+    public Task MacroPlaybackService_UseScreenScaledCoordinates_KeyboardOnlyLegacySession_DoesNotRequireScreenMetadata() => MacroPlaybackService_UseScreenScaledCoordinates_KeyboardOnlyLegacySession_DoesNotRequireScreenMetadataAsync();
+
+    [Fact(DisplayName = "MacroPlaybackService rejects conflicting coordinate modes before playback starts")]
+    public Task MacroPlaybackService_RejectsConflictingCoordinateModes() => MacroPlaybackService_RejectsConflictingCoordinateModesAsync();
 
     [Fact(DisplayName = "MacroPlaybackService simulation mode advances without sending input")]
     public Task MacroPlaybackService_SimulationMode_AdvancesWithoutSendingInput() => MacroPlaybackService_SimulationMode_AdvancesWithoutSendingInputAsync();
@@ -245,6 +296,11 @@ public sealed class MacroMasterTests
             var session = new MacroSession
             {
                 Name = "RoundTrip",
+                RecordedScreen = new RecordedScreenInfo
+                {
+                    Width = 1920,
+                    Height = 1080
+                },
                 Events =
                 {
                     new MacroEvent
@@ -275,6 +331,9 @@ public sealed class MacroMasterTests
 
             Assert.Equal(MacroSessionFormat.CurrentVersion, loadedSession.FormatVersion, "Saved session should use the current format version.");
             Assert.Equal(session.Name, loadedSession.Name, "Session name should round-trip.");
+            Assert.True(loadedSession.RecordedScreen is not null, "Recorded screen metadata should round-trip.");
+            Assert.Equal(1920, loadedSession.RecordedScreen!.Width, "Recorded screen width should round-trip.");
+            Assert.Equal(1080, loadedSession.RecordedScreen.Height, "Recorded screen height should round-trip.");
             Assert.Equal(2, loadedSession.Events.Count, "Event count should round-trip.");
             Assert.Equal(0x1E, loadedSession.Events[0].ScanCode, "Keyboard scan code should round-trip.");
             Assert.Equal(320, loadedSession.Events[1].X, "Mouse X coordinate should round-trip.");
@@ -297,6 +356,11 @@ public sealed class MacroMasterTests
             var session = new MacroSession
             {
                 Name = "XmlRoundTrip",
+                RecordedScreen = new RecordedScreenInfo
+                {
+                    Width = 1366,
+                    Height = 768
+                },
                 Events =
                 {
                     new MacroEvent
@@ -324,10 +388,98 @@ public sealed class MacroMasterTests
             MacroSession loadedSession = await storageService.LoadAsync(filePath);
 
             Assert.Equal(session.Name, loadedSession.Name, "XML session name should round-trip.");
+            Assert.True(loadedSession.RecordedScreen is not null, "XML recorded screen metadata should round-trip.");
+            Assert.Equal(1366, loadedSession.RecordedScreen!.Width, "XML recorded screen width should round-trip.");
+            Assert.Equal(768, loadedSession.RecordedScreen.Height, "XML recorded screen height should round-trip.");
             Assert.Equal(2, loadedSession.Events.Count, "XML event count should round-trip.");
             Assert.Equal(0x41, loadedSession.Events[0].KeyCode, "XML keyboard event data should round-trip.");
             Assert.Equal(640, loadedSession.Events[1].X, "XML mouse X coordinate should round-trip.");
             Assert.Equal(360, loadedSession.Events[1].Y, "XML mouse Y coordinate should round-trip.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static async Task JsonMacroStorageService_LoadsLegacySessionWithoutScreenMetadataAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            string filePath = Path.Combine(directoryPath, "legacy.json");
+
+            string payload = JsonSerializer.Serialize(
+                new
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Legacy",
+                    CreatedAtUtc = DateTime.UtcNow,
+                    FormatVersion = "1.1",
+                    Events = new[]
+                    {
+                        new
+                        {
+                            Id = Guid.NewGuid(),
+                            EventType = MacroEventType.Mouse,
+                            MouseActionType = MouseActionType.Move,
+                            DelayMs = 10,
+                            X = 320,
+                            Y = 240,
+                            Description = "Legacy mouse move"
+                        }
+                    }
+                });
+
+            await File.WriteAllTextAsync(filePath, payload);
+
+            var storageService = new JsonMacroStorageService();
+            MacroSession loadedSession = await storageService.LoadAsync(filePath);
+
+            Assert.Equal("1.1", loadedSession.FormatVersion, "Legacy sessions should keep their persisted format version on load.");
+            Assert.True(loadedSession.RecordedScreen is null, "Legacy sessions without recorded screen metadata should remain loadable.");
+            Assert.Equal(1, loadedSession.Events.Count, "Legacy event payload should remain loadable.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static async Task JsonMacroStorageService_RejectsInvalidRecordedScreenMetadataAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            string filePath = Path.Combine(directoryPath, "invalid-screen.json");
+            var storageService = new JsonMacroStorageService();
+            var session = new MacroSession
+            {
+                Name = "InvalidScreen",
+                RecordedScreen = new RecordedScreenInfo
+                {
+                    Width = 0,
+                    Height = 1080
+                },
+                Events =
+                {
+                    new MacroEvent
+                    {
+                        EventType = MacroEventType.Mouse,
+                        MouseActionType = MouseActionType.Move,
+                        DelayMs = 10,
+                        X = 320,
+                        Y = 240,
+                        Description = "Mouse move"
+                    }
+                }
+            };
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => storageService.SaveAsync(session, filePath),
+                "Recorded screen metadata with non-positive dimensions must be rejected during save.");
         }
         finally
         {
@@ -456,6 +608,7 @@ public sealed class MacroMasterTests
             Assert.Equal(0, settings.InitialDelayMs, "Missing settings files should fall back to zero initial delay.");
             Assert.False(settings.LoopIndefinitely, "Missing settings files should not enable looping by default.");
             Assert.False(settings.UseRelativeCoordinates, "Missing settings files should not enable relative coordinates by default.");
+            Assert.False(settings.UseScreenScaledCoordinates, "Missing settings files should not enable screen-scaled coordinates by default.");
             Assert.True(settings.StopOnError, "Missing settings files should preserve the default stop-on-error behavior.");
             Assert.True(settings.PreserveOriginalTiming, "Missing settings files should preserve original timing by default.");
         }
@@ -480,6 +633,7 @@ public sealed class MacroMasterTests
                 InitialDelayMs = 500,
                 LoopIndefinitely = true,
                 UseRelativeCoordinates = true,
+                UseScreenScaledCoordinates = false,
                 SimulationMode = true,
                 StopOnError = false,
                 PreserveOriginalTiming = false
@@ -493,9 +647,43 @@ public sealed class MacroMasterTests
             Assert.Equal(expectedSettings.InitialDelayMs, loadedSettings.InitialDelayMs, "Playback initial delay should round-trip.");
             Assert.Equal(expectedSettings.LoopIndefinitely, loadedSettings.LoopIndefinitely, "Loop-indefinitely should round-trip.");
             Assert.Equal(expectedSettings.UseRelativeCoordinates, loadedSettings.UseRelativeCoordinates, "Relative coordinate mode should round-trip.");
+            Assert.Equal(expectedSettings.UseScreenScaledCoordinates, loadedSettings.UseScreenScaledCoordinates, "Screen-scaled coordinate mode should round-trip.");
             Assert.Equal(expectedSettings.SimulationMode, loadedSettings.SimulationMode, "Simulation mode should round-trip.");
             Assert.Equal(expectedSettings.StopOnError, loadedSettings.StopOnError, "Stop-on-error should round-trip.");
             Assert.Equal(expectedSettings.PreserveOriginalTiming, loadedSettings.PreserveOriginalTiming, "Preserve-original-timing should round-trip.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static async Task JsonPlaybackSettingsStore_RoundTripsScreenScaledCoordinatesAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            string filePath = Path.Combine(directoryPath, "screen-scaled-playback-settings.json");
+            var settingsStore = new JsonPlaybackSettingsStore(filePath);
+            var expectedSettings = new PlaybackSettings
+            {
+                SpeedMultiplier = 1.0,
+                RepeatCount = 1,
+                InitialDelayMs = 0,
+                LoopIndefinitely = false,
+                UseRelativeCoordinates = false,
+                UseScreenScaledCoordinates = true,
+                SimulationMode = false,
+                StopOnError = true,
+                PreserveOriginalTiming = true
+            };
+
+            await settingsStore.SaveAsync(expectedSettings);
+            PlaybackSettings loadedSettings = await settingsStore.LoadAsync();
+
+            Assert.False(loadedSettings.UseRelativeCoordinates, "Screen-scaled coordinate mode should remain exclusive from relative coordinates.");
+            Assert.True(loadedSettings.UseScreenScaledCoordinates, "Screen-scaled coordinate mode should round-trip when enabled.");
         }
         finally
         {
@@ -518,6 +706,7 @@ public sealed class MacroMasterTests
                 InitialDelayMs = 150,
                 LoopIndefinitely = false,
                 UseRelativeCoordinates = false,
+                UseScreenScaledCoordinates = false,
                 StopOnError = true,
                 PreserveOriginalTiming = true
             };
@@ -550,6 +739,7 @@ public sealed class MacroMasterTests
                     InitialDelayMs = -1,
                     LoopIndefinitely = false,
                     UseRelativeCoordinates = false,
+                    UseScreenScaledCoordinates = false,
                     StopOnError = true,
                     PreserveOriginalTiming = true
                 });
@@ -561,6 +751,49 @@ public sealed class MacroMasterTests
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => settingsStore.LoadAsync(),
                 "Invalid playback settings files must be rejected during load.");
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(directoryPath);
+        }
+    }
+
+    private static async Task JsonPlaybackSettingsStore_RejectsConflictingCoordinateModesAsync()
+    {
+        string directoryPath = CreateTempDirectory();
+
+        try
+        {
+            string filePath = Path.Combine(directoryPath, "conflicting-coordinate-settings.json");
+            var settingsStore = new JsonPlaybackSettingsStore(filePath);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => settingsStore.SaveAsync(
+                    new PlaybackSettings
+                    {
+                        UseRelativeCoordinates = true,
+                        UseScreenScaledCoordinates = true
+                    }),
+                "Playback settings must reject conflicting coordinate modes during save.");
+
+            string payload = JsonSerializer.Serialize(
+                new
+                {
+                    SpeedMultiplier = 1.0,
+                    RepeatCount = 1,
+                    InitialDelayMs = 0,
+                    LoopIndefinitely = false,
+                    UseRelativeCoordinates = true,
+                    UseScreenScaledCoordinates = true,
+                    StopOnError = true,
+                    PreserveOriginalTiming = true
+                });
+
+            await File.WriteAllTextAsync(filePath, payload);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => settingsStore.LoadAsync(),
+                "Playback settings must reject conflicting coordinate modes during load.");
         }
         finally
         {
@@ -1389,6 +1622,195 @@ public sealed class MacroMasterTests
         });
     }
 
+    private static async Task PlaybackResolutionWarningDialog_UsesStableLayoutAsync()
+    {
+        _ = await RunOnStaThreadAsync(() =>
+        {
+            using var dialog = new PlaybackResolutionWarningDialog(
+                new RecordedScreenInfo
+                {
+                    Width = 1920,
+                    Height = 1080
+                },
+                new RecordedScreenInfo
+                {
+                    Width = 1366,
+                    Height = 768
+                });
+
+            dialog.CreateControl();
+            dialog.PerformLayout();
+
+            Assert.True(
+                dialog.ClientSize.Width >= 520,
+                $"Resolution warning dialog should allocate enough width. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
+            Assert.True(
+                dialog.ClientSize.Height >= 210,
+                $"Resolution warning dialog should allocate enough height. Actual client size: {dialog.ClientSize.Width}x{dialog.ClientSize.Height}.");
+
+            List<ThemedDialogButton> buttons = GetDescendants<ThemedDialogButton>(dialog).ToList();
+            Assert.Equal(3, buttons.Count, "Resolution warning dialog should expose scaled, normal, and cancel actions.");
+
+            foreach (ThemedDialogButton button in buttons)
+            {
+                Rectangle bounds = GetBoundsRelativeToAncestor(button, dialog);
+
+                Assert.True(
+                    bounds.Left >= 0 && bounds.Top >= 0,
+                    $"{DescribeControl(button)} should remain within the dialog origin.");
+                Assert.True(
+                    bounds.Right <= dialog.ClientSize.Width,
+                    $"{DescribeControl(button)} should be fully visible within the dialog width.");
+                Assert.True(
+                    bounds.Bottom <= dialog.ClientSize.Height,
+                    $"{DescribeControl(button)} should be fully visible within the dialog height.");
+            }
+        });
+    }
+
+    private static Task PlaybackResolutionWarningPolicy_WarnsForRiskyResolutionMismatchAsync()
+    {
+        MacroSession session = CreateResolutionWarningSession();
+        var settings = new PlaybackSettings();
+        var currentScreen = new RecordedScreenInfo
+        {
+            Width = 1366,
+            Height = 768
+        };
+
+        Assert.True(
+            PlaybackResolutionWarningPolicy.ShouldWarn(session, settings, currentScreen),
+            "Resolution warning should appear when mouse coordinates will play normally on a different screen size.");
+        Assert.True(
+            PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(session, settings),
+            "Resolution warning should inspect current screen only for candidate sessions.");
+
+        currentScreen.Width = 1920;
+        currentScreen.Height = 1080;
+
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(session, settings, currentScreen),
+            "Resolution warning should not appear when recorded and current screen sizes match.");
+        return Task.CompletedTask;
+    }
+
+    private static Task PlaybackResolutionWarningPolicy_SkipsHandledCoordinateModesAsync()
+    {
+        MacroSession session = CreateResolutionWarningSession();
+        var currentScreen = new RecordedScreenInfo
+        {
+            Width = 1366,
+            Height = 768
+        };
+
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(
+                session,
+                new PlaybackSettings { UseScreenScaledCoordinates = true },
+                currentScreen),
+            "Resolution warning should not appear when screen-scaled playback is already enabled.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(
+                session,
+                new PlaybackSettings { UseScreenScaledCoordinates = true }),
+            "Resolution warning should not read current screen when screen-scaled playback is already enabled.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(
+                session,
+                new PlaybackSettings { UseRelativeCoordinates = true },
+                currentScreen),
+            "Resolution warning should not appear when relative coordinates are already enabled.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(
+                session,
+                new PlaybackSettings { UseRelativeCoordinates = true }),
+            "Resolution warning should not read current screen when relative coordinates are already enabled.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(
+                session,
+                new PlaybackSettings { SimulationMode = true },
+                currentScreen),
+            "Resolution warning should not appear in simulation mode because no real input is sent.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(
+                session,
+                new PlaybackSettings { SimulationMode = true }),
+            "Resolution warning should not read current screen in simulation mode.");
+        return Task.CompletedTask;
+    }
+
+    private static Task PlaybackResolutionWarningPolicy_SkipsNonMouseOrIncompleteMetadataAsync()
+    {
+        var currentScreen = new RecordedScreenInfo
+        {
+            Width = 1366,
+            Height = 768
+        };
+        var keyboardOnlySession = new MacroSession
+        {
+            Name = "KeyboardOnly",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 1920,
+                Height = 1080
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    KeyCode = 0x41,
+                    ScanCode = 0x1E,
+                    Description = "Keyboard down"
+                }
+            }
+        };
+        MacroSession missingMetadataSession = CreateResolutionWarningSession();
+        missingMetadataSession.RecordedScreen = null;
+
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(keyboardOnlySession, new PlaybackSettings(), currentScreen),
+            "Resolution warning should not appear for keyboard-only sessions.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(keyboardOnlySession, new PlaybackSettings()),
+            "Resolution warning should not read current screen for keyboard-only sessions.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(missingMetadataSession, new PlaybackSettings(), currentScreen),
+            "Resolution warning should not appear when recorded screen metadata is missing.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldInspectCurrentScreen(missingMetadataSession, new PlaybackSettings()),
+            "Resolution warning should not read current screen when recorded screen metadata is missing.");
+        Assert.False(
+            PlaybackResolutionWarningPolicy.ShouldWarn(CreateResolutionWarningSession(), new PlaybackSettings(), null),
+            "Resolution warning should not appear when current screen metadata cannot be read.");
+        return Task.CompletedTask;
+    }
+
+    private static MacroSession CreateResolutionWarningSession()
+    {
+        return new MacroSession
+        {
+            Name = "ResolutionWarning",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 1920,
+                Height = 1080
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 960,
+                    Y = 540,
+                    Description = "Mouse move"
+                }
+            }
+        };
+    }
+
     private static async Task FileLogger_WritesEntriesAsync()
     {
         string directoryPath = CreateTempDirectory();
@@ -1950,6 +2372,42 @@ public sealed class MacroMasterTests
         }
     }
 
+    private static async Task MacroRecorderService_CapturesRecordedScreenMetadataAsync()
+    {
+        var keyboardHookSource = new TestKeyboardHookSource();
+        var mouseHookSource = new TestMouseHookSource();
+        var recordedScreenProvider = new TestRecordedScreenProvider(
+            new RecordedScreenInfo
+            {
+                Width = 1920,
+                Height = 1080
+            });
+        var recorder = new MacroRecorderService(
+            keyboardHookSource,
+            mouseHookSource,
+            new ApplicationStateService(),
+            new TestHotkeyConfiguration(
+                HotkeyBinding.None(0x77),
+                HotkeyBinding.None(0x78),
+                HotkeyBinding.None(0x79)),
+            recordedScreenProvider: recordedScreenProvider);
+
+        await recorder.StartAsync("ScreenMetadata");
+
+        MacroSession? activeSession = recorder.CurrentSession;
+        Assert.True(activeSession is not null, "Recording start should create an active session.");
+        Assert.True(activeSession!.RecordedScreen is not null, "Recording start should capture screen metadata when it is available.");
+        Assert.Equal(1920, activeSession.RecordedScreen!.Width, "Recorded screen width should come from the screen provider.");
+        Assert.Equal(1080, activeSession.RecordedScreen.Height, "Recorded screen height should come from the screen provider.");
+        Assert.Equal(1, recordedScreenProvider.ReadCount, "Recording start should read screen metadata once.");
+
+        await recorder.StopAsync();
+
+        Assert.True(recorder.CurrentSession?.RecordedScreen is not null, "Completed sessions should retain captured screen metadata.");
+        Assert.Equal(1920, recorder.CurrentSession!.RecordedScreen!.Width, "Completed session should retain recorded screen width.");
+        Assert.Equal(1080, recorder.CurrentSession.RecordedScreen.Height, "Completed session should retain recorded screen height.");
+    }
+
     private static async Task MacroPlaybackService_UseRelativeCoordinates_RebasesMouseCoordinatesAsync()
     {
         var inputPlaybackAdapter = new TestInputPlaybackAdapter
@@ -2032,6 +2490,378 @@ public sealed class MacroMasterTests
         Assert.Equal(1, inputPlaybackAdapter.PlayedEvents.Count, "The mouse event should be played once.");
         Assert.Equal(42, inputPlaybackAdapter.PlayedEvents[0].X, "Absolute playback should preserve the recorded X coordinate.");
         Assert.Equal(64, inputPlaybackAdapter.PlayedEvents[0].Y, "Absolute playback should preserve the recorded Y coordinate.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_ScalesMouseCoordinatesAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(
+            new RecordedScreenInfo
+            {
+                Width = 1366,
+                Height = 768
+            });
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            new ApplicationStateService(),
+            recordedScreenProvider: currentScreenProvider);
+
+        var session = new MacroSession
+        {
+            Name = "ScreenScaledMouse",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 1920,
+                Height = 1080
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 960,
+                    Y = 540,
+                    Description = "Center move"
+                },
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftDown,
+                    X = 1919,
+                    Y = 1079,
+                    Description = "Bottom-right click"
+                },
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    KeyCode = 0x41,
+                    ScanCode = 0x1E,
+                    Description = "Keyboard down"
+                }
+            }
+        };
+
+        await playbackService.PlayAsync(
+            session,
+            new PlaybackSettings
+            {
+                UseScreenScaledCoordinates = true,
+                PreserveOriginalTiming = false,
+                SpeedMultiplier = 2.0
+            });
+
+        Assert.Equal(1, currentScreenProvider.ReadCount, "Screen-scaled playback should read the current screen metadata once.");
+        Assert.Equal(0, inputPlaybackAdapter.CursorPositionReadCount, "Screen-scaled playback should not query cursor anchors.");
+        Assert.Equal(3, inputPlaybackAdapter.PlayedEvents.Count, "Every event should be played.");
+        Assert.Equal(683, inputPlaybackAdapter.PlayedEvents[0].X, "The center X coordinate should be scaled to the current screen width.");
+        Assert.Equal(384, inputPlaybackAdapter.PlayedEvents[0].Y, "The center Y coordinate should be scaled to the current screen height.");
+        Assert.Equal(1365, inputPlaybackAdapter.PlayedEvents[1].X, "The bottom-right X coordinate should be scaled without overflowing the current width.");
+        Assert.Equal(767, inputPlaybackAdapter.PlayedEvents[1].Y, "The bottom-right Y coordinate should be scaled without overflowing the current height.");
+        Assert.False(inputPlaybackAdapter.PlayedEvents[2].X.HasValue, "Keyboard events should not receive synthetic X coordinates.");
+        Assert.False(inputPlaybackAdapter.PlayedEvents[2].Y.HasValue, "Keyboard events should not receive synthetic Y coordinates.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_ScalesSingleStepMouseCoordinatesAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(
+            new RecordedScreenInfo
+            {
+                Width = 1366,
+                Height = 768
+            });
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            new ApplicationStateService(),
+            recordedScreenProvider: currentScreenProvider);
+
+        var session = new MacroSession
+        {
+            Name = "ScreenScaledSingleStep",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 1920,
+                Height = 1080
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 960,
+                    Y = 540,
+                    Description = "Center move"
+                }
+            }
+        };
+
+        MacroEvent playedEvent = await playbackService.PlayEventAtAsync(
+            session,
+            new PlaybackSettings { UseScreenScaledCoordinates = true },
+            eventIndex: 0);
+
+        Assert.Equal(1, currentScreenProvider.ReadCount, "Single-step screen scaling should read the current screen metadata once.");
+        Assert.Equal(683, playedEvent.X, "Single-step playback should return the scaled X coordinate.");
+        Assert.Equal(384, playedEvent.Y, "Single-step playback should return the scaled Y coordinate.");
+        Assert.Equal(683, inputPlaybackAdapter.PlayedEvents[0].X, "Single-step playback should send the scaled X coordinate.");
+        Assert.Equal(384, inputPlaybackAdapter.PlayedEvents[0].Y, "Single-step playback should send the scaled Y coordinate.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_SameResolution_PreservesCoordinatesAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(
+            new RecordedScreenInfo
+            {
+                Width = 1366,
+                Height = 768
+            });
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            new ApplicationStateService(),
+            recordedScreenProvider: currentScreenProvider);
+
+        var session = new MacroSession
+        {
+            Name = "ScreenScaledSameResolution",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 1366,
+                Height = 768
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 365,
+                    Y = 231,
+                    Description = "Move"
+                }
+            }
+        };
+
+        await playbackService.PlayAsync(
+            session,
+            new PlaybackSettings { UseScreenScaledCoordinates = true });
+
+        Assert.Equal(365, inputPlaybackAdapter.PlayedEvents[0].X, "Same-resolution screen scaling should preserve X coordinates.");
+        Assert.Equal(231, inputPlaybackAdapter.PlayedEvents[0].Y, "Same-resolution screen scaling should preserve Y coordinates.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_MissingRecordedScreenMetadata_ThrowsAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(
+            new RecordedScreenInfo
+            {
+                Width = 1366,
+                Height = 768
+            });
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            applicationStateService,
+            recordedScreenProvider: currentScreenProvider);
+
+        var session = new MacroSession
+        {
+            Name = "MissingRecordedScreen",
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 960,
+                    Y = 540,
+                    Description = "Move"
+                }
+            }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => playbackService.PlayAsync(
+                session,
+                new PlaybackSettings { UseScreenScaledCoordinates = true }),
+            "Screen-scaled playback should fail fast when mouse coordinates exist but recorded screen metadata is missing.");
+
+        Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Missing metadata should not move the application out of Idle.");
+        Assert.Equal(0, currentScreenProvider.ReadCount, "Playback should not read current screen metadata after recorded metadata validation fails.");
+        Assert.Equal(0, inputPlaybackAdapter.AttemptedEventIds.Count, "Invalid screen scaling metadata should not send input events.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_MissingCurrentScreenMetadata_ThrowsAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(null);
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            applicationStateService,
+            recordedScreenProvider: currentScreenProvider);
+
+        var session = new MacroSession
+        {
+            Name = "MissingCurrentScreen",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 1920,
+                Height = 1080
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = 960,
+                    Y = 540,
+                    Description = "Move"
+                }
+            }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => playbackService.PlayAsync(
+                session,
+                new PlaybackSettings { UseScreenScaledCoordinates = true }),
+            "Screen-scaled playback should fail fast when current screen metadata is missing.");
+
+        Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Missing current screen metadata should not move the application out of Idle.");
+        Assert.Equal(1, currentScreenProvider.ReadCount, "Playback should attempt to read current screen metadata once.");
+        Assert.Equal(0, inputPlaybackAdapter.AttemptedEventIds.Count, "Invalid current screen metadata should not send input events.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_InvalidCoordinate_UsesStopOnErrorPolicyAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(
+            new RecordedScreenInfo
+            {
+                Width = 200,
+                Height = 200
+            });
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            applicationStateService,
+            recordedScreenProvider: currentScreenProvider);
+
+        var validEventId = Guid.NewGuid();
+        var session = new MacroSession
+        {
+            Name = "InvalidScreenScaledCoordinate",
+            RecordedScreen = new RecordedScreenInfo
+            {
+                Width = 100,
+                Height = 100
+            },
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.Move,
+                    X = -1,
+                    Y = 50,
+                    Description = "Invalid move"
+                },
+                new MacroEvent
+                {
+                    Id = validEventId,
+                    EventType = MacroEventType.Mouse,
+                    MouseActionType = MouseActionType.LeftDown,
+                    X = 50,
+                    Y = 50,
+                    Description = "Valid click"
+                }
+            }
+        };
+
+        await Assert.ThrowsAsync<AggregateException>(
+            () => playbackService.PlayAsync(
+                session,
+                new PlaybackSettings
+                {
+                    UseScreenScaledCoordinates = true,
+                    StopOnError = false
+                }),
+            "Invalid screen-scaled event coordinates should follow StopOnError=false and be reported at the end.");
+
+        Assert.Equal(1, inputPlaybackAdapter.AttemptedEventIds.Count, "Playback should continue to later events when StopOnError is disabled.");
+        Assert.Equal(validEventId, inputPlaybackAdapter.AttemptedEventIds[0], "Playback should skip the invalid event and send the later valid event.");
+        Assert.Equal(100, inputPlaybackAdapter.PlayedEvents[0].X, "The valid event X coordinate should still be scaled.");
+        Assert.Equal(100, inputPlaybackAdapter.PlayedEvents[0].Y, "The valid event Y coordinate should still be scaled.");
+        Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Playback should finish in Idle after reporting invalid coordinates.");
+    }
+
+    private static async Task MacroPlaybackService_UseScreenScaledCoordinates_KeyboardOnlyLegacySession_DoesNotRequireScreenMetadataAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var currentScreenProvider = new TestRecordedScreenProvider(null);
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            new ApplicationStateService(),
+            recordedScreenProvider: currentScreenProvider);
+
+        var session = new MacroSession
+        {
+            Name = "KeyboardOnlyLegacy",
+            Events =
+            {
+                new MacroEvent
+                {
+                    EventType = MacroEventType.Keyboard,
+                    KeyboardActionType = KeyboardActionType.KeyDown,
+                    KeyCode = 0x41,
+                    ScanCode = 0x1E,
+                    Description = "Keyboard down"
+                }
+            }
+        };
+
+        await playbackService.PlayAsync(
+            session,
+            new PlaybackSettings { UseScreenScaledCoordinates = true });
+
+        Assert.Equal(0, currentScreenProvider.ReadCount, "Keyboard-only sessions should not require current screen metadata for screen scaling.");
+        Assert.Equal(1, inputPlaybackAdapter.PlayedEvents.Count, "Keyboard-only sessions should still play.");
+        Assert.Equal(MacroEventType.Keyboard, inputPlaybackAdapter.PlayedEvents[0].EventType, "Keyboard events should be preserved.");
+    }
+
+    private static async Task MacroPlaybackService_RejectsConflictingCoordinateModesAsync()
+    {
+        var inputPlaybackAdapter = new TestInputPlaybackAdapter();
+        var applicationStateService = new ApplicationStateService();
+        var playbackService = new MacroPlaybackService(
+            inputPlaybackAdapter,
+            inputPlaybackAdapter,
+            applicationStateService);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => playbackService.PlayAsync(
+                CreatePlaybackSession(),
+                new PlaybackSettings
+                {
+                    UseRelativeCoordinates = true,
+                    UseScreenScaledCoordinates = true
+                }),
+            "Playback should reject mutually exclusive coordinate modes before starting.");
+
+        Assert.Equal(AppState.Idle, applicationStateService.CurrentState, "Rejected playback settings should not move the application out of Idle.");
+        Assert.Equal(0, inputPlaybackAdapter.AttemptedEventIds.Count, "Rejected playback settings should not send input events.");
     }
 
     private static async Task MacroPlaybackService_SimulationMode_AdvancesWithoutSendingInputAsync()
@@ -3005,6 +3835,34 @@ internal sealed class TestInputPlaybackAdapter : IInputPlaybackAdapter, ICursorP
             Y = source.Y,
             WheelDelta = source.WheelDelta,
             Description = source.Description
+        };
+    }
+}
+
+internal sealed class TestRecordedScreenProvider : IRecordedScreenProvider
+{
+    private readonly RecordedScreenInfo? _recordedScreenInfo;
+
+    public TestRecordedScreenProvider(RecordedScreenInfo? recordedScreenInfo)
+    {
+        _recordedScreenInfo = recordedScreenInfo;
+    }
+
+    public int ReadCount { get; private set; }
+
+    public RecordedScreenInfo? GetRecordedScreen()
+    {
+        ReadCount++;
+
+        if (_recordedScreenInfo is null)
+        {
+            return null;
+        }
+
+        return new RecordedScreenInfo
+        {
+            Width = _recordedScreenInfo.Width,
+            Height = _recordedScreenInfo.Height
         };
     }
 }

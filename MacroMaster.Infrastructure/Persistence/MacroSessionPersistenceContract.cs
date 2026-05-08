@@ -46,6 +46,8 @@ internal static class MacroSessionPersistenceContract
                 filePath);
         }
 
+        ValidateRecordedScreenInfo(session.RecordedScreen, operation, filePath);
+
         if (session.Events is null)
         {
             throw CreateValidationException(
@@ -207,6 +209,33 @@ internal static class MacroSessionPersistenceContract
             or MouseActionType.MiddleUp
             or MouseActionType.Wheel
             or MouseActionType.DoubleClick;
+    }
+
+    private static void ValidateRecordedScreenInfo(
+        RecordedScreenInfo? recordedScreenInfo,
+        string operation,
+        string? filePath)
+    {
+        if (recordedScreenInfo is null)
+        {
+            return;
+        }
+
+        if (recordedScreenInfo.Width <= 0)
+        {
+            throw CreateValidationException(
+                $"Kayit ekran genisligi pozitif olmalidir. Gecerli deger: {recordedScreenInfo.Width}.",
+                operation,
+                filePath);
+        }
+
+        if (recordedScreenInfo.Height <= 0)
+        {
+            throw CreateValidationException(
+                $"Kayit ekran yuksekligi pozitif olmalidir. Gecerli deger: {recordedScreenInfo.Height}.",
+                operation,
+                filePath);
+        }
     }
 
     private static InvalidOperationException CreateValidationException(

@@ -9,7 +9,10 @@ internal sealed class PlaybackCoordinateResolver : IDisposable
     private readonly object _syncRoot = new();
     private readonly SemaphoreSlim _anchorGate = new(1, 1);
     private readonly bool _useRelativeCoordinates;
+    private readonly bool _useScreenScaledCoordinates;
     private readonly CursorPosition? _recordedMouseAnchor;
+    private readonly RecordedScreenInfo? _recordedScreen;
+    private readonly RecordedScreenInfo? _playbackScreen;
 
     private CursorPosition? _playbackMouseAnchor;
     private int? _anchoredIteration;
@@ -17,18 +20,28 @@ internal sealed class PlaybackCoordinateResolver : IDisposable
 
     private PlaybackCoordinateResolver(
         bool useRelativeCoordinates,
-        CursorPosition? recordedMouseAnchor)
+        CursorPosition? recordedMouseAnchor,
+        bool useScreenScaledCoordinates,
+        RecordedScreenInfo? recordedScreen,
+        RecordedScreenInfo? playbackScreen)
     {
         _useRelativeCoordinates = useRelativeCoordinates;
         _recordedMouseAnchor = recordedMouseAnchor;
+        _useScreenScaledCoordinates = useScreenScaledCoordinates;
+        _recordedScreen = recordedScreen;
+        _playbackScreen = playbackScreen;
     }
 
     private bool CanResolveRelativeCoordinates =>
         _useRelativeCoordinates && _recordedMouseAnchor.HasValue;
 
+    private bool CanResolveScreenScaledCoordinates =>
+        _useScreenScaledCoordinates && _recordedScreen is not null && _playbackScreen is not null;
+
     public static PlaybackCoordinateResolver Create(
         MacroSession session,
-        PlaybackSettings settings)
+        PlaybackSettings settings,
+        IRecordedScreenProvider? recordedScreenProvider = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(settings);
@@ -38,10 +51,24 @@ internal sealed class PlaybackCoordinateResolver : IDisposable
         CursorPosition? recordedMouseAnchor = useRelativeCoordinates
             ? GetRecordedMouseAnchor(session)
             : null;
+        bool hasMouseCoordinates = HasMouseCoordinates(session);
+        bool useScreenScaledCoordinates = settings.UseScreenScaledCoordinates
+            && hasMouseCoordinates;
+        RecordedScreenInfo? recordedScreen = useScreenScaledCoordinates
+            ? ValidateRecordedScreen(session.RecordedScreen, "kayit")
+            : null;
+        RecordedScreenInfo? playbackScreen = useScreenScaledCoordinates
+            ? ValidateRecordedScreen(
+                (recordedScreenProvider ?? NullRecordedScreenProvider.Instance).GetRecordedScreen(),
+                "mevcut")
+            : null;
 
         return new PlaybackCoordinateResolver(
             useRelativeCoordinates,
-            recordedMouseAnchor);
+            recordedMouseAnchor,
+            useScreenScaledCoordinates,
+            recordedScreen,
+            playbackScreen);
     }
 
     public async Task PrepareForIterationAsync(
@@ -122,25 +149,44 @@ internal sealed class PlaybackCoordinateResolver : IDisposable
             playbackMouseAnchor = _playbackMouseAnchor;
         }
 
-        if (!CanResolveRelativeCoordinates
-            || playbackMouseAnchor is null
-            || macroEvent.EventType != MacroEventType.Mouse
+        if (macroEvent.EventType != MacroEventType.Mouse
             || !macroEvent.X.HasValue
             || !macroEvent.Y.HasValue)
         {
             return macroEvent;
         }
 
-        int resolvedX = ResolveRelativeCoordinate(
-            macroEvent.X.Value,
-            _recordedMouseAnchor!.Value.X,
-            playbackMouseAnchor.Value.X);
-        int resolvedY = ResolveRelativeCoordinate(
-            macroEvent.Y.Value,
-            _recordedMouseAnchor.Value.Y,
-            playbackMouseAnchor.Value.Y);
+        if (CanResolveRelativeCoordinates && playbackMouseAnchor is not null)
+        {
+            int resolvedRelativeX = ResolveRelativeCoordinate(
+                macroEvent.X.Value,
+                _recordedMouseAnchor!.Value.X,
+                playbackMouseAnchor.Value.X);
+            int resolvedRelativeY = ResolveRelativeCoordinate(
+                macroEvent.Y.Value,
+                _recordedMouseAnchor.Value.Y,
+                playbackMouseAnchor.Value.Y);
 
-        return CloneMacroEventWithCoordinates(macroEvent, resolvedX, resolvedY);
+            return CloneMacroEventWithCoordinates(macroEvent, resolvedRelativeX, resolvedRelativeY);
+        }
+
+        if (CanResolveScreenScaledCoordinates)
+        {
+            int resolvedScaledX = ResolveScreenScaledCoordinate(
+                macroEvent.X.Value,
+                _recordedScreen!.Width,
+                _playbackScreen!.Width,
+                "X");
+            int resolvedScaledY = ResolveScreenScaledCoordinate(
+                macroEvent.Y.Value,
+                _recordedScreen.Height,
+                _playbackScreen.Height,
+                "Y");
+
+            return CloneMacroEventWithCoordinates(macroEvent, resolvedScaledX, resolvedScaledY);
+        }
+
+        return macroEvent;
     }
 
     public void Dispose()
@@ -169,6 +215,40 @@ internal sealed class PlaybackCoordinateResolver : IDisposable
         return null;
     }
 
+    private static bool HasMouseCoordinates(MacroSession session)
+    {
+        foreach (MacroEvent macroEvent in session.Events)
+        {
+            if (macroEvent.EventType == MacroEventType.Mouse
+                && macroEvent.X.HasValue
+                && macroEvent.Y.HasValue)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static RecordedScreenInfo ValidateRecordedScreen(
+        RecordedScreenInfo? recordedScreenInfo,
+        string sourceName)
+    {
+        if (recordedScreenInfo is null
+            || recordedScreenInfo.Width <= 0
+            || recordedScreenInfo.Height <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Ekrana gore koordinat olcekleme icin {sourceName} ekran boyutu gecersiz veya eksik.");
+        }
+
+        return new RecordedScreenInfo
+        {
+            Width = recordedScreenInfo.Width,
+            Height = recordedScreenInfo.Height
+        };
+    }
+
     private static int ResolveRelativeCoordinate(
         int recordedCoordinate,
         int recordedAnchor,
@@ -181,6 +261,34 @@ internal sealed class PlaybackCoordinateResolver : IDisposable
         {
             throw new InvalidOperationException(
                 $"Goreli fare oynatimi gecersiz bir koordinat uretti: {resolvedCoordinate}.");
+        }
+
+        return (int)resolvedCoordinate;
+    }
+
+    private static int ResolveScreenScaledCoordinate(
+        int recordedCoordinate,
+        int recordedDimension,
+        int playbackDimension,
+        string axisName)
+    {
+        if (recordedCoordinate < 0 || recordedCoordinate >= recordedDimension)
+        {
+            throw new InvalidOperationException(
+                $"Ekrana gore koordinat olcekleme kayit {axisName} koordinatini ekran sinirlari disinda buldu: {recordedCoordinate}. Kayit boyutu: {recordedDimension}.");
+        }
+
+        double resolvedCoordinate = Math.Floor(
+            (double)recordedCoordinate * playbackDimension / recordedDimension);
+
+        if (double.IsNaN(resolvedCoordinate)
+            || double.IsInfinity(resolvedCoordinate)
+            || resolvedCoordinate < 0
+            || resolvedCoordinate >= playbackDimension
+            || resolvedCoordinate > int.MaxValue)
+        {
+            throw new InvalidOperationException(
+                $"Ekrana gore koordinat olcekleme mevcut ekran sinirlari disinda {axisName} koordinati uretti: {resolvedCoordinate}. Mevcut boyut: {playbackDimension}.");
         }
 
         return (int)resolvedCoordinate;
