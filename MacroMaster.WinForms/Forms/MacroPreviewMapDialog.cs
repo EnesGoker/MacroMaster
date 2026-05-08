@@ -172,19 +172,21 @@ internal sealed class MacroPreviewMapDialog : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 4,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
             Padding = ResolveRootPadding()
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveTitleRowHeight()));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveInspectionRowHeight()));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveLegendRowHeight()));
 
-        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 1);
-        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateTitlePanel(), 0, 0);
+        rootLayoutPanel.Controls.Add(CreateInspectionPanel(), 0, 1);
+        rootLayoutPanel.Controls.Add(CreateMapHost(), 0, 2);
+        rootLayoutPanel.Controls.Add(CreateLegendPanel(), 0, 3);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -199,6 +201,45 @@ internal sealed class MacroPreviewMapDialog : Form
         {
             ClientSize = nextClientSize;
         }
+    }
+
+    private TableLayoutPanel CreateTitlePanel()
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = DesignTokens.Surface,
+            Margin = Padding.Empty,
+            Padding = new Padding(0, 0, 0, DesignTokens.Scale(8))
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+        panel.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = Text,
+            Font = DesignTokens.FontUiNormal,
+            ForeColor = DesignTokens.TextPrimary,
+            BackColor = DesignTokens.Surface,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            UseMnemonic = false
+        }, 0, 0);
+
+        var closeButton = new PopupCloseButton
+        {
+            Dock = DockStyle.Fill,
+            AccessibleName = "Kapat",
+            AccessibleDescription = "Makro onizleme haritasi penceresini kapatir."
+        };
+        closeButton.Click += (_, _) => Close();
+        panel.Controls.Add(closeButton, 1, 0);
+
+        return panel;
     }
 
     private RoundedPanel CreateInspectionPanel()
@@ -277,7 +318,7 @@ internal sealed class MacroPreviewMapDialog : Form
             Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.SurfaceInset,
-            TextAlign = ContentAlignment.TopLeft,
+            TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true,
             UseMnemonic = false
         };
@@ -326,13 +367,25 @@ internal sealed class MacroPreviewMapDialog : Form
             + DesignTokens.Scale(4));
     }
 
+    private static int ResolveTitleRowHeight()
+    {
+        return Math.Max(
+            DesignTokens.Scale(34),
+            TextRenderer.MeasureText(
+                "Makro Onizleme Haritasi",
+                DesignTokens.FontUiNormal,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Height
+            + DesignTokens.Scale(14));
+    }
+
     private static Padding ResolveInspectionPanelPadding()
     {
         return new Padding(
             DesignTokens.Scale(12),
-            DesignTokens.Scale(7),
+            DesignTokens.Scale(9),
             DesignTokens.Scale(12),
-            DesignTokens.Scale(7));
+            DesignTokens.Scale(6));
     }
 
     private static int ResolveInspectionCaptionRowHeight()
@@ -412,7 +465,9 @@ internal sealed class MacroPreviewMapDialog : Form
 
     internal static Size ResolvePreferredClientSize()
     {
-        return new Size(DesignTokens.Scale(780), DesignTokens.Scale(580));
+        return new Size(
+            DesignTokens.Scale(780),
+            DesignTokens.Scale(580) + ResolveTitleRowHeight());
     }
 
     internal static Size ResolveMinimumClientSize()
@@ -425,6 +480,7 @@ internal sealed class MacroPreviewMapDialog : Form
             Math.Max(
                 DesignTokens.Scale(420),
                 rootPadding.Vertical
+                + ResolveTitleRowHeight()
                 + ResolveInspectionRowHeight()
                 + ResolveLegendRowHeight()
                 + minimumMapHeight));
@@ -517,6 +573,113 @@ internal sealed class MacroPreviewMapDialog : Form
                 TextFormatFlags.Left |
                 TextFormatFlags.EndEllipsis |
                 TextFormatFlags.NoPrefix);
+        }
+    }
+
+    private sealed class PopupCloseButton : Button
+    {
+        private bool _isHovered;
+        private bool _isPressed;
+
+        public PopupCloseButton()
+        {
+            SetStyle(
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.UserPaint,
+                true);
+
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            FlatAppearance.MouseDownBackColor = Color.Transparent;
+            FlatAppearance.MouseOverBackColor = Color.Transparent;
+            BackColor = DesignTokens.Surface;
+            ForeColor = DesignTokens.TextPrimary;
+            Margin = Padding.Empty;
+            Padding = Padding.Empty;
+            TabStop = false;
+            Text = string.Empty;
+            UseVisualStyleBackColor = false;
+            Cursor = Cursors.Hand;
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            _isHovered = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _isHovered = false;
+            _isPressed = false;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _isPressed = true;
+                Invalidate();
+            }
+
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            _isPressed = false;
+            Invalidate();
+            base.OnMouseUp(e);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Rectangle fillBounds = Rectangle.Inflate(
+                ClientRectangle,
+                -DesignTokens.Scale(2),
+                -DesignTokens.Scale(2));
+            if (fillBounds.Width > 0 && fillBounds.Height > 0 && (_isHovered || _isPressed))
+            {
+                using GraphicsPath backgroundPath = CreateRoundPath(fillBounds, DesignTokens.Scale(8));
+                using var backgroundBrush = new SolidBrush(_isPressed
+                    ? DesignTokens.AccentRedSoft
+                    : DesignTokens.SurfaceHover);
+                e.Graphics.FillPath(backgroundBrush, backgroundPath);
+            }
+
+            int centerX = ClientRectangle.Left + ClientRectangle.Width / 2;
+            int centerY = ClientRectangle.Top + ClientRectangle.Height / 2;
+            int halfSize = Math.Max(DesignTokens.Scale(5), DesignTokens.Scale(12) / 2);
+            using var pen = new Pen(DesignTokens.TextPrimary, Math.Max(1.4f, DesignTokens.DensityScale * 1.35f))
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round
+            };
+
+            e.Graphics.DrawLine(
+                pen,
+                centerX - halfSize,
+                centerY - halfSize,
+                centerX + halfSize,
+                centerY + halfSize);
+            e.Graphics.DrawLine(
+                pen,
+                centerX + halfSize,
+                centerY - halfSize,
+                centerX - halfSize,
+                centerY + halfSize);
         }
     }
 
