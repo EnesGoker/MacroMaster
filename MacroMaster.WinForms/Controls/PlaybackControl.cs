@@ -23,6 +23,9 @@ public readonly record struct PlaybackControlState(
 
 internal sealed class PlaybackControl : UserControl
 {
+    private readonly TableLayoutPanel _rootLayoutPanel;
+    private readonly TableLayoutPanel _controlsLayoutPanel;
+    private readonly Label _progressPercentLabel;
     private readonly PlaybackProgressBar _progressBar;
     private readonly MetricCell _statusMetricCell;
     private readonly MetricCell _eventCounterMetricCell;
@@ -69,10 +72,13 @@ internal sealed class PlaybackControl : UserControl
         _remainingTimeMetricCell = new MetricCell("Kalan Süre");
         _skipBackButton = new IconButton(IconButtonKind.SkipBack);
         _stepBackButton = new IconButton(IconButtonKind.StepBack);
-        _playbackButton = new IconButton(IconButtonKind.Play) { ButtonSizeOverride = DesignTokens.Scale(52) };
+        _playbackButton = new IconButton(IconButtonKind.Play, logicalButtonSize: 52);
         _stepForwardButton = new IconButton(IconButtonKind.StepForward);
         _stopButton = new IconButton(IconButtonKind.Stop);
         _toolTip = new ToolTip();
+        _rootLayoutPanel = new TableLayoutPanel();
+        _controlsLayoutPanel = new TableLayoutPanel();
+        _progressPercentLabel = new Label();
 
         BuildLayout();
         WireEvents();
@@ -82,6 +88,7 @@ internal sealed class PlaybackControl : UserControl
             false,
             false,
             PlaybackButtonState.Play));
+        ApplyDpiMetrics();
     }
 
     public void UpdateState(PlaybackControlState state)
@@ -128,26 +135,37 @@ internal sealed class PlaybackControl : UserControl
         base.Dispose(disposing);
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
     private void BuildLayout()
     {
-        var rootLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 4,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = new Padding(
-                DesignTokens.Scale(16),
-                DesignTokens.Scale(10),
-                DesignTokens.Scale(16),
-                DesignTokens.Scale(8))
-        };
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveMetricRowHeight())); // status row
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28))); // progress bar
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(20))); // progress % label
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));                    // buttons
+        _rootLayoutPanel.Dock = DockStyle.Fill;
+        _rootLayoutPanel.ColumnCount = 1;
+        _rootLayoutPanel.RowCount = 4;
+        _rootLayoutPanel.BackColor = DesignTokens.Surface;
+        _rootLayoutPanel.Margin = Padding.Empty;
+        _rootLayoutPanel.Padding = new Padding(
+            DesignTokens.Scale(16),
+            DesignTokens.Scale(10),
+            DesignTokens.Scale(16),
+            DesignTokens.Scale(8));
+        _rootLayoutPanel.ColumnStyles.Clear();
+        _rootLayoutPanel.RowStyles.Clear();
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, ResolveMetricRowHeight())); // status row
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28)));   // progress bar
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(20)));   // progress % label
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));                      // buttons
 
         var statusPanel = new TableLayoutPanel
         {
@@ -171,48 +189,75 @@ internal sealed class PlaybackControl : UserControl
 
         // Row 1: Progress bar
         // Row 2: Progress % (right-aligned)
-        var progressPercentLabel = new Label
-        {
-            Dock = DockStyle.Fill,
-            Font = DesignTokens.FontUiSmall,
-            ForeColor = DesignTokens.TextSecondary,
-            BackColor = DesignTokens.Surface,
-            TextAlign = ContentAlignment.MiddleRight,
-            AutoEllipsis = true
-        };
-        _progressBar.PercentLabel = progressPercentLabel;
+        _progressPercentLabel.Dock = DockStyle.Fill;
+        _progressPercentLabel.Font = DesignTokens.FontUiSmall;
+        _progressPercentLabel.ForeColor = DesignTokens.TextSecondary;
+        _progressPercentLabel.BackColor = DesignTokens.Surface;
+        _progressPercentLabel.TextAlign = ContentAlignment.MiddleRight;
+        _progressPercentLabel.AutoEllipsis = true;
+        _progressBar.PercentLabel = _progressPercentLabel;
 
         // Row 3: Buttons — centered, 5 buttons like reference
-        var controlsLayoutPanel = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 7,
-            RowCount = 1,
-            BackColor = DesignTokens.Surface,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty
-        };
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(72)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
-        controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        _controlsLayoutPanel.Dock = DockStyle.Fill;
+        _controlsLayoutPanel.ColumnCount = 7;
+        _controlsLayoutPanel.RowCount = 1;
+        _controlsLayoutPanel.BackColor = DesignTokens.Surface;
+        _controlsLayoutPanel.Margin = Padding.Empty;
+        _controlsLayoutPanel.Padding = Padding.Empty;
+        _controlsLayoutPanel.ColumnStyles.Clear();
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(72)));
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(52)));
+        _controlsLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
 
-        _playbackButton.ButtonSizeOverride = DesignTokens.Scale(52);
+        _controlsLayoutPanel.Controls.Add(_skipBackButton, 1, 0);
+        _controlsLayoutPanel.Controls.Add(_stepBackButton, 2, 0);
+        _controlsLayoutPanel.Controls.Add(_playbackButton, 3, 0);
+        _controlsLayoutPanel.Controls.Add(_stepForwardButton, 4, 0);
+        _controlsLayoutPanel.Controls.Add(_stopButton, 5, 0);
 
-        controlsLayoutPanel.Controls.Add(_skipBackButton, 1, 0);
-        controlsLayoutPanel.Controls.Add(_stepBackButton, 2, 0);
-        controlsLayoutPanel.Controls.Add(_playbackButton, 3, 0);
-        controlsLayoutPanel.Controls.Add(_stepForwardButton, 4, 0);
-        controlsLayoutPanel.Controls.Add(_stopButton, 5, 0);
+        _rootLayoutPanel.Controls.Add(statusPanel, 0, 0);
+        _rootLayoutPanel.Controls.Add(_progressBar, 0, 1);
+        _rootLayoutPanel.Controls.Add(_progressPercentLabel, 0, 2);
+        _rootLayoutPanel.Controls.Add(_controlsLayoutPanel, 0, 3);
+        Controls.Add(_rootLayoutPanel);
+    }
 
-        rootLayoutPanel.Controls.Add(statusPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(_progressBar, 0, 1);
-        rootLayoutPanel.Controls.Add(progressPercentLabel, 0, 2);
-        rootLayoutPanel.Controls.Add(controlsLayoutPanel, 0, 3);
-        Controls.Add(rootLayoutPanel);
+    private void ApplyDpiMetrics()
+    {
+        Font = DesignTokens.FontUiNormal;
+        _rootLayoutPanel.Padding = new Padding(
+            DesignTokens.Scale(16),
+            DesignTokens.Scale(10),
+            DesignTokens.Scale(16),
+            DesignTokens.Scale(8));
+        _rootLayoutPanel.RowStyles[0].Height = ResolveMetricRowHeight();
+        _rootLayoutPanel.RowStyles[1].Height = DesignTokens.Scale(28);
+        _rootLayoutPanel.RowStyles[2].Height = DesignTokens.Scale(20);
+
+        _controlsLayoutPanel.ColumnStyles[1].Width = DesignTokens.Scale(52);
+        _controlsLayoutPanel.ColumnStyles[2].Width = DesignTokens.Scale(52);
+        _controlsLayoutPanel.ColumnStyles[3].Width = DesignTokens.Scale(72);
+        _controlsLayoutPanel.ColumnStyles[4].Width = DesignTokens.Scale(52);
+        _controlsLayoutPanel.ColumnStyles[5].Width = DesignTokens.Scale(52);
+
+        _progressPercentLabel.Font = DesignTokens.FontUiSmall;
+        _statusMetricCell.ApplyDpiMetrics();
+        _eventCounterMetricCell.ApplyDpiMetrics();
+        _elapsedTimeMetricCell.ApplyDpiMetrics();
+        _remainingTimeMetricCell.ApplyDpiMetrics();
+        _skipBackButton.ApplyDpiMetrics();
+        _stepBackButton.ApplyDpiMetrics();
+        _playbackButton.ApplyDpiMetrics();
+        _stepForwardButton.ApplyDpiMetrics();
+        _stopButton.ApplyDpiMetrics();
+        _progressBar.ApplyDpiMetrics();
+
+        PerformLayout();
+        Invalidate();
     }
 
     private static NormalizedPlaybackTelemetry NormalizeTelemetry(PlaybackTelemetrySnapshot telemetry)
@@ -328,6 +373,12 @@ internal sealed class PlaybackControl : UserControl
             BackColor = DesignTokens.Surface;
             ForeColor = DesignTokens.TextPrimary;
             Font = DesignTokens.FontUiNormal;
+        }
+
+        public void ApplyDpiMetrics()
+        {
+            Font = DesignTokens.FontUiNormal;
+            Invalidate();
         }
 
         public string ValueText
@@ -453,6 +504,11 @@ internal sealed class PlaybackControl : UserControl
             }
         }
 
+        public void ApplyDpiMetrics()
+        {
+            Invalidate();
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -497,8 +553,9 @@ internal sealed class PlaybackControl : UserControl
     private sealed class IconButton : Control
     {
         private IconButtonKind _kind;
+        private readonly int _logicalButtonSize;
 
-        public IconButton(IconButtonKind kind)
+        public IconButton(IconButtonKind kind, int logicalButtonSize = 46)
         {
             SetStyle(
                 ControlStyles.AllPaintingInWmPaint |
@@ -508,11 +565,12 @@ internal sealed class PlaybackControl : UserControl
                 true);
 
             _kind = kind;
+            _logicalButtonSize = logicalButtonSize;
             Dock = DockStyle.Fill;
             Margin = new Padding(DesignTokens.Scale(4));
             BackColor = DesignTokens.Surface;
             Cursor = Cursors.Hand;
-            ButtonSizeOverride = DesignTokens.Scale(46);
+            ButtonSizeOverride = DesignTokens.Scale(_logicalButtonSize);
         }
 
         public int ButtonSizeOverride { get; set; }
@@ -533,6 +591,13 @@ internal sealed class PlaybackControl : UserControl
                 _kind = value;
                 Invalidate();
             }
+        }
+
+        public void ApplyDpiMetrics()
+        {
+            Margin = new Padding(DesignTokens.Scale(4));
+            ButtonSizeOverride = DesignTokens.Scale(_logicalButtonSize);
+            Invalidate();
         }
 
         protected override void OnEnabledChanged(EventArgs e)
@@ -689,6 +754,11 @@ internal sealed class PlaybackControl : UserControl
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
