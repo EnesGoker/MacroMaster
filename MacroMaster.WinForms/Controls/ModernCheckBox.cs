@@ -113,6 +113,18 @@ internal sealed class ModernCheckBox : Control
         pevent.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
     protected override void OnPaint(PaintEventArgs pevent)
     {
         Graphics graphics = pevent.Graphics;
@@ -158,6 +170,15 @@ internal sealed class ModernCheckBox : Control
             TextFormatFlags.VerticalCenter |
             TextFormatFlags.EndEllipsis |
             TextFormatFlags.NoPrefix);
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        Font = DesignTokens.FontUiNormal;
+        MinimumSize = new Size(DesignTokens.Scale(120), DesignTokens.Scale(30));
+        BackColor = DesignTokens.Surface;
+        ForeColor = DesignTokens.TextPrimary;
+        Invalidate();
     }
 
     private Color ResolveRowFillColor()
@@ -254,6 +275,11 @@ internal sealed class ModernCheckBox : Control
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
