@@ -7,7 +7,7 @@ public partial class MainForm
 {
     private void InitializeDynamicControls()
     {
-        BuildResponsiveHostLayout();
+        BuildResponsiveHostLayout(applyInitialWindowMetrics: true);
 
         _recordingEventRefreshThrottle = new UiRefreshThrottle(
             this,
@@ -77,14 +77,23 @@ public partial class MainForm
         _playbackControl.StopClicked += stopButton_Click;
     }
 
-    private void BuildResponsiveHostLayout()
+    private void BuildResponsiveHostLayout(bool applyInitialWindowMetrics)
     {
         SuspendLayout();
+        Control? previousRoot = Controls.Count > 0 ? Controls[0] : null;
+        if (previousRoot is not null)
+        {
+            DetachReusableDashboardControls(previousRoot);
+        }
 
         BackColor = DesignTokens.Background;
         ForeColor = DesignTokens.TextPrimary;
         AutoScaleMode = AutoScaleMode.None;
-        ClientSize = new Size(DesignTokens.Scale(1280), DesignTokens.Scale(760));
+        if (applyInitialWindowMetrics)
+        {
+            ClientSize = new Size(DesignTokens.Scale(1280), DesignTokens.Scale(760));
+        }
+
         MinimumSize = new Size(DesignTokens.Scale(640), DesignTokens.Scale(480));
         Padding = Padding.Empty;
         ApplyWindowChromeConfiguration();
@@ -189,6 +198,7 @@ public partial class MainForm
 
         Controls.Clear();
         Controls.Add(rootLayoutPanel);
+        previousRoot?.Dispose();
 
         ResumeLayout(performLayout: true);
     }
@@ -214,6 +224,46 @@ public partial class MainForm
             DesignTokens.CardPadding,
             DesignTokens.CardPadding);
         return card;
+    }
+
+    private void DetachReusableDashboardControls(Control root)
+    {
+        DetachReusableControl(root, _titleBarControl);
+        DetachReusableControl(root, _toolbarControl);
+        DetachReusableControl(root, _playbackSettingsControl);
+        DetachReusableControl(root, _eventListControl);
+        DetachReusableControl(root, _macroLibraryControl);
+        DetachReusableControl(root, _sessionSummaryControl);
+        DetachReusableControl(root, _playbackControl);
+    }
+
+    private static void DetachReusableControl(Control root, Control reusableControl)
+    {
+        Control? parent = reusableControl.Parent;
+        if (parent is null)
+        {
+            return;
+        }
+
+        Control? cursor = parent;
+        bool parentBelongsToRoot = false;
+        while (cursor is not null)
+        {
+            if (ReferenceEquals(cursor, root))
+            {
+                parentBelongsToRoot = true;
+                break;
+            }
+
+            cursor = cursor.Parent;
+        }
+
+        if (!parentBelongsToRoot)
+        {
+            return;
+        }
+
+        parent.Controls.Remove(reusableControl);
     }
 
     private void playbackSettingsControl_SettingsChanged(object? sender, EventArgs e)

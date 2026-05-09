@@ -47,6 +47,7 @@ public partial class MainForm : Form
     private bool _applyingPlaybackSettings;
     private bool _shutdownInProgress;
     private bool _shutdownCompleted;
+    private int _currentDpi = 96;
     private UiRefreshThrottle? _recordingEventRefreshThrottle;
     private UiRefreshThrottle? _playbackTelemetryRefreshThrottle;
     private UiRefreshThrottle? _playbackSelectionRefreshThrottle;
@@ -81,10 +82,33 @@ public partial class MainForm : Form
         _logger = logger;
 
         InitializeComponent();
+        _currentDpi = NormalizeDpi(DeviceDpi);
+        DesignTokens.ConfigureForDpi(_currentDpi);
         InitializeDynamicControls();
 
         Load += MainForm_Load;
         FormClosing += MainForm_FormClosing;
+    }
+
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        int newDpi = NormalizeDpi(e.DeviceDpiNew);
+        if (newDpi == _currentDpi)
+        {
+            base.OnDpiChanged(e);
+            return;
+        }
+
+        _currentDpi = newDpi;
+        DesignTokens.ConfigureForDpi(newDpi);
+        Bounds = e.SuggestedRectangle;
+        ApplyWindowChromeConfiguration();
+        BuildResponsiveHostLayout(applyInitialWindowMetrics: false);
+        RefreshUiState(forceEventListReload: true);
+
+        base.OnDpiChanged(e);
     }
 
     private void MainForm_Load(object? sender, EventArgs e)
@@ -644,6 +668,11 @@ public partial class MainForm : Form
         }
 
         return FormatAppState(appState);
+    }
+
+    private static int NormalizeDpi(int dpi)
+    {
+        return dpi > 0 ? dpi : 96;
     }
 
     private PlaybackControlState BuildPlaybackControlState(
