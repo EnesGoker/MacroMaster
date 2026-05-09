@@ -24,8 +24,20 @@ internal sealed class MacroLibraryControl : UserControl
     private readonly Label _emptyStateLabel;
     private readonly Label _totalMacroValueLabel;
     private readonly Label _totalEventValueLabel;
+    private readonly List<Label> _footerCaptionLabels = [];
     private readonly TextBox _searchTextBox;
     private readonly FilterIconButton _filterButton;
+    private RowStyle? _headerRowStyle;
+    private RowStyle? _searchRowStyle;
+    private RowStyle? _footerRowStyle;
+    private TableLayoutPanel? _headerLayoutPanel;
+    private ColumnStyle? _headerFilterColumnStyle;
+    private ColumnStyle? _headerAddColumnStyle;
+    private Label? _libraryTitleLabel;
+    private Button? _addButton;
+    private RoundedPanel? _searchPanel;
+    private ColumnStyle? _scrollBarColumnStyle;
+    private RoundedPanel? _footerPanel;
     private ToolStripDropDown? _filterDropDown;
     private IReadOnlyList<MacroLibraryViewItem> _items = [];
     private MacroLibraryFilterKind _selectedFilterKind = MacroLibraryFilterKind.All;
@@ -61,6 +73,7 @@ internal sealed class MacroLibraryControl : UserControl
         _filterButton = new FilterIconButton();
 
         BuildLayout();
+        ApplyDpiMetrics();
         SetItems([], null);
     }
 
@@ -168,10 +181,13 @@ internal sealed class MacroLibraryControl : UserControl
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(44)));
+        _headerRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(42));
+        _searchRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(44));
+        _footerRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(50));
+        rootLayoutPanel.RowStyles.Add(_headerRowStyle);
+        rootLayoutPanel.RowStyles.Add(_searchRowStyle);
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(50)));
+        rootLayoutPanel.RowStyles.Add(_footerRowStyle);
 
         var headerLayoutPanel = new TableLayoutPanel
         {
@@ -182,9 +198,12 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(0, 0, DesignTokens.Scale(12), 0),
             Padding = Padding.Empty
         };
+        _headerLayoutPanel = headerLayoutPanel;
         headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
-        headerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38)));
+        _headerFilterColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38));
+        _headerAddColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(38));
+        headerLayoutPanel.ColumnStyles.Add(_headerFilterColumnStyle);
+        headerLayoutPanel.ColumnStyles.Add(_headerAddColumnStyle);
 
         var titleLabel = new Label
         {
@@ -196,6 +215,7 @@ internal sealed class MacroLibraryControl : UserControl
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true
         };
+        _libraryTitleLabel = titleLabel;
 
         var addButton = new Button
         {
@@ -208,6 +228,7 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7)),
             UseVisualStyleBackColor = false
         };
+        _addButton = addButton;
         addButton.FlatAppearance.BorderColor = DesignTokens.BorderSoft;
         addButton.FlatAppearance.BorderSize = 1;
         addButton.Click += (_, _) => AddRequested?.Invoke(this, EventArgs.Empty);
@@ -236,6 +257,7 @@ internal sealed class MacroLibraryControl : UserControl
                 DesignTokens.Scale(10),
                 DesignTokens.Scale(4))
         };
+        _searchPanel = searchPanel;
         searchPanel.Click += (_, _) => _searchTextBox.Focus();
         searchPanel.Controls.Add(_searchTextBox);
 
@@ -249,7 +271,8 @@ internal sealed class MacroLibraryControl : UserControl
             Padding = Padding.Empty
         };
         listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        listHostPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(20)));
+        _scrollBarColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(20));
+        listHostPanel.ColumnStyles.Add(_scrollBarColumnStyle);
 
         _listViewportPanel.Dock = DockStyle.Fill;
         _listViewportPanel.BackColor = DesignTokens.Surface;
@@ -294,6 +317,7 @@ internal sealed class MacroLibraryControl : UserControl
             Margin = new Padding(0, DesignTokens.Scale(8), DesignTokens.Scale(12), 0),
             Padding = new Padding(DesignTokens.Scale(12), DesignTokens.Scale(5), DesignTokens.Scale(12), DesignTokens.Scale(5))
         };
+        _footerPanel = footerPanel;
 
         var footerLayoutPanel = new TableLayoutPanel
         {
@@ -309,13 +333,156 @@ internal sealed class MacroLibraryControl : UserControl
         footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
         footerLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16f));
 
-        footerLayoutPanel.Controls.Add(CreateFooterCaptionLabel("Toplam Makro"), 0, 0);
+        Label totalMacroCaptionLabel = CreateFooterCaptionLabel("Toplam Makro");
+        Label totalEventCaptionLabel = CreateFooterCaptionLabel("Toplam Olay");
+        _footerCaptionLabels.Add(totalMacroCaptionLabel);
+        _footerCaptionLabels.Add(totalEventCaptionLabel);
+
+        footerLayoutPanel.Controls.Add(totalMacroCaptionLabel, 0, 0);
         footerLayoutPanel.Controls.Add(_totalMacroValueLabel, 1, 0);
-        footerLayoutPanel.Controls.Add(CreateFooterCaptionLabel("Toplam Olay"), 2, 0);
+        footerLayoutPanel.Controls.Add(totalEventCaptionLabel, 2, 0);
         footerLayoutPanel.Controls.Add(_totalEventValueLabel, 3, 0);
 
         footerPanel.Controls.Add(footerLayoutPanel);
         return footerPanel;
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        BackColor = DesignTokens.Surface;
+        ForeColor = DesignTokens.TextPrimary;
+        Font = DesignTokens.FontUiNormal;
+
+        if (_headerRowStyle is not null)
+        {
+            _headerRowStyle.Height = DesignTokens.Scale(42);
+        }
+
+        if (_searchRowStyle is not null)
+        {
+            _searchRowStyle.Height = DesignTokens.Scale(44);
+        }
+
+        if (_footerRowStyle is not null)
+        {
+            _footerRowStyle.Height = DesignTokens.Scale(50);
+        }
+
+        if (_headerLayoutPanel is not null)
+        {
+            _headerLayoutPanel.Margin = new Padding(0, 0, DesignTokens.Scale(12), 0);
+        }
+
+        if (_headerFilterColumnStyle is not null)
+        {
+            _headerFilterColumnStyle.Width = DesignTokens.Scale(38);
+        }
+
+        if (_headerAddColumnStyle is not null)
+        {
+            _headerAddColumnStyle.Width = DesignTokens.Scale(38);
+        }
+
+        if (_libraryTitleLabel is not null)
+        {
+            _libraryTitleLabel.Font = DesignTokens.FontUiBold;
+            _libraryTitleLabel.ForeColor = DesignTokens.TextPrimary;
+            _libraryTitleLabel.BackColor = DesignTokens.Surface;
+        }
+
+        if (_addButton is not null)
+        {
+            _addButton.Font = DesignTokens.FontUiBold;
+            _addButton.Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7));
+        }
+
+        _filterButton.Margin = new Padding(DesignTokens.Scale(8), DesignTokens.Scale(3), 0, DesignTokens.Scale(7));
+
+        if (_searchPanel is not null)
+        {
+            _searchPanel.Margin = new Padding(
+                0,
+                DesignTokens.Scale(3),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(8));
+            _searchPanel.Padding = new Padding(
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(5),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(4));
+        }
+
+        _searchTextBox.Font = DesignTokens.FontUiNormal;
+        _searchTextBox.BackColor = DesignTokens.SurfaceInset;
+        _searchTextBox.ForeColor = DesignTokens.TextPrimary;
+
+        if (_scrollBarColumnStyle is not null)
+        {
+            _scrollBarColumnStyle.Width = DesignTokens.Scale(20);
+        }
+
+        _listScrollBar.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
+        _macroListPanel.Padding = new Padding(0, DesignTokens.Scale(2), 0, 0);
+
+        if (_footerPanel is not null)
+        {
+            _footerPanel.Margin = new Padding(0, DesignTokens.Scale(8), DesignTokens.Scale(12), 0);
+            _footerPanel.Padding = new Padding(
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(5),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(5));
+        }
+
+        _emptyStateLabel.Height = DesignTokens.Scale(96);
+        _emptyStateLabel.Font = DesignTokens.FontUiNormal;
+        _emptyStateLabel.ForeColor = DesignTokens.TextMuted;
+        _emptyStateLabel.BackColor = Color.Transparent;
+
+        foreach (Label footerCaptionLabel in _footerCaptionLabels)
+        {
+            footerCaptionLabel.Font = DesignTokens.FontUiNormal;
+            footerCaptionLabel.ForeColor = DesignTokens.TextSecondary;
+            footerCaptionLabel.BackColor = Color.Transparent;
+            footerCaptionLabel.Invalidate();
+        }
+
+        _totalMacroValueLabel.Font = DesignTokens.FontUiBold;
+        _totalMacroValueLabel.ForeColor = DesignTokens.Accent;
+        _totalMacroValueLabel.BackColor = Color.Transparent;
+        _totalMacroValueLabel.Invalidate();
+
+        _totalEventValueLabel.Font = DesignTokens.FontUiBold;
+        _totalEventValueLabel.ForeColor = DesignTokens.Accent;
+        _totalEventValueLabel.BackColor = Color.Transparent;
+        _totalEventValueLabel.Invalidate();
+
+        _footerPanel?.Invalidate();
+
+        foreach (Control control in _macroListPanel.Controls)
+        {
+            if (control is MacroLibraryRow row)
+            {
+                row.ApplyDpiMetrics();
+            }
+        }
+
+        ResizeLibraryRows();
+        UpdateListScrollLayout();
+        PerformLayout();
+        Invalidate();
     }
 
     private void ResizeLibraryRows()
@@ -1056,6 +1223,11 @@ internal sealed class MacroLibraryControl : UserControl
     {
         private readonly MacroLibraryViewItem _item;
         private readonly bool _isSelected;
+        private Label? _nameLabel;
+        private Label? _modifiedLabel;
+        private FavoriteMarker? _favoriteMarker;
+        private ColumnStyle? _favoriteColumnStyle;
+        private RowStyle? _titleRowStyle;
 
         public event EventHandler? Activated;
         public event EventHandler? RenameRequested;
@@ -1121,7 +1293,8 @@ internal sealed class MacroLibraryControl : UserControl
                 Padding = Padding.Empty
             };
             layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(22)));
+            _favoriteColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(22));
+            layoutPanel.ColumnStyles.Add(_favoriteColumnStyle);
 
             var textLayoutPanel = new TableLayoutPanel
             {
@@ -1132,33 +1305,38 @@ internal sealed class MacroLibraryControl : UserControl
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
-            textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(31)));
+            _titleRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(31));
+            textLayoutPanel.RowStyles.Add(_titleRowStyle);
             textLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
+            var nameLabel = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = _item.Entry.Name,
+                Font = DesignTokens.FontUiBold,
+                ForeColor = DesignTokens.TextPrimary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.BottomLeft,
+                AutoEllipsis = true
+            };
+            _nameLabel = nameLabel;
             textLayoutPanel.Controls.Add(
-                new Label
-                {
-                    Dock = DockStyle.Fill,
-                    Text = _item.Entry.Name,
-                    Font = DesignTokens.FontUiBold,
-                    ForeColor = DesignTokens.TextPrimary,
-                    BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.BottomLeft,
-                    AutoEllipsis = true
-                },
+                nameLabel,
                 0,
                 0);
+            var modifiedLabel = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = FormatLastModified(_item.Entry.LastModifiedUtc),
+                Font = DesignTokens.FontUiNormal,
+                ForeColor = DesignTokens.TextSecondary,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.TopLeft,
+                AutoEllipsis = true
+            };
+            _modifiedLabel = modifiedLabel;
             textLayoutPanel.Controls.Add(
-                new Label
-                {
-                    Dock = DockStyle.Fill,
-                    Text = FormatLastModified(_item.Entry.LastModifiedUtc),
-                    Font = DesignTokens.FontUiNormal,
-                    ForeColor = DesignTokens.TextSecondary,
-                    BackColor = Color.Transparent,
-                    TextAlign = ContentAlignment.TopLeft,
-                    AutoEllipsis = true
-                },
+                modifiedLabel,
                 0,
                 1);
 
@@ -1166,12 +1344,14 @@ internal sealed class MacroLibraryControl : UserControl
 
             if (_item.IsFavorite)
             {
+                var favoriteMarker = new FavoriteMarker
+                {
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0)
+                };
+                _favoriteMarker = favoriteMarker;
                 layoutPanel.Controls.Add(
-                    new FavoriteMarker
-                    {
-                        Dock = DockStyle.Fill,
-                        Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0)
-                    },
+                    favoriteMarker,
                     1,
                     0);
             }
@@ -1235,6 +1415,53 @@ internal sealed class MacroLibraryControl : UserControl
             }
 
             base.Dispose(disposing);
+        }
+
+        public void ApplyDpiMetrics()
+        {
+            Height = DesignTokens.Scale(68);
+            Margin = new Padding(0, 0, 0, DesignTokens.Scale(8));
+            Padding = new Padding(
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(9),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(9));
+
+            if (_favoriteColumnStyle is not null)
+            {
+                _favoriteColumnStyle.Width = DesignTokens.Scale(22);
+            }
+
+            if (_titleRowStyle is not null)
+            {
+                _titleRowStyle.Height = DesignTokens.Scale(31);
+            }
+
+            if (_nameLabel is not null)
+            {
+                _nameLabel.Font = DesignTokens.FontUiBold;
+                _nameLabel.ForeColor = DesignTokens.TextPrimary;
+            }
+
+            if (_modifiedLabel is not null)
+            {
+                _modifiedLabel.Font = DesignTokens.FontUiNormal;
+                _modifiedLabel.ForeColor = DesignTokens.TextSecondary;
+            }
+
+            if (_favoriteMarker is not null)
+            {
+                _favoriteMarker.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
+            }
+
+            if (ContextMenuStrip is ContextMenuStrip contextMenu && !contextMenu.IsDisposed)
+            {
+                contextMenu.MinimumSize = new Size(DesignTokens.Scale(176), 0);
+                AppToolStripRenderer.ApplyTo(contextMenu, AppToolStripMenuDensity.Comfortable);
+            }
+
+            PerformLayout();
+            Invalidate();
         }
 
         private void WireActivation(Control control)
@@ -1375,6 +1602,11 @@ internal sealed class MacroLibraryControl : UserControl
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
