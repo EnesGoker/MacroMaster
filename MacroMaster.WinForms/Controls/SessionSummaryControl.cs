@@ -14,12 +14,19 @@ public readonly record struct SessionSummaryState(
 
 internal sealed class SessionSummaryControl : UserControl
 {
+    private RowStyle? _detailsRowStyle;
+    private RowStyle? _mapCaptionRowStyle;
+    private SoftPanel? _detailsPanel;
+    private TableLayoutPanel? _mapLayoutPanel;
+    private readonly List<Label> _detailCaptionLabels = [];
+    private readonly List<Label> _sectionCaptionLabels = [];
     private readonly Label _statusValueLabel;
     private readonly Label _eventCountValueLabel;
     private readonly Label _durationValueLabel;
     private readonly Label _sessionNameValueLabel;
     private readonly Label _fileNameValueLabel;
     private readonly MacroPreviewMapControl _previewMapControl;
+    private ColumnStyle? _detailCaptionColumnStyle;
 
     public event EventHandler? PreviewMapRequested;
 
@@ -50,6 +57,19 @@ internal sealed class SessionSummaryControl : UserControl
 
         BuildLayout();
         UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi"));
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
     }
 
     public void UpdateState(
@@ -97,11 +117,18 @@ internal sealed class SessionSummaryControl : UserControl
             Padding = Padding.Empty
         };
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(168)));
+        var detailsRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(168));
+        _detailsRowStyle = detailsRowStyle;
+        rootLayoutPanel.RowStyles.Add(detailsRowStyle);
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        rootLayoutPanel.Controls.Add(CreateCompactDetailsPanel(), 0, 0);
-        rootLayoutPanel.Controls.Add(CreateMapSection(), 0, 1);
+        SoftPanel detailsPanel = CreateCompactDetailsPanel();
+        _detailsPanel = detailsPanel;
+        rootLayoutPanel.Controls.Add(detailsPanel, 0, 0);
+
+        TableLayoutPanel mapLayoutPanel = CreateMapSection();
+        _mapLayoutPanel = mapLayoutPanel;
+        rootLayoutPanel.Controls.Add(mapLayoutPanel, 0, 1);
 
         Controls.Add(rootLayoutPanel);
     }
@@ -130,7 +157,9 @@ internal sealed class SessionSummaryControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(76)));
+        var detailCaptionColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(76));
+        layoutPanel.ColumnStyles.Add(detailCaptionColumnStyle);
+        _detailCaptionColumnStyle = detailCaptionColumnStyle;
         layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
         for (int index = 0; index < 5; index++)
@@ -160,14 +189,87 @@ internal sealed class SessionSummaryControl : UserControl
             Padding = Padding.Empty
         };
         mapLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(28)));
+        var mapCaptionRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(28));
+        _mapCaptionRowStyle = mapCaptionRowStyle;
+        mapLayoutPanel.RowStyles.Add(mapCaptionRowStyle);
         mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        mapLayoutPanel.Controls.Add(CreateSectionCaptionLabel("Ekran Onizleme"), 0, 0);
+        Label mapCaptionLabel = CreateSectionCaptionLabel("Ekran Onizleme");
+        _sectionCaptionLabels.Add(mapCaptionLabel);
+        mapLayoutPanel.Controls.Add(mapCaptionLabel, 0, 0);
         mapLayoutPanel.Controls.Add(_previewMapControl, 0, 1);
         return mapLayoutPanel;
     }
 
-    private static void AddDetailRow(
+    private void ApplyDpiMetrics()
+    {
+        BackColor = DesignTokens.Surface;
+        ForeColor = DesignTokens.TextPrimary;
+        Font = DesignTokens.FontUiNormal;
+
+        if (_detailsRowStyle is not null)
+        {
+            _detailsRowStyle.Height = DesignTokens.Scale(168);
+        }
+
+        if (_mapCaptionRowStyle is not null)
+        {
+            _mapCaptionRowStyle.Height = DesignTokens.Scale(28);
+        }
+
+        if (_detailCaptionColumnStyle is not null)
+        {
+            _detailCaptionColumnStyle.Width = DesignTokens.Scale(76);
+        }
+
+        if (_detailsPanel is not null)
+        {
+            _detailsPanel.Margin = new Padding(0, 0, 0, DesignTokens.Scale(14));
+            _detailsPanel.Padding = new Padding(
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(14),
+                DesignTokens.Scale(12));
+            _detailsPanel.Invalidate();
+        }
+
+        if (_mapLayoutPanel is not null)
+        {
+            _mapLayoutPanel.Margin = new Padding(0, 0, 0, DesignTokens.Scale(10));
+        }
+
+        foreach (Label detailCaptionLabel in _detailCaptionLabels)
+        {
+            detailCaptionLabel.Font = DesignTokens.FontUiSmall;
+            detailCaptionLabel.ForeColor = DesignTokens.TextSecondary;
+            detailCaptionLabel.Invalidate();
+        }
+
+        foreach (Label sectionCaptionLabel in _sectionCaptionLabels)
+        {
+            sectionCaptionLabel.Font = DesignTokens.FontUiBold;
+            sectionCaptionLabel.ForeColor = DesignTokens.TextPrimary;
+            sectionCaptionLabel.Invalidate();
+        }
+
+        foreach (Label valueLabel in new[]
+        {
+            _statusValueLabel,
+            _eventCountValueLabel,
+            _durationValueLabel,
+            _sessionNameValueLabel,
+            _fileNameValueLabel
+        })
+        {
+            valueLabel.Font = DesignTokens.FontUiBold;
+            valueLabel.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
+            valueLabel.Invalidate();
+        }
+
+        PerformLayout();
+        Invalidate();
+    }
+
+    private void AddDetailRow(
         TableLayoutPanel layoutPanel,
         int rowIndex,
         string caption,
@@ -178,7 +280,9 @@ internal sealed class SessionSummaryControl : UserControl
         valueLabel.Margin = new Padding(DesignTokens.Scale(4), 0, 0, 0);
         valueLabel.TextAlign = ContentAlignment.MiddleLeft;
 
-        layoutPanel.Controls.Add(CreateCaptionLabel(caption), 0, rowIndex);
+        Label captionLabel = CreateCaptionLabel(caption);
+        _detailCaptionLabels.Add(captionLabel);
+        layoutPanel.Controls.Add(captionLabel, 0, rowIndex);
         layoutPanel.Controls.Add(valueLabel, 1, rowIndex);
     }
 
@@ -237,6 +341,12 @@ internal sealed class SessionSummaryControl : UserControl
                 true);
         }
 
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            Invalidate();
+        }
+
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             e.Graphics.Clear(Parent?.BackColor ?? DesignTokens.Surface);
@@ -264,6 +374,11 @@ internal sealed class SessionSummaryControl : UserControl
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
