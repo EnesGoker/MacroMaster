@@ -58,6 +58,7 @@ public partial class ToolbarControl : UserControl
         ApplyTheme();
         WireEvents();
         SetHotkeyHints(null, null, null, null);
+        ApplyDpiMetrics();
     }
 
     public void UpdateRecordButton(bool isRecording)
@@ -170,6 +171,59 @@ public partial class ToolbarControl : UserControl
     private static void ShowMenu(Control owner, ContextMenuStrip menu)
     {
         menu.Show(owner, new Point(0, owner.Height + DesignTokens.Scale(4)));
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        MinimumSize = new Size(0, DesignTokens.ToolbarHeight);
+        toolbarLayoutPanel.Padding = new Padding(
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(10),
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(10));
+
+        foreach (Control control in toolbarLayoutPanel.Controls)
+        {
+            if (control is ToolbarButton button)
+            {
+                ApplyToolbarButtonMetrics(button);
+            }
+        }
+
+        AppToolStripRenderer.ApplyTo(
+            _saveMenu,
+            AppToolStripMenuDensity.Comfortable);
+        AppToolStripRenderer.ApplyTo(
+            _loadMenu,
+            AppToolStripMenuDensity.Comfortable);
+
+        PerformLayout();
+        Invalidate();
+    }
+
+    private static void ApplyToolbarButtonMetrics(ToolbarButton button)
+    {
+        button.Font = DesignTokens.FontUiBold;
+        button.Margin = new Padding(
+            DesignTokens.Scale(5),
+            DesignTokens.Scale(6),
+            DesignTokens.Scale(5),
+            DesignTokens.Scale(6));
+        button.TextAlign = ContentAlignment.MiddleCenter;
+        button.Cursor = Cursors.Hand;
+        button.Invalidate();
     }
 
     private void ApplyTheme()
