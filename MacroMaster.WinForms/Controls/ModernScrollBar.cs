@@ -28,6 +28,34 @@ internal sealed class ModernScrollBar : Control
         BackColor = DesignTokens.Surface;
     }
 
+    // -------------------------------------------------------------------------
+    // DPI metrics
+    // -------------------------------------------------------------------------
+
+    private void ApplyDpiMetrics()
+    {
+        Width = DesignTokens.Scale(12);
+        MinimumSize = new Size(DesignTokens.Scale(10), 0);
+        BackColor = DesignTokens.Surface;
+        Invalidate();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
     public event EventHandler? ValueChanged;
 
     public int LargeChange
@@ -217,6 +245,12 @@ internal sealed class ModernScrollBar : Control
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
