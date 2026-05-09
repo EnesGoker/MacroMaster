@@ -32,6 +32,15 @@ internal sealed class EventListControl : UserControl
     private readonly TextBox _filterSearchTextBox;
     private readonly ModernSelect _typeFilterSelect;
     private readonly ModernSelect _smartFilterSelect;
+    private TableLayoutPanel? _rootLayoutPanel;
+    private RowStyle? _headerRowStyle;
+    private TableLayoutPanel? _headerToolbarPanel;
+    private ColumnStyle? _headerSearchColumnStyle;
+    private ColumnStyle? _headerSearchSpacerColumnStyle;
+    private ColumnStyle? _headerTypeFilterColumnStyle;
+    private ColumnStyle? _headerFilterSpacerColumnStyle;
+    private ColumnStyle? _headerSmartFilterColumnStyle;
+    private RoundedInputHostPanel? _searchPanel;
     private MacroSession? _displayedSession;
     private Guid? _displayedSessionId;
     private int _displayedEventCount;
@@ -67,6 +76,7 @@ internal sealed class EventListControl : UserControl
         BuildLayout();
         ConfigureGrid();
         ApplyTheme();
+        ApplyDpiMetrics();
         SetSession(null);
     }
 
@@ -216,8 +226,11 @@ internal sealed class EventListControl : UserControl
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
+        _rootLayoutPanel = rootLayoutPanel;
         rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(42)));
+        var headerRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(42));
+        _headerRowStyle = headerRowStyle;
+        rootLayoutPanel.RowStyles.Add(headerRowStyle);
         rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _gridHostPanel.Dock = DockStyle.Fill;
@@ -255,12 +268,23 @@ internal sealed class EventListControl : UserControl
             Margin = Padding.Empty,
             Padding = new Padding(0, 0, 0, DesignTokens.Scale(8))
         };
+        _headerToolbarPanel = toolbarPanel;
         toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(118)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10)));
-        toolbarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(172)));
+        var searchColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(220));
+        _headerSearchColumnStyle = searchColumnStyle;
+        toolbarPanel.ColumnStyles.Add(searchColumnStyle);
+        var searchSpacerColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10));
+        _headerSearchSpacerColumnStyle = searchSpacerColumnStyle;
+        toolbarPanel.ColumnStyles.Add(searchSpacerColumnStyle);
+        var typeFilterColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(118));
+        _headerTypeFilterColumnStyle = typeFilterColumnStyle;
+        toolbarPanel.ColumnStyles.Add(typeFilterColumnStyle);
+        var filterSpacerColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(10));
+        _headerFilterSpacerColumnStyle = filterSpacerColumnStyle;
+        toolbarPanel.ColumnStyles.Add(filterSpacerColumnStyle);
+        var smartFilterColumnStyle = new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(172));
+        _headerSmartFilterColumnStyle = smartFilterColumnStyle;
+        toolbarPanel.ColumnStyles.Add(smartFilterColumnStyle);
         toolbarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var searchPanel = new RoundedInputHostPanel
@@ -275,6 +299,7 @@ internal sealed class EventListControl : UserControl
                 DesignTokens.Scale(10),
                 DesignTokens.Scale(5))
         };
+        _searchPanel = searchPanel;
         searchPanel.Click += (_, _) => _filterSearchTextBox.Focus();
         searchPanel.Controls.Add(_filterSearchTextBox);
 
@@ -875,6 +900,159 @@ internal sealed class EventListControl : UserControl
             0);
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        Font = DesignTokens.FontUiNormal;
+        BackColor = DesignTokens.Surface;
+        ForeColor = DesignTokens.TextPrimary;
+
+        _headerTitleLabel.Font = DesignTokens.FontUiBold;
+        _headerTitleLabel.ForeColor = DesignTokens.TextPrimary;
+        _headerTitleLabel.Padding = new Padding(
+            DesignTokens.Scale(2),
+            0,
+            DesignTokens.Scale(12),
+            DesignTokens.Scale(2));
+
+        if (_headerRowStyle is not null)
+        {
+            _headerRowStyle.Height = DesignTokens.Scale(42);
+        }
+
+        if (_headerToolbarPanel is not null)
+        {
+            _headerToolbarPanel.Padding = new Padding(0, 0, 0, DesignTokens.Scale(8));
+        }
+
+        if (_headerSearchColumnStyle is not null)
+        {
+            _headerSearchColumnStyle.Width = DesignTokens.Scale(220);
+        }
+
+        if (_headerSearchSpacerColumnStyle is not null)
+        {
+            _headerSearchSpacerColumnStyle.Width = DesignTokens.Scale(10);
+        }
+
+        if (_headerTypeFilterColumnStyle is not null)
+        {
+            _headerTypeFilterColumnStyle.Width = DesignTokens.Scale(118);
+        }
+
+        if (_headerFilterSpacerColumnStyle is not null)
+        {
+            _headerFilterSpacerColumnStyle.Width = DesignTokens.Scale(10);
+        }
+
+        if (_headerSmartFilterColumnStyle is not null)
+        {
+            _headerSmartFilterColumnStyle.Width = DesignTokens.Scale(172);
+        }
+
+        if (_searchPanel is not null)
+        {
+            _searchPanel.Padding = new Padding(
+                DesignTokens.Scale(12),
+                DesignTokens.Scale(6),
+                DesignTokens.Scale(10),
+                DesignTokens.Scale(5));
+        }
+
+        _eventGridView.ColumnHeadersHeight = DesignTokens.Scale(42);
+        _eventGridView.RowTemplate.Height = DesignTokens.Scale(38);
+        foreach (DataGridViewRow row in _eventGridView.Rows)
+        {
+            row.Height = DesignTokens.Scale(38);
+        }
+
+        _eventContextMenu.MinimumSize = new Size(DesignTokens.Scale(138), 0);
+        AppToolStripRenderer.ApplyTo(_eventContextMenu, AppToolStripMenuDensity.Comfortable);
+
+        ApplyMetricSafeGridTheme();
+        ApplyColumnMetricScale();
+        _gridHostPanel.ApplyDpiMetrics();
+
+        LayoutGridViewport();
+        ApplyColumnWidths();
+        UpdateEventScrollBar();
+        PerformLayout();
+        Invalidate();
+    }
+
+    private void ApplyMetricSafeGridTheme()
+    {
+        _emptyStateLabel.BackColor = DesignTokens.SurfaceInset;
+        _emptyStateLabel.ForeColor = DesignTokens.TextSecondary;
+        _emptyStateLabel.Font = DesignTokens.FontUiNormal;
+
+        _filterSearchTextBox.BackColor = DesignTokens.SurfaceInset;
+        _filterSearchTextBox.ForeColor = DesignTokens.TextPrimary;
+        _filterSearchTextBox.Font = DesignTokens.FontUiNormal;
+
+        _eventGridView.DefaultCellStyle.BackColor = DesignTokens.SurfaceInset;
+        _eventGridView.DefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
+        _eventGridView.DefaultCellStyle.Font = DesignTokens.FontUiNormal;
+        _eventGridView.DefaultCellStyle.SelectionBackColor = Color.FromArgb(24, 93, 188);
+        _eventGridView.DefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
+        _eventGridView.DefaultCellStyle.Padding = new Padding(DesignTokens.Scale(6), 0, DesignTokens.Scale(6), 0);
+
+        _eventGridView.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(12, 17, 27);
+        _eventGridView.AlternatingRowsDefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
+
+        _eventGridView.ColumnHeadersDefaultCellStyle.BackColor = DesignTokens.Surface2;
+        _eventGridView.ColumnHeadersDefaultCellStyle.ForeColor = DesignTokens.TextPrimary;
+        _eventGridView.ColumnHeadersDefaultCellStyle.Font = DesignTokens.FontUiBold;
+        _eventGridView.ColumnHeadersDefaultCellStyle.SelectionBackColor = DesignTokens.Surface2;
+        _eventGridView.ColumnHeadersDefaultCellStyle.SelectionForeColor = DesignTokens.TextPrimary;
+        _eventGridView.ColumnHeadersDefaultCellStyle.Padding = new Padding(
+            DesignTokens.Scale(8),
+            0,
+            DesignTokens.Scale(8),
+            0);
+    }
+
+    private void ApplyColumnMetricScale()
+    {
+        if (_eventGridView.Columns.Count == 0)
+        {
+            return;
+        }
+
+        ApplyColumnMetricScale("#", minimumWidth: 58, fillWeight: 6);
+        ApplyColumnMetricScale("Time", minimumWidth: 126, fillWeight: 15);
+        ApplyColumnMetricScale("Type", minimumWidth: 78, fillWeight: 10);
+        ApplyColumnMetricScale("Action", minimumWidth: 92, fillWeight: 15);
+        ApplyColumnMetricScale("Position", minimumWidth: 138, fillWeight: 22);
+        ApplyColumnMetricScale("Delay", minimumWidth: 86, fillWeight: 11);
+        ApplyColumnMetricScale("Detail", minimumWidth: 132, fillWeight: 21);
+    }
+
+    private void ApplyColumnMetricScale(string name, int minimumWidth, int fillWeight)
+    {
+        if (_eventGridView.Columns[name] is not DataGridViewColumn column)
+        {
+            return;
+        }
+
+        int scaledMinimumWidth = DesignTokens.Scale(minimumWidth);
+        int scaledWidth = DesignTokens.Scale(Math.Max(minimumWidth, fillWeight * 10));
+        column.MinimumWidth = scaledMinimumWidth;
+        column.Width = Math.Max(scaledMinimumWidth, scaledWidth);
+        column.FillWeight = fillWeight;
+    }
+
     private static DataGridViewTextBoxColumn CreateTextColumn(
         string name,
         string headerText,
@@ -1098,6 +1276,12 @@ internal sealed class EventListControl : UserControl
             e.Graphics.SmoothingMode = SmoothingMode.None;
         }
 
+        public void ApplyDpiMetrics()
+        {
+            UpdateRegion();
+            Invalidate();
+        }
+
         private void UpdateRegion()
         {
             Rectangle bounds = ClientRectangle;
@@ -1134,6 +1318,11 @@ internal sealed class EventListControl : UserControl
     private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
