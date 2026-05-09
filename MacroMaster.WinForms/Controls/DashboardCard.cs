@@ -8,6 +8,7 @@ internal sealed class DashboardCard : UserControl
     private readonly TableLayoutPanel _rootLayoutPanel;
     private readonly Label _titleLabel;
     private bool _showHeader = true;
+    private Padding _contentPadding;
     private Size _lastRegionSize;
     private int _lastRegionRadius = -1;
 
@@ -23,16 +24,13 @@ internal sealed class DashboardCard : UserControl
         DoubleBuffered = true;
         BackColor = DesignTokens.Surface;
         ForeColor = DesignTokens.TextPrimary;
-        Font = DesignTokens.FontUiNormal;
         Padding = new Padding(1);
 
         _titleLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Surface,
-            Padding = new Padding(2, 0, 0, 2),
             TextAlign = ContentAlignment.MiddleLeft
         };
 
@@ -51,15 +49,17 @@ internal sealed class DashboardCard : UserControl
             RowCount = 2,
             BackColor = DesignTokens.Surface,
             Margin = Padding.Empty,
-            Padding = new Padding(DesignTokens.CardPadding)
+            Padding = Padding.Empty
         };
         _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DesignTokens.Scale(38)));
+        _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));
         _rootLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         _rootLayoutPanel.Controls.Add(_titleLabel, 0, 0);
         _rootLayoutPanel.Controls.Add(Body, 0, 1);
 
         Controls.Add(_rootLayoutPanel);
+        _contentPadding = new Padding(DesignTokens.CardPadding);
+        ApplyDpiMetrics();
         UpdateHeaderVisibility();
     }
 
@@ -88,8 +88,14 @@ internal sealed class DashboardCard : UserControl
 
     public Padding ContentPadding
     {
-        get => _rootLayoutPanel.Padding;
-        set => _rootLayoutPanel.Padding = value;
+        get => _contentPadding;
+        set
+        {
+            _contentPadding = value;
+            _rootLayoutPanel.Padding = _contentPadding;
+            PerformLayout();
+            Invalidate();
+        }
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
@@ -142,10 +148,35 @@ internal sealed class DashboardCard : UserControl
         Invalidate();
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
     private void UpdateHeaderVisibility()
     {
         _titleLabel.Visible = _showHeader;
-        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? DesignTokens.Scale(38) : 0f;
+        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? ResolveHeaderHeight() : 0f;
+        PerformLayout();
+        Invalidate();
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        Font = DesignTokens.FontUiNormal;
+        _titleLabel.Font = DesignTokens.FontUiBold;
+        _titleLabel.Padding = new Padding(DesignTokens.Scale(2), 0, 0, DesignTokens.Scale(2));
+        _rootLayoutPanel.Padding = _contentPadding;
+        _rootLayoutPanel.RowStyles[0].Height = _showHeader ? ResolveHeaderHeight() : 0f;
+        UpdateRegion();
+        PerformLayout();
+        Invalidate();
+    }
+
+    private static int ResolveHeaderHeight()
+    {
+        return DesignTokens.Scale(38);
     }
 
     private void UpdateRegion()
@@ -182,6 +213,11 @@ internal sealed class DashboardCard : UserControl
     private static GraphicsPath CreateRoundedRectanglePath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
@@ -204,5 +240,19 @@ internal sealed class DashboardCard : UserControl
 
         path.CloseFigure();
         return path;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Region? previousRegion = Region;
+            Region = null;
+            previousRegion?.Dispose();
+            _lastRegionSize = Size.Empty;
+            _lastRegionRadius = -1;
+        }
+
+        base.Dispose(disposing);
     }
 }
