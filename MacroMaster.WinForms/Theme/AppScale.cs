@@ -6,11 +6,12 @@ namespace MacroMaster.WinForms.Theme;
 /// Enterprise-grade DPI-aware scaling system.
 ///
 /// Strategy:
-///   1. Read the actual Windows DPI for the primary monitor via Win32 API (GetDpiForSystem).
-///   2. Normalize against the standard 96 DPI baseline → yields a true scale factor
+///   1. Resolve system DPI at startup/fallback via Win32 API (GetDpiForSystem).
+///   2. Allow explicit DPI injection via ConfigureForDpi(int dpi) for per-window/per-monitor lifecycle.
+///   3. Normalize against the standard 96 DPI baseline → yields a true scale factor
 ///      (e.g. 100% = 1.0f, 125% = 1.25f, 150% = 1.5f, 200% = 2.0f).
-///   3. All layout values are authored at 96 DPI (1x) and multiplied by this factor.
-///   4. Fonts are scaled separately with a tighter clamp so they don't blow up on 4K.
+///   4. All layout values are authored at 96 DPI (1x) and multiplied by this factor.
+///   5. Fonts are scaled separately with a tighter clamp so they don't blow up on 4K.
 ///
 /// Why NOT use Screen.WorkingArea?
 ///   WorkingArea returns *logical* pixels already adjusted by DPI, so dividing by a
@@ -24,12 +25,68 @@ namespace MacroMaster.WinForms.Theme;
 internal static class AppScale
 {
     private const float BaseDpi = 96f;
+    private static readonly object Sync = new();
+    private static int _currentDpi = (int)BaseDpi;
+    private static float _densityScale = 1f;
+    private static float _fontScale = 1f;
+
+    static AppScale()
+    {
+        Refresh();
+    }
 
     // True Windows DPI scale: 1.0 at 96dpi, 1.25 at 120dpi, 1.5 at 144dpi, 2.0 at 192dpi
-    public static readonly float DensityScale = ResolveWindowsDpiScale();
+    public static int CurrentDpi
+    {
+        get
+        {
+            lock (Sync)
+            {
+                return _currentDpi;
+            }
+        }
+    }
+
+    public static float DensityScale
+    {
+        get
+        {
+            lock (Sync)
+            {
+                return _densityScale;
+            }
+        }
+    }
 
     // Font scale is clamped tighter — large fonts on high-DPI look disproportionate
-    public static readonly float FontScale = Math.Clamp(DensityScale, 1f, 1.15f);
+    public static float FontScale
+    {
+        get
+        {
+            lock (Sync)
+            {
+                return _fontScale;
+            }
+        }
+    }
+
+    public static void Refresh()
+    {
+        int dpi = ResolveWindowsDpi();
+        ConfigureForDpi(dpi);
+    }
+
+    public static void ConfigureForDpi(int dpi)
+    {
+        lock (Sync)
+        {
+            int normalizedDpi = dpi <= 0 ? (int)BaseDpi : dpi;
+            float density = Math.Max(1f, normalizedDpi / BaseDpi);
+            _currentDpi = normalizedDpi;
+            _densityScale = density;
+            _fontScale = Math.Clamp(density, 1f, 1.15f);
+        }
+    }
 
     public static int Scale(int value) =>
         (int)Math.Round(value * DensityScale);
@@ -44,16 +101,14 @@ internal static class AppScale
     [DllImport("user32.dll")]
     private static extern int GetDpiForSystem();
 
-    private static float ResolveWindowsDpiScale()
+    private static int ResolveWindowsDpi()
     {
         try
         {
             int sysDpi = GetDpiForSystem();
             if (sysDpi > 0)
             {
-                // No clamping — respect whatever DPI the user has set.
-                // Layout will scale linearly: 125% → 1.25, 200% → 2.0, etc.
-                return sysDpi / BaseDpi;
+                return sysDpi;
             }
         }
         catch
@@ -65,10 +120,10 @@ internal static class AppScale
         try
         {
             using var screen = Graphics.FromHwnd(IntPtr.Zero);
-            float dpi = screen.DpiX;
+            int dpi = (int)Math.Round(screen.DpiX);
             if (dpi > 0)
             {
-                return dpi / BaseDpi;
+                return dpi;
             }
         }
         catch
@@ -76,6 +131,6 @@ internal static class AppScale
             // Ignore
         }
 
-        return 1f; // Safe default: no scaling
+        return (int)BaseDpi; // Safe default: no scaling
     }
 }

@@ -2,6 +2,24 @@ namespace MacroMaster.WinForms.Theme;
 
 internal static class DesignTokens
 {
+    /// <summary>
+    /// Primary DPI gateway for form/window DPI change lifecycle.
+    /// </summary>
+    public static void ConfigureForDpi(int dpi)
+    {
+        AppScale.ConfigureForDpi(dpi);
+        AppTypography.Refresh();
+    }
+
+    /// <summary>
+    /// System-DPI bootstrap/fallback refresh for application startup.
+    /// </summary>
+    public static void RefreshDpiTokens()
+    {
+        AppScale.Refresh();
+        AppTypography.Refresh();
+    }
+
     public static float DensityScale => AppScale.DensityScale;
     public static float FontScale => AppScale.FontScale;
 
