@@ -24,6 +24,7 @@ public partial class PlaybackSettingsControl : UserControl
         PopulateSpeedOptions();
         WireEvents();
         ApplySettings(new PlaybackSettings());
+        ApplyDpiMetrics();
     }
 
     public PlaybackSettings GetCurrentSettings()
@@ -109,6 +110,30 @@ public partial class PlaybackSettingsControl : UserControl
         }
 
         dividerPanel.BackColor = DesignTokens.BorderSoft;
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        BackColor = DesignTokens.Surface;
+        ForeColor = DesignTokens.TextPrimary;
+        Font = DesignTokens.FontUiNormal;
+        MinimumSize = new Size(0, DesignTokens.Scale(160));
+        ApplyDensityScale();
+
+        rootLayoutPanel.BackColor = DesignTokens.Surface;
+        settingsLayoutPanel.BackColor = DesignTokens.Surface;
+        initialDelayUnitLabel.ForeColor = DesignTokens.TextSecondary;
+        initialDelayUnitLabel.BackColor = DesignTokens.Surface;
+        initialDelayUnitLabel.Font = DesignTokens.FontUiNormal;
+
+        foreach (Control control in settingsLayoutPanel.Controls)
+        {
+            ApplyChildTheme(control);
+        }
+
+        dividerPanel.BackColor = DesignTokens.BorderSoft;
+        PerformLayout();
+        Invalidate();
     }
 
     private static void ApplyChildTheme(Control control)
@@ -201,6 +226,18 @@ public partial class PlaybackSettingsControl : UserControl
                 optionVerticalMargin);
             optionCheckBox.MinimumSize = new Size(0, DesignTokens.Scale(26));
         }
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
     }
 
     private void PopulateSpeedOptions()
