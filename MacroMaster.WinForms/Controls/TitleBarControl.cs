@@ -5,6 +5,16 @@ namespace MacroMaster.WinForms.Controls;
 
 internal sealed class TitleBarControl : UserControl
 {
+    private const int IconCol = 0;
+    private const int TitleCol = 1;
+    private const int StatusCol = 2;
+    private const int MinCol = 3;
+    private const int MaxCol = 4;
+    private const int CloseCol = 5;
+    private const int SpacerCol = 6;
+
+    private readonly TableLayoutPanel _rootLayoutPanel;
+    private readonly LogoPanel _logoPanel;
     private readonly Label _appNameLabel;
     private readonly StatusPillControl _statusPill;
     private readonly CaptionButton _minimizeButton;
@@ -23,36 +33,30 @@ internal sealed class TitleBarControl : UserControl
         DoubleBuffered = true;
         BackColor = DesignTokens.Background;
         ForeColor = DesignTokens.TextPrimary;
-        Font = DesignTokens.FontUiNormal;
-        MinimumSize = new Size(0, DesignTokens.TitleBarHeight);
 
-        var rootLayoutPanel = new TableLayoutPanel
+        _rootLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 7,
             RowCount = 1,
             BackColor = DesignTokens.Background,
             Margin = Padding.Empty,
-            Padding = new Padding(
-                0,
-                0,
-                DesignTokens.Scale(10),
-                DesignTokens.Scale(2))
+            Padding = Padding.Empty
         };
 
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarIconSize + DesignTokens.Scale(8)));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(132)));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.TitleBarButtonWidth));
-        rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DesignTokens.Scale(2)));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
+        _rootLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0f));
 
-        var logoPanel = new LogoPanel
+        _logoPanel = new LogoPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesignTokens.Background,
-            Margin = new Padding(0, 0, DesignTokens.Scale(8), 0)
+            Margin = Padding.Empty
         };
 
         var textLayoutPanel = new TableLayoutPanel
@@ -70,7 +74,6 @@ internal sealed class TitleBarControl : UserControl
         {
             Dock = DockStyle.Fill,
             Text = "MacroMaster Kontrol Merkezi",
-            Font = DesignTokens.FontUiBold,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Background,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -82,7 +85,6 @@ internal sealed class TitleBarControl : UserControl
         _statusPill = new StatusPillControl
         {
             Dock = DockStyle.Fill,
-            Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(2), DesignTokens.Scale(8), DesignTokens.Scale(2)),
             BackColor = Color.Transparent,
         };
 
@@ -94,15 +96,16 @@ internal sealed class TitleBarControl : UserControl
         _maximizeButton.Click += (_, _) => MaximizeRestoreRequested?.Invoke(this, EventArgs.Empty);
         _closeButton.Click += (_, _) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
-        rootLayoutPanel.Controls.Add(logoPanel, 0, 0);
-        rootLayoutPanel.Controls.Add(textLayoutPanel, 1, 0);
-        rootLayoutPanel.Controls.Add(_statusPill, 2, 0);
-        rootLayoutPanel.Controls.Add(_minimizeButton, 3, 0);
-        rootLayoutPanel.Controls.Add(_maximizeButton, 4, 0);
-        rootLayoutPanel.Controls.Add(_closeButton, 5, 0);
+        _rootLayoutPanel.Controls.Add(_logoPanel, IconCol, 0);
+        _rootLayoutPanel.Controls.Add(textLayoutPanel, TitleCol, 0);
+        _rootLayoutPanel.Controls.Add(_statusPill, StatusCol, 0);
+        _rootLayoutPanel.Controls.Add(_minimizeButton, MinCol, 0);
+        _rootLayoutPanel.Controls.Add(_maximizeButton, MaxCol, 0);
+        _rootLayoutPanel.Controls.Add(_closeButton, CloseCol, 0);
 
-        Controls.Add(rootLayoutPanel);
+        Controls.Add(_rootLayoutPanel);
         AttachDragForwarding(this);
+        ApplyDpiMetrics();
     }
 
     public event EventHandler? DragRequested;
@@ -144,6 +147,54 @@ internal sealed class TitleBarControl : UserControl
 
         using var bottomPen = new Pen(DesignTokens.BorderSoft);
         e.Graphics.DrawLine(bottomPen, 0, Height - 1, Width, Height - 1);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    private void ApplyDpiMetrics()
+    {
+        Font = DesignTokens.FontUiNormal;
+        _appNameLabel.Font = DesignTokens.FontUiBold;
+        MinimumSize = new Size(0, DesignTokens.TitleBarHeight);
+
+        _rootLayoutPanel.Padding = new Padding(
+            0,
+            0,
+            DesignTokens.Scale(10),
+            DesignTokens.Scale(2));
+
+        _rootLayoutPanel.ColumnStyles[IconCol].Width = DesignTokens.TitleBarIconSize + DesignTokens.Scale(8);
+        _rootLayoutPanel.ColumnStyles[StatusCol].Width = DesignTokens.Scale(132);
+        _rootLayoutPanel.ColumnStyles[MinCol].Width = DesignTokens.TitleBarButtonWidth;
+        _rootLayoutPanel.ColumnStyles[MaxCol].Width = DesignTokens.TitleBarButtonWidth;
+        _rootLayoutPanel.ColumnStyles[CloseCol].Width = DesignTokens.TitleBarButtonWidth;
+        _rootLayoutPanel.ColumnStyles[SpacerCol].Width = DesignTokens.Scale(2);
+
+        _logoPanel.Margin = new Padding(0, 0, DesignTokens.Scale(8), 0);
+        _logoPanel.Invalidate();
+
+        _statusPill.Margin = new Padding(
+            DesignTokens.Scale(6),
+            DesignTokens.Scale(2),
+            DesignTokens.Scale(8),
+            DesignTokens.Scale(2));
+        _statusPill.ApplyDpiMetrics();
+        _minimizeButton.ApplyDpiMetrics();
+        _maximizeButton.ApplyDpiMetrics();
+        _closeButton.ApplyDpiMetrics();
+
+        PerformLayout();
+        Invalidate();
     }
 
     private enum CaptionButtonKind
@@ -215,6 +266,13 @@ internal sealed class TitleBarControl : UserControl
 
             Font = DesignTokens.FontUiNormal;
             ForeColor = DesignTokens.TextSecondary;
+        }
+
+        public void ApplyDpiMetrics()
+        {
+            Font = DesignTokens.FontUiNormal;
+            ForeColor = DesignTokens.TextSecondary;
+            Invalidate();
         }
 
         public void SetStatus(string status, Color dotColor)
@@ -351,16 +409,24 @@ internal sealed class TitleBarControl : UserControl
 
             Dock = DockStyle.Fill;
             FlatStyle = FlatStyle.Flat;
+            Margin = Padding.Empty;
+            MinimumSize = Size.Empty;
+            TabStop = false;
+            Cursor = Cursors.Hand;
+            FlatAppearance.BorderSize = 0;
+            BackColor = DesignTokens.Background;
+            ApplyDpiMetrics();
+        }
+
+        public void ApplyDpiMetrics()
+        {
             Margin = new Padding(
                 DesignTokens.Scale(2),
                 DesignTokens.Scale(1),
                 0,
                 DesignTokens.Scale(7));
             MinimumSize = new Size(DesignTokens.TitleBarButtonWidth, DesignTokens.TitleBarButtonHeight);
-            TabStop = false;
-            Cursor = Cursors.Hand;
-            FlatAppearance.BorderSize = 0;
-            BackColor = DesignTokens.Background;
+            Invalidate();
         }
 
         public CaptionButtonKind Kind
