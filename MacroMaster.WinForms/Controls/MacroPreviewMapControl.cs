@@ -44,6 +44,32 @@ internal sealed class MacroPreviewMapControl : Control
 
     public bool InspectionEnabled { get; set; }
 
+    // -------------------------------------------------------------------------
+    // DPI metrics
+    // -------------------------------------------------------------------------
+
+    private void ApplyDpiMetrics()
+    {
+        BackColor = DesignTokens.SurfaceInset;
+        Invalidate();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnParentChanged(EventArgs e)
+    {
+        base.OnParentChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
     public event EventHandler? PreviewRequested;
     public event EventHandler<MacroPreviewMapPointEventArgs>? PointInspected;
 
@@ -803,6 +829,12 @@ internal sealed class MacroPreviewMapControl : Control
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)
     {
         var path = new GraphicsPath();
+
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return path;
+        }
+
         int diameter = Math.Min(radius * 2, Math.Min(bounds.Width, bounds.Height));
 
         if (diameter <= 1)
