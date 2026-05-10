@@ -12,6 +12,7 @@
 	<Title>Polly</Title>
 	<Company>Enes Göker</Company>
 	<Authors>Enes Göker</Authors>
+	<ApplicationIcon>Resources\Polly.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
