@@ -13,8 +13,8 @@ internal sealed class MacroNameEditDialog : Form
     public MacroNameEditDialog(string currentName)
         : this(
             currentName,
-            "Makro Ismi Duzenle",
-            "Makro adini duzenle",
+            "Polly",
+            "Makro adını düzenle",
             "Kaydet")
     {
     }
@@ -45,7 +45,7 @@ internal sealed class MacroNameEditDialog : Form
         ClientSize = new Size(DesignTokens.Scale(420), DesignTokens.Scale(206));
         MinimumSize = Size;
 
-        _cancelButton = CreateDialogButton("Iptal", ThemedDialogButtonStyle.Secondary);
+        _cancelButton = CreateDialogButton("İptal", ThemedDialogButtonStyle.Secondary);
         BuildLayout();
     }
 
@@ -56,7 +56,7 @@ internal sealed class MacroNameEditDialog : Form
         return new MacroNameEditDialog(
             suggestedName,
             "Makro Kaydet",
-            "Makro adini belirle",
+            "Makro adını belirle",
             "Kaydet");
     }
 
@@ -89,7 +89,7 @@ internal sealed class MacroNameEditDialog : Form
         var fieldLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Makro adi",
+            Text = "Makro adı",
             Font = DesignTokens.FontUiSmall,
             ForeColor = DesignTokens.TextSecondary,
             BackColor = Color.Transparent,
@@ -176,8 +176,8 @@ internal sealed class MacroNameEditDialog : Form
         {
             ModalDialogOverlay.ShowMessage(
                 this,
-                "Makro adi bos olamaz.",
-                "MacroMaster",
+                "Makro adı boş olamaz.",
+                "Polly",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return;
@@ -187,8 +187,8 @@ internal sealed class MacroNameEditDialog : Form
         {
             ModalDialogOverlay.ShowMessage(
                 this,
-                "Makro adi dosya adinda kullanilamayan karakterler iceremez.",
-                "MacroMaster",
+                "Makro adı dosya adında kullanılamayan karakterler içeremez.",
+                "Polly",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return;

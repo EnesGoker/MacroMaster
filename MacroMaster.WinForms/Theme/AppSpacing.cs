@@ -1,12 +1,9 @@
 namespace MacroMaster.WinForms.Theme;
 
-/// <summary>
-/// All values are authored at 96 DPI (1x baseline).
-/// AppScale.Scale() multiplies them by the detected Windows DPI factor at runtime.
-/// </summary>
+
 internal static class AppSpacing
 {
-    public static readonly int TitleBarHeight = AppScale.Scale(54);
+    public static readonly int TitleBarHeight = AppScale.Scale(40);
     public static readonly int TitleBarButtonWidth = AppScale.Scale(48);
     public static readonly int TitleBarButtonHeight = AppScale.Scale(40);
     public static readonly int TitleBarIconSize = AppScale.Scale(32);

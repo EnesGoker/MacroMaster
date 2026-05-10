@@ -88,7 +88,7 @@ public partial class MainForm : Form
     private void MainForm_Load(object? sender, EventArgs e)
     {
         SubscribeToServiceEvents();
-        _ = ExecuteUiActionAsync(InitializeUiAsync, "Uygulama baslatma");
+        _ = ExecuteUiActionAsync(InitializeUiAsync, "Uygulama başlatma");
     }
 
     private async Task InitializeUiAsync()
@@ -101,7 +101,7 @@ public partial class MainForm : Form
         {
             ApplyPlaybackSettings(new PlaybackSettings());
             ShowError(
-                "Oynatma ayarlari yuklenemedi. Varsayilan oynatma ayarlari kullanilacak.",
+                "Oynatma ayarları yüklenemedi. Varsayılan oynatma ayarları kullanılacak.",
                 ex);
         }
 
@@ -113,7 +113,7 @@ public partial class MainForm : Form
         {
             _hotkeyConfiguration.Apply(HotkeySettings.CreateDefault());
             ShowError(
-                "Kisayol ayarlari yuklenemedi. Varsayilan kisayollar kullanilacak.",
+                "Kısayol ayarları yüklenemedi. Varsayılan kısayollar kullanılacak.",
                 ex);
         }
 
@@ -125,7 +125,7 @@ public partial class MainForm : Form
         {
             _macroLibraryUserState = new MacroLibraryUserState();
             ShowError(
-                "Makro kutuphanesi kullanici tercihleri yuklenemedi. Favori ve son kullanilan bilgileri bu oturumda bos baslatilacak.",
+                "Makro kütüphanesi kullanıcı tercihleri yüklenemedi. Favori ve son kullanılan bilgileri bu oturumda boş başlatılacak.",
                 ex);
         }
 
@@ -137,7 +137,7 @@ public partial class MainForm : Form
         catch (Exception ex)
         {
             ShowError(
-                "Makro kutuphanesi yuklenemedi. Uygulama bos kutuphane ile devam edecek.",
+                "Makro kütüphanesi yüklenemedi. Uygulama boş kütüphane ile devam edecek.",
                 ex);
             _macroLibraryControl.SetItems([], null);
         }
@@ -171,7 +171,7 @@ public partial class MainForm : Form
         catch (Exception ex)
         {
             _shutdownInProgress = false;
-            ShowError("Uygulama kapatilirken bir hata olustu.", ex);
+            ShowError("Uygulama kapatılırken bir hata oluştu.", ex);
         }
     }
 
@@ -191,14 +191,14 @@ public partial class MainForm : Form
             _logger.Log(
                 AppLogLevel.Warning,
                 nameof(MainForm),
-                "Global kisayollar kaydedilemedi. Uygulama odaktayken yerel kisayol yedegi kullanilacak.",
+                "Global kısayollar kaydedilemedi. Uygulama odaktayken yerel kısayol yedeği kullanılacak.",
                 ex);
         }
     }
 
     private void OnRecordToggleRequested()
     {
-        _ = ExecuteUiActionAsync(HandleRecordToggleAsync, "Kaydi baslat/durdur");
+        _ = ExecuteUiActionAsync(HandleRecordToggleAsync, "Kaydı başlat/durdur");
     }
 
     private async Task HandleRecordToggleAsync()
@@ -251,12 +251,12 @@ public partial class MainForm : Form
 
     private void OnStopRequested()
     {
-        _ = ExecuteUiActionAsync(HandleStopAsync, "Durdurma istegi");
+        _ = ExecuteUiActionAsync(HandleStopAsync, "Durdurma isteği");
     }
 
     private void OnHotkeySettingsRequested()
     {
-        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayollari ac");
+        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kısayolları aç");
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -525,7 +525,7 @@ public partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            ShowError($"{operationName} islemi basarisiz oldu.", ex);
+            ShowError($"{operationName} işlemi başarısız oldu.", ex);
         }
     }
 
@@ -549,7 +549,7 @@ public partial class MainForm : Form
         ModalDialogOverlay.ShowMessage(
             this,
             $"{message}{Environment.NewLine}{Environment.NewLine}{detail}",
-            "MacroMaster",
+            "Polly",
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
     }
@@ -687,21 +687,21 @@ public partial class MainForm : Form
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(ResetPlaybackCursorAsync, "Oynatma basa alma");
+        _ = ExecuteUiActionAsync(ResetPlaybackCursorAsync, "Oynatma başa alma");
     }
 
     private void playbackStepBackButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(() => StepPlaybackAsync(stepDirection: -1), "Oynatma geri adim");
+        _ = ExecuteUiActionAsync(() => StepPlaybackAsync(stepDirection: -1), "Oynatma geri adım");
     }
 
     private void playbackStepForwardButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(() => StepPlaybackAsync(stepDirection: 1), "Oynatma ileri adim");
+        _ = ExecuteUiActionAsync(() => StepPlaybackAsync(stepDirection: 1), "Oynatma ileri adım");
     }
 
     private void saveJsonButton_Click(object? sender, EventArgs e)
@@ -715,21 +715,21 @@ public partial class MainForm : Form
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(SaveToLibraryAsync, "Makro kutuphanesine kaydetme");
+        _ = ExecuteUiActionAsync(SaveToLibraryAsync, "Makro kütüphanesine kaydetme");
     }
 
     private void loadJsonButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(LoadJsonAsync, "JSON yukleme");
+        _ = ExecuteUiActionAsync(LoadJsonAsync, "JSON yükleme");
     }
 
     private void importLibraryMacroButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(ImportLibraryMacroAsync, "Makro kutuphanesine ice aktarma");
+        _ = ExecuteUiActionAsync(ImportLibraryMacroAsync, "Makro kütüphanesine içe aktarma");
     }
 
     private void saveXmlButton_Click(object? sender, EventArgs e)
@@ -743,21 +743,21 @@ public partial class MainForm : Form
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(SaveHtmlReportAsync, "HTML rapor olusturma");
+        _ = ExecuteUiActionAsync(SaveHtmlReportAsync, "HTML rapor oluşturma");
     }
 
     private void saveTextReportButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(SaveTextReportAsync, "TXT rapor olusturma");
+        _ = ExecuteUiActionAsync(SaveTextReportAsync, "TXT rapor oluşturma");
     }
 
     private void loadXmlButton_Click(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(LoadXmlAsync, "XML yukleme");
+        _ = ExecuteUiActionAsync(LoadXmlAsync, "XML yükleme");
     }
 
     private void clearSessionButton_Click(object? sender, EventArgs e)
@@ -771,43 +771,43 @@ public partial class MainForm : Form
     {
         _ = sender;
         _ = e;
-        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kisayol ayarlari");
+        _ = ExecuteUiActionAsync(EditHotkeysAsync, "Kısayol ayarları");
     }
 
     private void macroLibraryControl_LoadRequested(object? sender, MacroLibraryItemEventArgs e)
     {
         _ = sender;
-        _ = ExecuteUiActionAsync(() => LoadLibraryMacroAsync(e.Item), "Makro kutuphanesi yukleme");
+        _ = ExecuteUiActionAsync(() => LoadLibraryMacroAsync(e.Item), "Makro kütüphanesi yükleme");
     }
 
     private void macroLibraryControl_RenameRequested(object? sender, MacroLibraryItemEventArgs e)
     {
         _ = sender;
-        _ = ExecuteUiActionAsync(() => RenameLibraryMacroAsync(e.Item), "Makro kutuphanesi isim duzenleme");
+        _ = ExecuteUiActionAsync(() => RenameLibraryMacroAsync(e.Item), "Makro kütüphanesi isim düzenleme");
     }
 
     private void macroLibraryControl_DeleteRequested(object? sender, MacroLibraryItemEventArgs e)
     {
         _ = sender;
-        _ = ExecuteUiActionAsync(() => DeleteLibraryMacroAsync(e.Item), "Makro kutuphanesi silme");
+        _ = ExecuteUiActionAsync(() => DeleteLibraryMacroAsync(e.Item), "Makro kütüphanesi silme");
     }
 
     private void macroLibraryControl_FavoriteToggled(object? sender, MacroLibraryItemEventArgs e)
     {
         _ = sender;
-        _ = ExecuteUiActionAsync(() => ToggleLibraryFavoriteAsync(e.Item), "Makro favori degistirme");
+        _ = ExecuteUiActionAsync(() => ToggleLibraryFavoriteAsync(e.Item), "Makro favori değiştirme");
     }
 
     private void macroLibraryControl_OptimizeRequested(object? sender, MacroLibraryItemEventArgs e)
     {
         _ = sender;
-        _ = ExecuteUiActionAsync(() => OptimizeLibraryMacroAsync(e.Item), "Makro kutuphanesi optimizasyonu");
+        _ = ExecuteUiActionAsync(() => OptimizeLibraryMacroAsync(e.Item), "Makro kütüphanesi optimizasyonu");
     }
 
     private void eventListControl_EventEditRequested(object? sender, EventEditRequestedEventArgs e)
     {
         _ = sender;
-        _ = ExecuteUiActionAsync(() => EditEventAsync(e), "Olay duzenleme");
+        _ = ExecuteUiActionAsync(() => EditEventAsync(e), "Olay düzenleme");
     }
 
     private void preserveTimingCheckBox_CheckedChanged(object? sender, EventArgs e)
@@ -853,7 +853,7 @@ public partial class MainForm : Form
 
         using var dialog = new SaveFileDialog
         {
-            Filter = "JSON makro (*.json)|*.json|Tum dosyalar (*.*)|*.*",
+            Filter = "JSON makro (*.json)|*.json|Tüm dosyalar (*.*)|*.*",
             FileName = BuildDefaultFileName(session.Name, ".json"),
             AddExtension = true,
             DefaultExt = "json",
@@ -901,7 +901,7 @@ public partial class MainForm : Form
 
         _lastSessionPath = filePath;
         MarkLibraryFileUsed(filePath);
-        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
+        await TrySaveMacroLibraryUserStateAsync("Makro kütüphanesi son kullanılan kaydetme");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
@@ -931,7 +931,7 @@ public partial class MainForm : Form
             ModalDialogOverlay.ShowMessage(
                 this,
                 $"Bu isimde bir makro zaten var: {requestedName}",
-                "MacroMaster",
+                "Polly",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
 
@@ -957,7 +957,7 @@ public partial class MainForm : Form
 
         using var dialog = new OpenFileDialog
         {
-            Filter = "JSON makro (*.json)|*.json|Tum dosyalar (*.*)|*.*",
+            Filter = "JSON makro (*.json)|*.json|Tüm dosyalar (*.*)|*.*",
             RestoreDirectory = true
         };
 
@@ -977,7 +977,7 @@ public partial class MainForm : Form
 
         using var dialog = new OpenFileDialog
         {
-            Filter = "Makro dosyalari (*.json;*.xml)|*.json;*.xml|JSON makro (*.json)|*.json|XML makro (*.xml)|*.xml|Tum dosyalar (*.*)|*.*",
+            Filter = "Makro dosyaları (*.json;*.xml)|*.json;*.xml|JSON makro (*.json)|*.json|XML makro (*.xml)|*.xml|Tüm dosyalar (*.*)|*.*",
             RestoreDirectory = true
         };
 
@@ -991,7 +991,7 @@ public partial class MainForm : Form
 
         AdoptLoadedSession(session, importedFilePath);
         MarkLibraryFileUsed(importedFilePath);
-        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
+        await TrySaveMacroLibraryUserStateAsync("Makro kütüphanesi son kullanılan kaydetme");
         await RefreshMacroLibraryAsync();
     }
 
@@ -1002,7 +1002,7 @@ public partial class MainForm : Form
 
         using var dialog = new SaveFileDialog
         {
-            Filter = "XML makro (*.xml)|*.xml|Tum dosyalar (*.*)|*.*",
+            Filter = "XML makro (*.xml)|*.xml|Tüm dosyalar (*.*)|*.*",
             FileName = BuildDefaultFileName(session.Name, ".xml"),
             AddExtension = true,
             DefaultExt = "xml",
@@ -1023,7 +1023,7 @@ public partial class MainForm : Form
     private async Task SaveHtmlReportAsync()
     {
         await SaveReportAsync(
-            "HTML rapor (*.html)|*.html|Tum dosyalar (*.*)|*.*",
+            "HTML rapor (*.html)|*.html|Tüm dosyalar (*.*)|*.*",
             ".html",
             "html",
             MacroReportGenerator.GenerateHtml);
@@ -1032,7 +1032,7 @@ public partial class MainForm : Form
     private async Task SaveTextReportAsync()
     {
         await SaveReportAsync(
-            "TXT rapor (*.txt)|*.txt|Tum dosyalar (*.*)|*.*",
+            "TXT rapor (*.txt)|*.txt|Tüm dosyalar (*.*)|*.*",
             ".txt",
             "txt",
             MacroReportGenerator.GenerateText);
@@ -1071,7 +1071,7 @@ public partial class MainForm : Form
 
         using var dialog = new OpenFileDialog
         {
-            Filter = "XML makro (*.xml)|*.xml|Tum dosyalar (*.*)|*.*",
+            Filter = "XML makro (*.xml)|*.xml|Tüm dosyalar (*.*)|*.*",
             RestoreDirectory = true
         };
 
@@ -1107,7 +1107,7 @@ public partial class MainForm : Form
         MacroSession session = await _macroLibraryService.LoadAsync(item.FilePath);
         AdoptLoadedSession(session, item.FilePath);
         MarkLibraryFileUsed(item.FilePath);
-        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi son kullanilan kaydetme");
+        await TrySaveMacroLibraryUserStateAsync("Makro kütüphanesi son kullanılan kaydetme");
         await RefreshMacroLibraryAsync();
     }
 
@@ -1139,7 +1139,7 @@ public partial class MainForm : Form
         }
 
         MoveLibraryStatePath(previousFilePath, renamedFilePath);
-        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi kullanici tercihi tasima");
+        await TrySaveMacroLibraryUserStateAsync("Makro kütüphanesi kullanıcı tercihi taşıma");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
@@ -1162,7 +1162,7 @@ public partial class MainForm : Form
         }
 
         RemoveLibraryStatePath(item.FilePath);
-        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi kullanici tercihi silme");
+        await TrySaveMacroLibraryUserStateAsync("Makro kütüphanesi kullanıcı tercihi silme");
         await RefreshMacroLibraryAsync();
         RefreshUiState();
     }
@@ -1191,7 +1191,7 @@ public partial class MainForm : Form
 
         if (editRequest.EventIndex < 0 || editRequest.EventIndex >= session.Events.Count)
         {
-            throw new InvalidOperationException("Duzenlenecek olay aktif oturumda bulunamadi.");
+            throw new InvalidOperationException("Düzenlenecek olay aktif oturumda bulunamadı.");
         }
 
         MacroEvent macroEvent = session.Events[editRequest.EventIndex];
@@ -1250,7 +1250,7 @@ public partial class MainForm : Form
         }
 
         MarkLibraryFileUsed(item.FilePath);
-        await TrySaveMacroLibraryUserStateAsync("Makro kutuphanesi optimizasyon son kullanilan kaydetme");
+        await TrySaveMacroLibraryUserStateAsync("Makro kütüphanesi optimizasyon son kullanılan kaydetme");
         await RefreshMacroLibraryAsync();
         RefreshUiState(forceEventListReload: optimizedActiveSession);
     }
@@ -1261,7 +1261,7 @@ public partial class MainForm : Form
         {
             MacroLibraryFileFormat.Json => _macroStorageService.SaveAsJsonAsync(session, item.FilePath),
             MacroLibraryFileFormat.Xml => _macroStorageService.SaveAsXmlAsync(session, item.FilePath),
-            _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formati: {item.FilePath}")
+            _ => throw new NotSupportedException($"Desteklenmeyen makro dosya formatı: {item.FilePath}")
         };
     }
 
@@ -1272,7 +1272,7 @@ public partial class MainForm : Form
         if (PruneMacroLibraryUserState(entries))
         {
             await TrySaveMacroLibraryUserStateAsync(
-                "Makro kutuphanesi kullanici tercihleri temizleme");
+                "Makro kütüphanesi kullanıcı tercihleri temizleme");
         }
 
         _macroLibraryControl.SetItems(BuildMacroLibraryViewItems(entries), _lastSessionPath);
@@ -1299,7 +1299,7 @@ public partial class MainForm : Form
             _logger.Log(
                 AppLogLevel.Warning,
                 nameof(MainForm),
-                $"{operationName} islemi tamamlanamadi.",
+                $"{operationName} işlemi tamamlanamadı.",
                 ex);
         }
     }
@@ -1517,7 +1517,7 @@ public partial class MainForm : Form
     {
         return GetSessionForPlayback() is { Events.Count: > 0 } session
             ? session
-            : throw new InvalidOperationException("Kullanilacak kayitli veya yuklenmis bir oturum yok.");
+            : throw new InvalidOperationException("Kullanılacak kayıtlı veya yüklenmiş bir oturum yok.");
     }
 
     private void EnsureSessionMutationAllowed()
@@ -1526,7 +1526,7 @@ public partial class MainForm : Form
             || _applicationStateService.IsAny(AppState.Recording, AppState.Playing, AppState.Paused, AppState.Stopping))
         {
             throw new InvalidOperationException(
-                "Oturum kaydetme ve yukleme islemleri yalnizca uygulama bostayken kullanilabilir.");
+                "Oturum kaydetme ve yükleme işlemleri yalnızca uygulama boştayken kullanılabilir.");
         }
     }
 
@@ -1535,7 +1535,7 @@ public partial class MainForm : Form
         if (_shutdownInProgress || !_applicationStateService.IsState(AppState.Idle))
         {
             throw new InvalidOperationException(
-                "Kisayol degisiklikleri yalnizca uygulama bostayken yapilabilir.");
+                "Kısayol değişiklikleri yalnızca uygulama boştayken yapılabilir.");
         }
     }
 
@@ -1848,7 +1848,7 @@ public partial class MainForm : Form
 
         _titleBarControl.Name = "titleBarControl";
         _titleBarControl.Dock = DockStyle.Fill;
-        _titleBarControl.SetTitle("MacroMaster Kontrol Merkezi");
+        _titleBarControl.SetTitle("Polly Kontrol Merkezi");
         _titleBarControl.DragRequested += titleBarControl_DragRequested;
         _titleBarControl.MinimizeRequested += titleBarControl_MinimizeRequested;
         _titleBarControl.MaximizeRestoreRequested += titleBarControl_MaximizeRestoreRequested;
@@ -2025,7 +2025,7 @@ public partial class MainForm : Form
         previewHostPanel.ContentPadding = _layoutProfile.Main.PrimaryCardContentPadding;
         previewHostPanel.Body.Controls.Add(_eventListControl);
 
-        var sessionHostPanel = CreateSectionCard("Oturum Ozeti", _layoutProfile);
+        var sessionHostPanel = CreateSectionCard("Oturum Özeti", _layoutProfile);
         sessionHostPanel.Margin = new Padding(trailingMainGap, 0, 0, 0);
         sessionHostPanel.Body.Controls.Add(_sessionSummaryControl);
 
@@ -2045,11 +2045,11 @@ public partial class MainForm : Form
         bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48f));
         bottomLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52f));
 
-        var playbackControlCard = CreateSectionCard("Oynatma Kontrolu", _layoutProfile);
+        var playbackControlCard = CreateSectionCard("Oynatma Kontrolü", _layoutProfile);
         playbackControlCard.Margin = new Padding(0, 0, DesignTokens.GapMedium / 2, 0);
         playbackControlCard.Body.Controls.Add(_playbackControl);
 
-        var playbackSettingsHostPanel = CreateSectionCard("Oynatma Ayarlari", _layoutProfile);
+        var playbackSettingsHostPanel = CreateSectionCard("Oynatma Ayarları", _layoutProfile);
         playbackSettingsHostPanel.Margin = new Padding(DesignTokens.GapMedium / 2, 0, 0, 0);
         playbackSettingsHostPanel.Body.Controls.Add(_playbackSettingsControl);
 
@@ -2079,7 +2079,7 @@ public partial class MainForm : Form
         }
         catch
         {
-            // Fall through to the primary screen fallback.
+      
         }
 
         return Screen.PrimaryScreen?.WorkingArea
@@ -2168,7 +2168,7 @@ public partial class MainForm : Form
         ArgumentNullException.ThrowIfNull(hotkeySettings);
 
         EnsureHotkeyMutationAllowed();
-        HotkeySettingsValidator.Validate(hotkeySettings, "Kisayol ayari uygulama");
+        HotkeySettingsValidator.Validate(hotkeySettings, "Kısayol ayarı uygulama");
 
         HotkeySettings previousSettings = _hotkeyConfiguration.Snapshot();
         bool wasRegistered = _hotkeyService.IsRegistered || restorePreviousRegistrationOnFailure;
@@ -2205,7 +2205,7 @@ public partial class MainForm : Form
             {
                 recoveryErrors.Add(
                     new InvalidOperationException(
-                        "Kismen uygulanan kisayol kaydi temiz bir sekilde geri alinamadi.",
+                        "Kısmen uygulanan kısayol kaydı temiz bir şekilde geri alınamadı.",
                         unregisterException));
             }
 
@@ -2217,7 +2217,7 @@ public partial class MainForm : Form
             {
                 recoveryErrors.Add(
                     new InvalidOperationException(
-                        "Onceki kisayol yapilandirmasi geri yuklenemedi.",
+                        "Önceki kısayol yapılandırması geri yüklenemedi.",
                         restoreConfigurationException));
             }
 
@@ -2231,7 +2231,7 @@ public partial class MainForm : Form
                 {
                     recoveryErrors.Add(
                         new InvalidOperationException(
-                            "Onceki kisayol kaydi yeniden yuklenemedi.",
+                            "Önceki kısayol kaydı yeniden yüklenemedi.",
                             restoreRegistrationException));
                 }
             }
@@ -2244,7 +2244,7 @@ public partial class MainForm : Form
                 List<Exception> aggregateErrors = [applyException];
                 aggregateErrors.AddRange(recoveryErrors);
                 throw new AggregateException(
-                    "Kisayol ayari guncellemesi basarisiz oldu ve geri alma islemi tam olarak tamamlanamadi.",
+                    "Kısayol ayarı güncellemesi başarısız oldu ve geri alma işlemi tam olarak tamamlanamadı.",
                     aggregateErrors);
             }
 
@@ -2322,10 +2322,10 @@ public partial class MainForm : Form
     {
         return appState switch
         {
-            AppState.Idle => "Bos",
-            AppState.Recording => "Kayit",
+            AppState.Idle => "Boş",
+            AppState.Recording => "Kayıt",
             AppState.Playing => "Oynatma",
-            AppState.Paused => "Duraklatildi",
+            AppState.Paused => "Duraklatıldı",
             AppState.Stopping => "Durduruluyor",
             AppState.Error => "Hata",
             _ => appState.ToString()

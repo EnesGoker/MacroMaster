@@ -14,7 +14,7 @@ internal sealed class MacroOptimizationDialog : Form
     {
         ArgumentNullException.ThrowIfNull(preview);
 
-        Text = "Makro Optimize Et";
+        Text = "Polly";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -251,7 +251,7 @@ internal sealed class MacroOptimizationDialog : Form
         string durationText = preview.PreservesDuration
             ? "Toplam süre korunacak."
             : "Toplam sürede fark oluştu; uygulamadan önce kontrol edin.";
-        string detailText = $"{durationText} Klavye, tıklama ve wheel olayları korunur; yalnızca kısa ara mouse hareketleri kaldırılır.";
+        string detailText = $"{durationText} Klavye, tıklama ve kaydırma olayları korunur; yalnızca kısa ara fare hareketleri kaldırılır.";
 
         panel.Controls.Add(
             new Label

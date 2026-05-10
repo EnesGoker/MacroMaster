@@ -79,45 +79,45 @@ internal static class MacroReportGenerator
         MacroReportStatistics statistics = Analyze(session, filePath);
         var builder = new StringBuilder();
 
-        builder.AppendLine("MacroMaster Oturum Raporu");
+        builder.AppendLine("Polly Oturum Raporu");
         builder.AppendLine(new string('=', 29));
         builder.AppendLine();
         builder.AppendLine("Makro: " + statistics.SessionName);
         builder.AppendLine("Dosya: " + statistics.FileName);
         builder.AppendLine("Dosya yolu: " + statistics.FilePath);
-        builder.AppendLine("Kayit tarihi: " + FormatDateTime(statistics.CreatedAtLocal));
+        builder.AppendLine("Kayıt tarihi: " + FormatDateTime(statistics.CreatedAtLocal));
         builder.AppendLine("Rapor tarihi: " + FormatDateTime(statistics.GeneratedAtLocal));
         builder.AppendLine();
-        builder.AppendLine("Ozet");
+        builder.AppendLine("Özet");
         builder.AppendLine("----");
         builder.AppendLine("Toplam olay: " + statistics.TotalEventCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Toplam sure: " + FormatDuration(statistics.TotalDurationMs));
+        builder.AppendLine("Toplam süre: " + FormatDuration(statistics.TotalDurationMs));
         builder.AppendLine("Ortalama gecikme: " + FormatMilliseconds(statistics.AverageDelayMs));
         builder.AppendLine("En uzun bekleme: " + FormatDuration(statistics.LongestDelayMs));
         builder.AppendLine();
-        builder.AppendLine("Olay Dagilimi");
+        builder.AppendLine("Olay Dağılımı");
         builder.AppendLine("-------------");
-        builder.AppendLine("Klavye olaylari: " + statistics.KeyboardEventCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Mouse olaylari: " + statistics.MouseEventCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Klavye olayları: " + statistics.KeyboardEventCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Mouse olayları: " + statistics.MouseEventCount.ToString("N0", TurkishCulture));
         builder.AppendLine("Mouse hareketleri: " + statistics.MouseMoveCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Tiklama olaylari: " + statistics.MouseClickCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Mouse wheel olaylari: " + statistics.MouseWheelCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Sistem olaylari: " + statistics.SystemEventCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Tıklama olayları: " + statistics.MouseClickCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Mouse kaydırma olayları: " + statistics.MouseWheelCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Sistem olayları: " + statistics.SystemEventCount.ToString("N0", TurkishCulture));
         builder.AppendLine();
         builder.AppendLine("Analiz");
         builder.AppendLine("------");
         builder.AppendLine("Uzun bekleme: " + statistics.LongDelayCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Eksik veya hatali olay: " + statistics.InvalidOrIncompleteCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Optimizasyon adayi: " + statistics.OptimizationCandidateCount.ToString("N0", TurkishCulture));
-        builder.AppendLine("Optimizasyon aday orani: " + statistics.OptimizationCandidateRate.ToString("0.#", TurkishCulture) + "%");
+        builder.AppendLine("Eksik veya hatalı olay: " + statistics.InvalidOrIncompleteCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Optimizasyon adayı: " + statistics.OptimizationCandidateCount.ToString("N0", TurkishCulture));
+        builder.AppendLine("Optimizasyon aday oranı: " + statistics.OptimizationCandidateRate.ToString("0.#", TurkishCulture) + "%");
         builder.AppendLine();
-        builder.AppendLine("Oneri");
+        builder.AppendLine("Öneri");
         builder.AppendLine("-----");
         builder.AppendLine(BuildRecommendation(statistics));
         builder.AppendLine();
         builder.AppendLine("Olay Detaylari");
         builder.AppendLine("---------------");
-        builder.AppendLine("# | Zaman | Tur | Aksiyon | Konum | Gecikme | Detay");
+        builder.AppendLine("# | Zaman | Tür | Aksiyon | Konum | Gecikme | Detay");
         builder.AppendLine("--|-------|-----|---------|-------|---------|------");
 
         foreach (string row in BuildTextEventRows(session.Events))
@@ -139,7 +139,7 @@ internal static class MacroReportGenerator
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>MacroMaster Oturum Raporu - {{Html(statistics.SessionName)}}</title>
+              <title>Polly Oturum Raporu - {{Html(statistics.SessionName)}}</title>
               <style>
                 :root {
                   color-scheme: dark;
@@ -251,15 +251,15 @@ internal static class MacroReportGenerator
             <body>
               <main>
                 <header>
-                  <h1>MacroMaster Oturum Raporu</h1>
-                  <p class="muted">{{Html(statistics.SessionName)}} icin uretilen analiz raporu</p>
+                  <h1>Polly Oturum Raporu</h1>
+                  <p class="muted">{{Html(statistics.SessionName)}} için üretilen analiz raporu</p>
                 </header>
 
-                <section class="grid" aria-label="Ozet metrikler">
+                <section class="grid" aria-label="Özet metrikler">
                   {{MetricCard("Toplam olay", statistics.TotalEventCount.ToString("N0", TurkishCulture))}}
-                  {{MetricCard("Toplam sure", FormatDuration(statistics.TotalDurationMs))}}
+                  {{MetricCard("Toplam süre", FormatDuration(statistics.TotalDurationMs))}}
                   {{MetricCard("Mouse hareketi", statistics.MouseMoveCount.ToString("N0", TurkishCulture))}}
-                  {{MetricCard("Optimizasyon adayi", statistics.OptimizationCandidateCount.ToString("N0", TurkishCulture))}}
+                  {{MetricCard("Optimizasyon adayı", statistics.OptimizationCandidateCount.ToString("N0", TurkishCulture))}}
                 </section>
 
                 <section class="section">
@@ -269,22 +269,22 @@ internal static class MacroReportGenerator
                       {{TableRow("Makro", statistics.SessionName)}}
                       {{TableRow("Dosya", statistics.FileName)}}
                       {{TableRow("Dosya yolu", statistics.FilePath)}}
-                      {{TableRow("Kayit tarihi", FormatDateTime(statistics.CreatedAtLocal))}}
+                      {{TableRow("Kayıt tarihi", FormatDateTime(statistics.CreatedAtLocal))}}
                       {{TableRow("Rapor tarihi", FormatDateTime(statistics.GeneratedAtLocal))}}
                     </tbody>
                   </table>
                 </section>
 
                 <section class="section">
-                  <h2>Olay Dagilimi</h2>
+                  <h2>Olay Dağılımı</h2>
                   <table>
                     <tbody>
-                      {{TableRow("Klavye olaylari", statistics.KeyboardEventCount.ToString("N0", TurkishCulture))}}
-                      {{TableRow("Mouse olaylari", statistics.MouseEventCount.ToString("N0", TurkishCulture))}}
+                      {{TableRow("Klavye olayları", statistics.KeyboardEventCount.ToString("N0", TurkishCulture))}}
+                      {{TableRow("Mouse olayları", statistics.MouseEventCount.ToString("N0", TurkishCulture))}}
                       {{TableRow("Mouse hareketleri", statistics.MouseMoveCount.ToString("N0", TurkishCulture))}}
-                      {{TableRow("Tiklama olaylari", statistics.MouseClickCount.ToString("N0", TurkishCulture))}}
-                      {{TableRow("Mouse wheel olaylari", statistics.MouseWheelCount.ToString("N0", TurkishCulture))}}
-                      {{TableRow("Sistem olaylari", statistics.SystemEventCount.ToString("N0", TurkishCulture))}}
+                      {{TableRow("Tıklama olayları", statistics.MouseClickCount.ToString("N0", TurkishCulture))}}
+                      {{TableRow("Mouse wheel olayları", statistics.MouseWheelCount.ToString("N0", TurkishCulture))}}
+                      {{TableRow("Sistem olayları", statistics.SystemEventCount.ToString("N0", TurkishCulture))}}
                     </tbody>
                   </table>
                 </section>
@@ -296,26 +296,26 @@ internal static class MacroReportGenerator
                       {{TableRow("Ortalama gecikme", FormatMilliseconds(statistics.AverageDelayMs))}}
                       {{TableRow("En uzun bekleme", FormatDuration(statistics.LongestDelayMs))}}
                       {{TableRow("Uzun bekleme", statistics.LongDelayCount.ToString("N0", TurkishCulture))}}
-                      {{TableRow("Eksik veya hatali olay", statistics.InvalidOrIncompleteCount.ToString("N0", TurkishCulture))}}
-                      {{TableRow("Optimizasyon aday orani", statistics.OptimizationCandidateRate.ToString("0.#", TurkishCulture) + "%")}}
+                      {{TableRow("Eksik veya hatalı olay", statistics.InvalidOrIncompleteCount.ToString("N0", TurkishCulture))}}
+                      {{TableRow("Optimizasyon aday oranı", statistics.OptimizationCandidateRate.ToString("0.#", TurkishCulture) + "%")}}
                     </tbody>
                   </table>
                 </section>
 
                 <section class="section">
-                  <h2>Oneri</h2>
+                  <h2>Öneri</h2>
                   <p class="recommendation">{{Html(recommendation)}}</p>
                 </section>
 
                 <section class="section">
-                  <h2>Olay Detaylari</h2>
+                  <h2>Olay Detayları</h2>
                   <div class="table-scroll">
                     <table class="detail-table">
                       <thead>
                         <tr>
                           <th>#</th>
                           <th>Zaman</th>
-                          <th>Tur</th>
+                          <th>Tür</th>
                           <th>Aksiyon</th>
                           <th>Konum</th>
                           <th>Gecikme</th>
@@ -338,21 +338,21 @@ internal static class MacroReportGenerator
     {
         if (statistics.InvalidOrIncompleteCount > 0)
         {
-            return "Bu makroda eksik veya hatali olaylar var. Oynatmadan once olay listesini kontrol etmeniz onerilir.";
+            return "Bu makroda eksik veya hatalı olaylar var. Oynatmadan önce olay listesini kontrol etmeniz önerilir.";
         }
 
         if (statistics.OptimizationCandidateCount > 0)
         {
             return FormattableString.Invariant(
-                $"Bu makroda {statistics.OptimizationCandidateCount} optimizasyon adayi mouse hareketi bulundu. Optimize Et ozelligi ile olay sayisi azaltilabilir.");
+                $"Bu makroda {statistics.OptimizationCandidateCount} optimizasyon adayı mouse hareketi bulundu. Optimize Et özelliği ile olay sayısı azaltılabilir.");
         }
 
         if (statistics.LongDelayCount > 0)
         {
-            return "Makroda uzun beklemeler bulunuyor. Oynatma hizi veya gecikme ayarlari sunumdan once kontrol edilebilir.";
+            return "Makroda uzun beklemeler bulunuyor. Oynatma hızı veya gecikme ayarları sunumdan önce kontrol edilebilir.";
         }
 
-        return "Bu makro icin kritik bir optimizasyon uyarisi bulunmuyor.";
+        return "Bu makro için kritik bir optimizasyon uyarısı bulunmuyor.";
     }
 
     private static string MetricCard(string label, string value)
@@ -540,7 +540,7 @@ internal static class MacroReportGenerator
             && macroEvent.MouseActionType == MouseActionType.Wheel
             && macroEvent.WheelDelta.HasValue)
         {
-            return "Delta: " + macroEvent.WheelDelta.Value.ToString(CultureInfo.InvariantCulture);
+            return "Kaydırma değeri: " + macroEvent.WheelDelta.Value.ToString(CultureInfo.InvariantCulture);
         }
 
         return "-";

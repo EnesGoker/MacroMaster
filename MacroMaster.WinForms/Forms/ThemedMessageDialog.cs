@@ -17,7 +17,7 @@ internal sealed class ThemedMessageDialog : Form
         IReadOnlyList<MessageButtonSpec> buttonSpecs = ResolveButtons(buttons);
 
         Text = string.IsNullOrWhiteSpace(caption)
-            ? "MacroMaster"
+            ? "Polly"
             : caption.Trim();
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -321,7 +321,7 @@ internal sealed class ThemedMessageDialog : Form
             MessageBoxIcon.Warning => "Uyarı",
             MessageBoxIcon.Information => "Bilgi",
             MessageBoxIcon.Question => "Onay",
-            _ => "MacroMaster"
+            _ => "Polly"
         };
     }
 

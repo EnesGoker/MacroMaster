@@ -55,7 +55,7 @@ internal sealed class SessionSummaryControl : UserControl
         _previewMapControl.PreviewRequested += (_, _) => PreviewMapRequested?.Invoke(this, EventArgs.Empty);
 
         BuildLayout();
-        UpdateState(new SessionSummaryState("Bos", "Oturum yok", 0, 0, "Kaydedilmedi"));
+        UpdateState(new SessionSummaryState("Boş", "Oturum yok", 0, 0, "Kaydedilmedi"));
     }
 
     public void UpdateState(
@@ -81,7 +81,7 @@ internal sealed class SessionSummaryControl : UserControl
             state.StatusText,
             events,
             activeSourceEventIndex);
-        _statusValueLabel.ForeColor = state.StatusText.Equals("Bos", StringComparison.OrdinalIgnoreCase)
+        _statusValueLabel.ForeColor = state.StatusText.Equals("Boş", StringComparison.OrdinalIgnoreCase)
             ? DesignTokens.TextPrimary
             : DesignTokens.AccentGreen;
     }
@@ -175,7 +175,7 @@ internal sealed class SessionSummaryControl : UserControl
 
         AddDetailRow(layoutPanel, 0, "Durum", _statusValueLabel);
         AddDetailRow(layoutPanel, 1, "Olay", _eventCountValueLabel);
-        AddDetailRow(layoutPanel, 2, "Sure", _durationValueLabel);
+        AddDetailRow(layoutPanel, 2, "Süre", _durationValueLabel);
         AddDetailRow(layoutPanel, 3, "Oturum", _sessionNameValueLabel);
         AddDetailRow(layoutPanel, 4, "Dosya", _fileNameValueLabel);
 
@@ -198,7 +198,7 @@ internal sealed class SessionSummaryControl : UserControl
         _mapTitleRowStyle = new RowStyle(SizeType.Absolute, DesignTokens.Scale(28));
         _mapLayoutPanel.RowStyles.Add(_mapTitleRowStyle);
         _mapLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-        _mapLayoutPanel.Controls.Add(CreateSectionCaptionLabel("Ekran Onizleme"), 0, 0);
+        _mapLayoutPanel.Controls.Add(CreateSectionCaptionLabel("Ekran Önizleme"), 0, 0);
         _mapLayoutPanel.Controls.Add(_previewMapControl, 0, 1);
         return _mapLayoutPanel;
     }

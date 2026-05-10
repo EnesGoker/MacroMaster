@@ -82,8 +82,8 @@ internal sealed class TitleBarControl : UserControl
         _appNameLabel = new Label
         {
             Dock = DockStyle.Fill,
-            Text = "MacroMaster Kontrol Merkezi",
-            Font = DesignTokens.FontUiBold,
+            Text = "Polly Kontrol Merkezi",
+            Font = DesignTokens.FontUiLarge,
             ForeColor = DesignTokens.TextPrimary,
             BackColor = DesignTokens.Background,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -95,6 +95,7 @@ internal sealed class TitleBarControl : UserControl
         _statusPill = new StatusPillControl
         {
             Dock = DockStyle.Fill,
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             Margin = new Padding(DesignTokens.Scale(6), DesignTokens.Scale(2), DesignTokens.Scale(8), DesignTokens.Scale(2)),
             BackColor = Color.Transparent,
         };
@@ -137,7 +138,10 @@ internal sealed class TitleBarControl : UserControl
             profile.Chrome.TitleBarIconSize,
             profile.Chrome.TitleBarIconInset,
             profile.Chrome.TitleBarIconCornerRadius);
-        _statusPill.Margin = profile.Chrome.TitleBarStatusMargin;
+        var sm = profile.Chrome.TitleBarStatusMargin;
+        _statusPill.Margin = new Padding(sm.Left, sm.Top, sm.Right, 0);
+        _statusPill.MinimumSize = new Size(0, profile.Chrome.TitleBarButtonHeight);
+        _appNameLabel.Margin = new Padding(0, 0, 0, profile.Chrome.TitleBarLogoMargin.Bottom);
         _statusPill.ApplyLayoutMetrics(
             profile.Chrome.TitleBarStatusCornerRadius,
             profile.Chrome.TitleBarStatusDotSize,
@@ -270,7 +274,7 @@ internal sealed class TitleBarControl : UserControl
 
     private sealed class StatusPillControl : Control
     {
-        private string _statusText = "Hazir";
+        private string _statusText = "Hazır";
         private Color _dotColor = DesignTokens.AccentGreen;
         private int _cornerRadius = DesignTokens.Scale(8);
         private int _dotSize = DesignTokens.TitleBarStatusDotSize;
@@ -296,7 +300,7 @@ internal sealed class TitleBarControl : UserControl
         public void SetStatus(string status, Color dotColor)
         {
             _statusText = string.IsNullOrWhiteSpace(status)
-                ? "Hazir"
+                ? "Hazır"
                 : status;
             _dotColor = dotColor;
             Invalidate();
@@ -413,7 +417,7 @@ internal sealed class TitleBarControl : UserControl
             base.OnPaint(e);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            int size = Math.Min(_iconSize, Math.Min(Width, Height) - _iconInset);
+            int size = _iconSize;
             if (size <= 0)
             {
                 return;
@@ -438,7 +442,7 @@ internal sealed class TitleBarControl : UserControl
 
             e.Graphics.FillPath(fillBrush, path);
             e.Graphics.DrawPath(borderPen, path);
-            e.Graphics.DrawString("M", font, textBrush, bounds, stringFormat);
+            e.Graphics.DrawString("P", font, textBrush, bounds, stringFormat);
         }
     }
 

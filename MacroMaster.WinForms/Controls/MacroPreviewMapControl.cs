@@ -62,8 +62,8 @@ internal sealed class MacroPreviewMapControl : Control
         BackColor = DesignTokens.SurfaceInset;
         Cursor = Cursors.Hand;
         TabStop = true;
-        AccessibleName = "Makro onizleme haritasi";
-        AccessibleDescription = "Secili makronun fare rotasini kucuk harita olarak gosterir.";
+        AccessibleName = "Makro önizleme haritası";
+        AccessibleDescription = "Seçili makronun fare rotasını küçük harita olarak gösterir.";
 
         _pulseTimer = new System.Windows.Forms.Timer
         {
@@ -248,13 +248,13 @@ internal sealed class MacroPreviewMapControl : Control
 
         if (_state.EventCount <= 0)
         {
-            DrawEmptyState(graphics, plotBounds, "Harita icin makro secin");
+            DrawEmptyState(graphics, plotBounds, "Harita için makro seçin");
             return;
         }
 
         if (_mousePoints.Count == 0)
         {
-            DrawEmptyState(graphics, plotBounds, "Fare rotasi bulunamadi");
+            DrawEmptyState(graphics, plotBounds, "Fare rotası bulunamadı");
             return;
         }
 
@@ -658,15 +658,15 @@ internal sealed class MacroPreviewMapControl : Control
     {
         return actionType switch
         {
-            MouseActionType.Move => "Move",
-            MouseActionType.LeftDown => "LeftDown",
-            MouseActionType.LeftUp => "LeftUp",
-            MouseActionType.RightDown => "RightDown",
-            MouseActionType.RightUp => "RightUp",
-            MouseActionType.MiddleDown => "MiddleDown",
-            MouseActionType.MiddleUp => "MiddleUp",
-            MouseActionType.Wheel => "Wheel",
-            MouseActionType.DoubleClick => "DoubleClick",
+            MouseActionType.Move => "Hareket",
+            MouseActionType.LeftDown => "Sol Basma",
+            MouseActionType.LeftUp => "Sol Bırakma",
+            MouseActionType.RightDown => "Sağ Basma",
+            MouseActionType.RightUp => "Sağ Bırakma",
+            MouseActionType.MiddleDown => "Orta Basma",
+            MouseActionType.MiddleUp => "Orta Bırakma",
+            MouseActionType.Wheel => "Kaydırma",
+            MouseActionType.DoubleClick => "Çift Tıklama",
             _ => "Fare"
         };
     }
@@ -675,16 +675,15 @@ internal sealed class MacroPreviewMapControl : Control
     {
         return actionType switch
         {
-            MouseActionType.Move => "Fare hareketi",
-            MouseActionType.LeftDown => "Sol tus basildi",
-            MouseActionType.LeftUp => "Sol tus birakildi",
-            MouseActionType.RightDown => "Sag tus basildi",
-            MouseActionType.RightUp => "Sag tus birakildi",
-            MouseActionType.MiddleDown => "Orta tus basildi",
-            MouseActionType.MiddleUp => "Orta tus birakildi",
-            MouseActionType.Wheel => "Tekerlek hareketi",
-            MouseActionType.DoubleClick => "Cift tiklama",
-            _ => "Fare olayi"
+            MouseActionType.LeftDown => "Sol tuş basıldı",
+            MouseActionType.LeftUp => "Sol tuş bırakıldı",
+            MouseActionType.RightDown => "Sağ tuş basıldı",
+            MouseActionType.RightUp => "Sağ tuş bırakıldı",
+            MouseActionType.MiddleDown => "Orta tuş basıldı",
+            MouseActionType.MiddleUp => "Orta tuş bırakıldı",
+            MouseActionType.Wheel => "Kaydırma hareketi",
+            MouseActionType.DoubleClick => "Çift tıklama",
+            _ => "Fare olayı"
         };
     }
 

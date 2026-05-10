@@ -25,18 +25,18 @@ public partial class ToolbarControl : UserControl
 {
     private readonly ContextMenuStrip _saveMenu = new();
     private readonly ContextMenuStrip _loadMenu = new();
-    private readonly ToolStripMenuItem _saveLibraryMenuItem = new("Kutuphaneye Kaydet");
+    private readonly ToolStripMenuItem _saveLibraryMenuItem = new("Kütüphaneye Kaydet");
     private readonly ToolStripMenuItem _saveJsonMenuItem = new("JSON Kaydet");
     private readonly ToolStripMenuItem _saveXmlMenuItem = new("XML Kaydet");
-    private readonly ToolStripMenuItem _saveHtmlReportMenuItem = new("HTML Rapor Olustur");
-    private readonly ToolStripMenuItem _saveTextReportMenuItem = new("TXT Rapor Olustur");
-    private readonly ToolStripMenuItem _loadJsonMenuItem = new("JSON Yukle");
-    private readonly ToolStripMenuItem _loadXmlMenuItem = new("XML Yukle");
+    private readonly ToolStripMenuItem _saveHtmlReportMenuItem = new("HTML Rapor Oluştur");
+    private readonly ToolStripMenuItem _saveTextReportMenuItem = new("TXT Rapor Oluştur");
+    private readonly ToolStripMenuItem _loadJsonMenuItem = new("JSON Yükle");
+    private readonly ToolStripMenuItem _loadXmlMenuItem = new("XML Yükle");
     private string? _recordHotkey;
     private string? _stopHotkey;
     private string? _playbackHotkey;
     private string? _hotkeysHotkey;
-    private string _recordLabel = "Kaydi Baslat";
+    private string _recordLabel = "Kaydı Başlat";
     private string _playbackLabel = "Oynat";
 
     public event EventHandler? RecordToggleClicked;
@@ -54,6 +54,7 @@ public partial class ToolbarControl : UserControl
     public ToolbarControl()
     {
         InitializeComponent();
+        loadButton.Text = "Yükle";
         ConfigureMenus();
         ApplyTheme();
         WireEvents();
@@ -62,7 +63,7 @@ public partial class ToolbarControl : UserControl
 
     public void UpdateRecordButton(bool isRecording)
     {
-        _recordLabel = isRecording ? "Kaydi Durdur" : "Kaydi Baslat";
+        _recordLabel = isRecording ? "Kaydı Durdur" : "Kaydı Başlat";
         SetButtonText(recordButton, _recordLabel, _recordHotkey);
         ApplyButtonAccent(recordButton, DesignTokens.AccentRed, DesignTokens.AccentRedSoft);
     }
@@ -108,7 +109,7 @@ public partial class ToolbarControl : UserControl
         SetButtonText(recordButton, _recordLabel, _recordHotkey);
         SetButtonText(stopButton, "Durdur", _stopHotkey);
         SetButtonText(playbackButton, _playbackLabel, _playbackHotkey);
-        SetButtonText(hotkeysButton, "Kisayollar", _hotkeysHotkey);
+        SetButtonText(hotkeysButton, "Kısayollar", _hotkeysHotkey);
     }
 
     internal void ApplyShellLayoutProfile(AppShellLayoutProfile profile)

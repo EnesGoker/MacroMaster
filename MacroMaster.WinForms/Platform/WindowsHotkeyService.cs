@@ -53,11 +53,11 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         if (!OperatingSystem.IsWindows())
         {
             PlatformNotSupportedException exception = new(
-                "WindowsHotkeyService yalnizca Windows ortaminda calisir.");
+                "WindowsHotkeyService yalnızca Windows ortamında çalısır.");
             _logger.Log(
                 AppLogLevel.Error,
                 nameof(WindowsHotkeyService),
-                "Global kisayol servisi Windows disindaki bir ortamda baslatilamadi.",
+                "Global kısayol servisi Windows dışındaki bir ortamda başlatılamadı.",
                 exception);
             throw exception;
         }
@@ -109,7 +109,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         _logger.Log(
             AppLogLevel.Information,
             nameof(WindowsHotkeyService),
-            "Global kisayollar basariyla kaydedildi.");
+            "Global kısayollar başarıyla kaydedildi.");
         return Task.CompletedTask;
     }
 
@@ -136,7 +136,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         _logger.Log(
             AppLogLevel.Information,
             nameof(WindowsHotkeyService),
-            "Global kisayollar kaldirildi.");
+            "Global kısayollar kaldırıldı.");
     }
 
     internal void HandleHotkeyPressed(int hotkeyId)
@@ -166,7 +166,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         if (!TryRegisterHotkey(id, hotkeyBinding, out InvalidOperationException? exception))
         {
             InvalidOperationException registrationException = exception
-                ?? new InvalidOperationException($"Kisayol kaydedilemedi. Kimlik: {id}.");
+                ?? new InvalidOperationException($"Kısayol kaydedilemedi. Kimlik: {id}.");
 
             _logger.Log(
                 AppLogLevel.Error,
@@ -190,7 +190,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         _logger.Log(
             AppLogLevel.Warning,
             nameof(WindowsHotkeyService),
-            "Yardimci global kisayol kaydedilemedi. Ana kisayollar aktif kalacak.",
+            "Yardımcı global kısayol kaydedilemedi. Ana kısayollar aktif kalacak.",
             exception);
         return false;
     }
@@ -215,7 +215,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         int errorCode = Marshal.GetLastWin32Error();
         exception = new InvalidOperationException(
             FormattableString.Invariant(
-                $"Kisayol kaydedilemedi. Kimlik: {id}, kisayol: {FormatHotkey(hotkeyBinding)}. Win32 hata kodu: {errorCode}"));
+                $"Kısayol kaydedilemedi. Kimlik: {id}, kısayol: {FormatHotkey(hotkeyBinding)}. Win32 hata kodu: {errorCode}"));
         return false;
     }
 

@@ -201,7 +201,7 @@ internal static class EventListFilterEngine
             return true;
         }
 
-        if (IsField(fieldName, "type", "tur", "event"))
+        if (IsField(fieldName, "type", "tur", "tür", "event"))
         {
             isMatch = MatchesTypeAlias(macroEvent.EventType, fieldValue);
             return true;
@@ -215,14 +215,14 @@ internal static class EventListFilterEngine
             return true;
         }
 
-        if (IsField(fieldName, "detail", "detay", "desc", "aciklama"))
+        if (IsField(fieldName, "detail", "detay", "desc", "description", "aciklama", "acıklama", "açıklama"))
         {
             string detail = macroEvent.Description ?? string.Empty;
             isMatch = detail.Contains(fieldValue, StringComparison.CurrentCultureIgnoreCase);
             return true;
         }
 
-        if (IsField(fieldName, "key", "tus"))
+        if (IsField(fieldName, "key", "tus", "tuş"))
         {
             string keyName = macroEvent.KeyName ?? string.Empty;
             isMatch = keyName.Contains(fieldValue, StringComparison.CurrentCultureIgnoreCase);
@@ -291,7 +291,7 @@ internal static class EventListFilterEngine
     {
         value = 0;
 
-        if (IsField(fieldName, "row", "no", "#", "sira"))
+        if (IsField(fieldName, "row", "no", "#", "sira", "sıra"))
         {
             value = sourceIndex + 1;
             return true;
@@ -303,7 +303,7 @@ internal static class EventListFilterEngine
             return true;
         }
 
-        if (IsField(fieldName, "elapsed", "time", "zaman", "sure"))
+        if (IsField(fieldName, "elapsed", "time", "zaman", "sure", "süre"))
         {
             value = elapsedMs;
             return true;
@@ -331,7 +331,7 @@ internal static class EventListFilterEngine
             return true;
         }
 
-        if (IsField(fieldName, "wheel", "delta"))
+        if (IsField(fieldName, "wheel", "delta", "kaydirma", "kaydırma"))
         {
             if (!macroEvent.WheelDelta.HasValue)
             {

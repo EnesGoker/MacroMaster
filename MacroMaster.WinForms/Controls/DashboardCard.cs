@@ -140,7 +140,6 @@ internal sealed class DashboardCard : UserControl
         e.Graphics.DrawPath(borderPen, path);
         e.Graphics.DrawLine(highlightPen, bounds.Left + DesignTokens.Radius, bounds.Top, bounds.Right - DesignTokens.Radius, bounds.Top);
 
-        // Header divider line
         if (_showHeader)
         {
             int dividerY = bounds.Top + _headerHeight;

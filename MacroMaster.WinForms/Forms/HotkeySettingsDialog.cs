@@ -30,7 +30,7 @@ public sealed class HotkeySettingsDialog : Form
 
         SuspendLayout();
 
-        Text = "Kısayol Ayarları";
+        Text = "Polly";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -329,7 +329,7 @@ public sealed class HotkeySettingsDialog : Form
             ModalDialogOverlay.ShowMessage(
                 this,
                 ex.Message,
-                "MacroMaster",
+                "Polly",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }

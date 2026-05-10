@@ -405,7 +405,7 @@ internal sealed class ModernSelect : Control
         }
         catch (ObjectDisposedException)
         {
-            // The owner can be torn down while the drop-down is closing.
+
         }
         catch (InvalidOperationException)
         {

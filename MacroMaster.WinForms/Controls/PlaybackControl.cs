@@ -108,9 +108,9 @@ internal sealed class PlaybackControl : UserControl
             _ => "Oynat"
         });
         _toolTip.SetToolTip(_stopButton, "Durdur");
-        _toolTip.SetToolTip(_skipBackButton, _skipBackButton.Enabled ? "Debug imlecini basa al" : "Basa almak icin ilerleme gerekli");
-        _toolTip.SetToolTip(_stepBackButton, _stepBackButton.Enabled ? "Debug imlecini bir olay geri al" : "Geri adim icin ilerleme gerekli");
-        _toolTip.SetToolTip(_stepForwardButton, _stepForwardButton.Enabled ? "Sıradaki olayı çalıştır" : "Oynatilacak olay yok");
+        _toolTip.SetToolTip(_skipBackButton, _skipBackButton.Enabled ? "Debug imlecini başa al" : "Başa almak için ilerleme gerekli");
+        _toolTip.SetToolTip(_stepBackButton, _stepBackButton.Enabled ? "Debug imlecini bir olay geri al" : "Geri adım için ilerleme gerekli");
+        _toolTip.SetToolTip(_stepForwardButton, _stepForwardButton.Enabled ? "Sıradaki olayı çalıştır" : "Oynatılacak olay yok");
     }
 
     public void UpdateTelemetry(PlaybackTelemetrySnapshot telemetry)
@@ -169,8 +169,6 @@ internal sealed class PlaybackControl : UserControl
         statusPanel.Controls.Add(_elapsedTimeMetricCell, 2, 0);
         statusPanel.Controls.Add(_remainingTimeMetricCell, 3, 0);
 
-        // Row 1: Progress bar
-        // Row 2: Progress % (right-aligned)
         var progressPercentLabel = new Label
         {
             Dock = DockStyle.Fill,
@@ -182,7 +180,6 @@ internal sealed class PlaybackControl : UserControl
         };
         _progressBar.PercentLabel = progressPercentLabel;
 
-        // Row 3: Buttons — centered, 5 buttons like reference
         var controlsLayoutPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -517,7 +514,6 @@ internal sealed class PlaybackControl : UserControl
 
         public int ButtonSizeOverride { get; set; }
 
-        // Keep old name working
         public int ButtonSize
         {
             get => ButtonSizeOverride;
@@ -629,7 +625,6 @@ internal sealed class PlaybackControl : UserControl
                 b.Top + b.Height / 2 - s / 2, s, s);
         }
 
-        // |◀  skip to beginning
         private static void DrawSkipBackIcon(Graphics g, Rectangle b, Brush brush)
         {
             int ih = b.Height / 3;
@@ -645,7 +640,6 @@ internal sealed class PlaybackControl : UserControl
             });
         }
 
-        // ◀  step back one event
         private static void DrawStepBackIcon(Graphics g, Rectangle b, Brush brush)
         {
             int ih = b.Height / 3;
@@ -659,7 +653,6 @@ internal sealed class PlaybackControl : UserControl
             });
         }
 
-        // ▶  step forward one event
         private static void DrawStepForwardIcon(Graphics g, Rectangle b, Brush brush)
         {
             int ih = b.Height / 3;
@@ -673,7 +666,7 @@ internal sealed class PlaybackControl : UserControl
             });
         }
 
-    } // end IconButton
+    } 
 
     private enum IconButtonKind
     {
@@ -683,7 +676,7 @@ internal sealed class PlaybackControl : UserControl
         Pause,
         StepForward,
         Stop,
-        Previous // legacy alias
+        Previous 
     }
 
     private static GraphicsPath CreateRoundPath(Rectangle bounds, int radius)

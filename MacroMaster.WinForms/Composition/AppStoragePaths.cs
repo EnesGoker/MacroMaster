@@ -28,7 +28,7 @@ internal sealed class AppStoragePaths
     {
         string rootDirectoryPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MacroMaster");
+            "Polly");
 
         return FromRootDirectory(rootDirectoryPath);
     }
@@ -37,7 +37,7 @@ internal sealed class AppStoragePaths
     {
         if (string.IsNullOrWhiteSpace(rootDirectoryPath))
         {
-            throw new ArgumentException("Uygulama veri klasor yolu bos olamaz.", nameof(rootDirectoryPath));
+            throw new ArgumentException("Uygulama veri klasörü yolu boş olamaz.", nameof(rootDirectoryPath));
         }
 
         return new AppStoragePaths(Path.GetFullPath(rootDirectoryPath));

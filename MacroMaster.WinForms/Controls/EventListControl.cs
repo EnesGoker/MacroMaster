@@ -19,7 +19,7 @@ internal sealed class EventListControl : UserControl
     [
         new(EventListSmartFilterKind.All, "Analiz: Tümü", "Tümü"),
         new(EventListSmartFilterKind.LongDelays, "Analiz: Uzun beklemeler", "Uzun beklemeler"),
-        new(EventListSmartFilterKind.OptimizationCandidates, "Analiz: Optimize adayları", "Optimize adayları"),
+        new(EventListSmartFilterKind.OptimizationCandidates, "Analiz: Optimizasyon", "Optimizasyon adayları"),
         new(EventListSmartFilterKind.InvalidOrIncomplete, "Analiz: Hatalı/eksik", "Hatalı/eksik")
     ];
 
@@ -352,7 +352,7 @@ internal sealed class EventListControl : UserControl
         return new Label
         {
             Dock = DockStyle.Fill,
-            Text = "Olay / Oturum Onizleme",
+            Text = "Olay Önizleme",
             TextAlign = ContentAlignment.MiddleLeft,
             AutoEllipsis = true,
             BackColor = DesignTokens.Surface,

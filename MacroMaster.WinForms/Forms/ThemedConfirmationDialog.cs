@@ -40,7 +40,7 @@ internal sealed class ThemedConfirmationDialog : Form
             : macroName.Trim();
 
         using var dialog = new ThemedConfirmationDialog(
-            "Makro Sil",
+            "Polly",
             "Makro silinsin mi?",
             $"{displayName} kütüphaneden silinecek.",
             "Bu işlem geri alınamaz.",
