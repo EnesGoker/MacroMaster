@@ -79,6 +79,16 @@ public partial class MainForm : Form
         _logger = logger;
 
         InitializeComponent();
+
+        var appIcon = Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
+        if (appIcon is not null)
+        {
+            Icon = appIcon;
+        }
+
+        ShowIcon = true;
+        ShowInTaskbar = true;
+
         InitializeDynamicControls();
 
         Load += MainForm_Load;
