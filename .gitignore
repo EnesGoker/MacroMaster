@@ -21,3 +21,7 @@ Thumbs.db
 *.log
 TestResults/
 artifacts-temp/
+
+publish/
+installer/output/
+*.aip
